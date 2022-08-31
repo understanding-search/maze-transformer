@@ -39,7 +39,7 @@ class LatticeMazeGenerators:
 				random.randint(0, grid_shape[1] - 1),
 			)
 
-		print(f"{grid_shape = } {start_coord = }")
+		# print(f"{grid_shape = } {start_coord = }")
 
 		# initialize the stack with the target coord
 		visited_cells: set[tuple[int, int]] = set(tuple(start_coord))

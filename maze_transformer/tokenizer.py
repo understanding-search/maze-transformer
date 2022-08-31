@@ -1,3 +1,5 @@
+import json
+import os
 import sys
 import inspect
 from functools import cached_property
@@ -8,8 +10,9 @@ from dataclasses import dataclass, field
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
-from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP
+from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP, lpad_array
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory, dataclass_loader_factory, try_catch, JSONitem
+from muutils.misc import freeze
 
 from maze_transformer.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray
 from maze_transformer.generators import LatticeMazeGenerators, GENERATORS_MAP
@@ -23,6 +26,7 @@ SPECIAL_TOKENS: dict[str, str] = dict(
 	end_path = "<END_PATH>",
 	connector = "<-->",
 	adjacency_endline = ";",
+	padding = "<PADDING>",
 )
 
 
@@ -42,7 +46,12 @@ class SolvedMaze:
 			# give adjacency list
 			SPECIAL_TOKENS["adjlist_start"],
 			*chain.from_iterable([
-				[ node_token_map[c_s], SPECIAL_TOKENS["connector"], node_token_map[c_e], SPECIAL_TOKENS["adjacency_endline"] ]
+				[
+					node_token_map[tuple(c_s.tolist())], 
+					SPECIAL_TOKENS["connector"], 
+					node_token_map[tuple(c_e.tolist())], 
+					SPECIAL_TOKENS["adjacency_endline"],
+				]
 				for c_s, c_e in self.maze.as_adjlist()
 			]),
 			SPECIAL_TOKENS["adjlist_end"],
@@ -52,7 +61,10 @@ class SolvedMaze:
 			SPECIAL_TOKENS["target_end"],
 			# give path
 			SPECIAL_TOKENS["start_path"],
-			*[ node_token_map[c] for c in self.solution ],
+			*[ 
+				node_token_map[tuple(c.tolist())] 
+				for c in self.solution
+			],
 			SPECIAL_TOKENS["end_path"],
 		]
 
@@ -71,10 +83,10 @@ class MazeDatasetConfig:
 	)
 	# paths_per_maze: int = 5,
 	# p_min_tgt_dist: float = 0.2,
-	dtype: torch.dtype = field(default_factory=torch.int16)
+	dtype: torch.dtype|np.dtype = field(default_factory=lambda : np.int16)
 
 	seq_len_min: int = 1
-	seq_len_max: int = 1024
+	seq_len_max: int = 2048
 
 	@cached_property
 	def node_token_map(self) -> dict[CoordTup, str]:
@@ -100,23 +112,49 @@ class MazeDatasetConfig:
 			for i, t in enumerate(self.token_arr)
 		}
 
-	def tokenize_seq(self, seq: list[str]) -> torch.Tensor:
+	def tokenize_seq(self, seq: list[str], pad_len: bool|int = True) -> NDArray:
 		"""tokenize sequence"""
-		return torch.tensor(
-			[ self.tokenizer_map[t] for t in seq ], 
-			dtype=self.dtype, device=self.device,
-		)
+		if pad_len:
+			# adjust pad length
+			if isinstance(pad_len, bool):
+				pad_len = self.seq_len_max
+			elif isinstance(pad_len, int):
+				assert pad_len >= len(seq)
+			else:
+				raise TypeError(f"pad_len must be bool or int, not {type(pad_len) = } {pad_len = }")
+			
+			return lpad_array(
+				np.array(
+					[ self.tokenizer_map[t] for t in seq ], 
+					dtype=self.dtype,
+				),
+				padded_length=pad_len,
+				pad_value=self.tokenizer_map[SPECIAL_TOKENS["padding"]],
+			)
+
+		else:
+			return np.array(
+				[ self.tokenizer_map[t] for t in seq ], 
+				dtype=self.dtype,
+			)
 
 	def serialize(self) -> JSONitem:
+
+		maze_ctor: dict = { "__name__": self.maze_ctor.__name__ }
+		try:
+			maze_ctor["code_hash"] = hash(inspect.getsource(self.maze_ctor))
+			maze_ctor["sourcefile"] = inspect.getsourcefile(self.maze_ctor)
+		except (TypeError, OSError) as e:
+			print(e, file=sys.stderr)
+			maze_ctor["code_hash"] = None
+			maze_ctor["sourcefile"] = None
+			maze_ctor["__exception__"] = str(e)
+
 		return dict(
 			grid_n = self.grid_n,
 			n_mazes = self.n_mazes,
 			grid_shape = self.grid_shape,
-			maze_ctor = {
-				"__name__": self.maze_ctor.__name__,
-				"code_hash": try_catch(lambda x: hash(inspect.getsource(x))),
-				"sourcefile": try_catch(lambda x: inspect.getsourcefile(x)),
-			},
+			maze_ctor = maze_ctor,
 			device = str(self.device),
 			dtype = str(self.dtype),
 			node_token_map = json_serialize(self.node_token_map),
@@ -166,8 +204,6 @@ class MazeDataset(Dataset):
 
 		self.cfg: MazeDatasetConfig = cfg
 
-		self.paths: dict[str, str] = paths if paths is not None else dict()
-
 		# get mode
 		if sum(
 			1 if x is None else 0  
@@ -188,10 +224,14 @@ class MazeDataset(Dataset):
 		# process tokens into tensors
 		# TODO: parallelize this
 		if (self.mazes_tokens is not None) and (mazes_tokenized is None):
-			self.mazes_tokenized = [
-				cfg.tokenize_seq(m)
+			max_len: int = max(len(t) for t in self.mazes_tokens)
+			if max_len > cfg.seq_len_max:
+				raise ValueError(f"{max_len=} exceeds {cfg.seq_len_max=}")
+			
+			self.mazes_tokenized = np.array([
+				cfg.tokenize_seq(m, pad_len = cfg.seq_len_max)
 				for m in self.mazes_tokens
-			]
+			])
 
 		# validate
 		if any(x is None for x in (self.mazes_objs, self.mazes_tokens, self.mazes_tokenized)):
@@ -248,17 +288,76 @@ class MazeDataset(Dataset):
 		)
 		
 
+	def serialize_config(self) -> JSONitem:
+		return json_serialize(self.cfg)
 
-	# def 
+	@freeze
+	class DISK_SAVE_FILES:
+		cfg: str = "cfg.json"
+		obj: str = "maze_obj.jsonl"
+		tokens: str = "maze_tokens.jsonl"
+		tokenized: str = "maze_tokenized.npy"
 
-	# def save_obj(self):
-	# 	"""serialize this object"""
+	def disk_save(
+			self, 
+			path_base: str = "data/test-001",
+			do_config: bool = True,
+			do_obj: bool = False,
+			do_tokens: bool = False,
+			do_tokenized: bool = True,
+		) -> None:
 
-	# def save_tokens(self):
-	# 	"""serialize this object to tokens"""
-	# 	raise NotImplementedError()
+		# make the appropriate directories
+		print(f"saving to '{path_base}'")
+		os.makedirs(path_base, exist_ok = True)
 
-	# def save_tokenized(self):
+		if do_config:
+			# save config as json
+			with open(f"{path_base}/{self.DISK_SAVE_FILES.cfg}", "w") as f:
+				json.dump(json_serialize(self.cfg), f)
+
+		if do_obj:
+			raise NotImplementedError("do_obj not implemented")
+
+		if do_tokens:
+			raise NotImplementedError("do_tokens not implemented")
+
+
+		if do_tokenized:
+			# save tokenized data as npz
+			np.save(f"{path_base}/{self.DISK_SAVE_FILES.tokenized}", self.mazes_tokenized)
+
+	@classmethod
+	def disk_load(
+		cls,
+		path_base: str,
+					do_config: bool = True,
+			do_obj: bool = False,
+			do_tokens: bool = False,
+			do_tokenized: bool = True,
+		) -> "MazeDataset":
+
+		if do_obj:
+			raise NotImplementedError("do_obj not implemented")
+		if do_tokens:
+			raise NotImplementedError("do_tokens not implemented")
+
+		if do_config:
+			# load config from json
+			with open(f"{path_base}/{cls.DISK_SAVE_FILES.cfg}", "r") as f:
+				cfg: MazeDatasetConfig = MazeDatasetConfig.load(json.load(f))
+			
+		if do_tokenized:
+			# load tokenized data from npz
+			tokenized: NDArray = np.load(f"{path_base}/{cls.DISK_SAVE_FILES.tokenized}")
+
+		return cls(
+			cfg = cfg if do_config else None,
+			mazes_objs = None, # if do_obj else None,
+			mazes_tokens = None, # if do_tokens else None,
+			mazes_tokenized = tokenized if do_tokenized else None,
+		)
+
 
 
 			

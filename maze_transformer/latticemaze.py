@@ -92,19 +92,22 @@ class LatticeMaze:
 			flip_d1: NDArray[("conn", 1), np.float16] = np.random.rand(self.n_connections)
 
 		# loop over all nonzero elements of the connection list
-		for i, (d, x, y) in enumerate(np.ndindex(self.connection_list.shape)):
+		idx: int = 0
+		for d, x, y in np.ndindex(self.connection_list.shape):
 			if self.connection_list[d, x, y]:
 				c_start: CoordTup = (x, y)
 				c_end: CoordTup = (
 					x + (1 if d == 0 else 0),
 					y + (1 if d == 1 else 0),
 				)
-				adjlist[i, 0] = np.array(c_start)
-				adjlist[i, 1] = np.array(c_end)
+				adjlist[idx, 0] = np.array(c_start)
+				adjlist[idx, 1] = np.array(c_end)
 
 				# flip if shuffling
-				if shuffle_d1 and (flip_d1[i] > 0.5):
-						adjlist[i, 0], adjlist[i, 1] = adjlist[i, 1], adjlist[i, 0]					
+				if shuffle_d1 and (flip_d1[idx] > 0.5):
+					adjlist[idx, 0], adjlist[idx, 1] = adjlist[idx, 1], adjlist[idx, 0]
+				
+				idx += 1
 
 		if shuffle_d0:
 			np.random.shuffle(adjlist)
