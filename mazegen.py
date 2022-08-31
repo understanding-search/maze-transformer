@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
-from muutils.tensor_utils import ATensor, DTYPE_MAP
+from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory, dataclass_loader_factory, try_catch, JSONitem
 # from muutils.defaulterdict import DefaulterDict
 
@@ -22,7 +22,7 @@ from muutils.json_serialize import json_serialize, dataclass_serializer_factory,
 # 	"""generalized maze class"""
 # 	n_nodes: int
 	
-DIRECTIONS_MAP: np.ndarray = np.array([
+DIRECTIONS_MAP: NDArray[(("direction", 4), ("axes", 2)), int] = np.array([
 	[0, 1], # down
 	[0, -1], # up
 	[1, 1], # right
@@ -30,7 +30,7 @@ DIRECTIONS_MAP: np.ndarray = np.array([
 ])
 
 
-NEIGHBORS_MASK: np.ndarray = np.array([
+NEIGHBORS_MASK: NDArray[(("direction", 4), ("axes", 2)), int] = np.array([
 	[0, 1], # down
 	[0, -1], # up
 	[1, 0], # right
@@ -39,9 +39,9 @@ NEIGHBORS_MASK: np.ndarray = np.array([
 
 # print(NEIGHBORS_MASK, NEIGHBORS_MASK.dtype, NEIGHBORS_MASK.shape)
 
-Coord = ATensor[("coord", 2), np.int8]
+Coord = NDArray[("coord", 2), np.int8]
 CoordTup = tuple[int, int]
-CoordArray =  ATensor[("points", Any), ("coord", 2), np.int8]
+CoordArray =  NDArray[(("points", Any), ("coord", 2)), np.int8]
 
 # def get_neighbors_2d(c: Coord, maze_shape: tuple[int, int]) -> list[tuple[int, int]]:
 # 	"""get the neighbors of a given coordinate"""
@@ -58,7 +58,7 @@ CoordArray =  ATensor[("points", Any), ("coord", 2), np.int8]
 class LatticeMaze:
 	"""lattice maze (nodes on a lattice, connections only to neighboring nodes)"""
 	lattice_dim: int = 2
-	connection_list: np.ndarray # shape = (grid_shape[0], grid_shape.y, lattice_dim)
+	connection_list: NDArray[("lattice_dim", "x", "y"), bool]
 	generation_meta: dict|None = None
 
 	grid_shape = property(
@@ -70,17 +70,11 @@ class LatticeMaze:
 	)
 
 
-
-	def get_neighbors(self, node_idx: int) -> np.ndarray:
-		"""returns the indices of the neighbors of a node"""
-		return self.connection_list[node_idx]
-
-
-	def as_img(self) -> np.ndarray:
+	def as_img(self) -> NDArray[("x", "y"), bool]:
 
 		# set up the background
 		print(self.grid_shape)
-		img: np.ndarray = np.zeros(
+		img: NDArray[("x", "y"), bool] = np.zeros(
 			(
 				self.grid_shape[0] * 2 + 1,
 				self.grid_shape[1] * 2 + 1,
@@ -98,15 +92,15 @@ class LatticeMaze:
 
 		return img
 
-	def as_adjlist(self, shuffle_d0: bool = True, shuffle_d1: bool = True) -> ATensor[( ("conn", Any), ("start_end", 2), ("coord", 2) ), np.int8]:
+	def as_adjlist(self, shuffle_d0: bool = True, shuffle_d1: bool = True) -> NDArray[( ("conn", Any), ("start_end", 2), ("coord", 2) ), np.int8]:
 
-		adjlist: ATensor[( ("conn", Any), ("start_end", 2), ("coord", 2) ), np.int8] = np.full(
+		adjlist: NDArray[( ("conn", Any), ("start_end", 2), ("coord", 2) ), np.int8] = np.full(
 			(self.n_connections, 2, 2),
 			-1,
 		)
 
 		if shuffle_d1:
-			flip_d1: ATensor[("conn", 1), np.float16] = np.random.rand(self.n_connections)
+			flip_d1: NDArray[("conn", 1), np.float16] = np.random.rand(self.n_connections)
 
 		# loop over all nonzero elements of the connection list
 		for i, (d, x, y) in enumerate(np.ndindex(self.connection_list.shape)):
@@ -191,7 +185,7 @@ class LatticeMaze:
 			# check if goal is reached
 			if c_end == c_current:
 				path: list[CoordTup] = [c_current]
-				p_current: CoordTup = source[c_current]
+				p_current: CoordTup = c_current
 				while p_current in source:
 					p_current = source[p_current]
 					path.append(p_current)
@@ -226,6 +220,7 @@ class LatticeMaze:
 
 
 class LatticeMazeGenerators:
+	"""namespace for generators for lattice mazes"""
 	@staticmethod
 	def gen_dfs(
 			grid_shape: Coord, 
@@ -247,7 +242,7 @@ class LatticeMazeGenerators:
 		# n_directions: int = lattice_dim * 2
 
 		# initialize the maze with no connections)
-		connection_list: np.ndarray = np.zeros((lattice_dim, grid_shape[0], grid_shape[0]), dtype=bool)
+		connection_list: NDArray[("lattice_dim", "x", "y"), bool] = np.zeros((lattice_dim, grid_shape[0], grid_shape[0]), dtype=bool)
 
 		if start_coord is None:
 			start_coord: Coord = (
@@ -457,7 +452,7 @@ class MazeDataset(Dataset):
 			cfg: MazeDatasetConfig, 
 			mazes_objs: list[SolvedMaze]|None = None,
 			mazes_tokens: list[list[str]]|None = None,
-			mazes_tokenized: list[ATensor[("sequence", "tokens")]]|None = None,
+			mazes_tokenized: list[NDArray[("sequence", "tokens")]]|None = None,
 			paths: dict[str, str] = None,
 		) -> None:
 		super().__init__()
@@ -476,7 +471,7 @@ class MazeDataset(Dataset):
 		# transfer
 		self.mazes_objs: list[SolvedMaze]|None = mazes_objs
 		self.mazes_tokens: list[list[str]]|None = mazes_tokens
-		self.mazes_tokenized: list[ATensor[("sequence", "tokens")]]|None = mazes_tokenized
+		self.mazes_tokenized: list[NDArray[("sequence", "tokens")]]|None = mazes_tokenized
 
 		# process into tokens
 		# TODO: parallelize this
@@ -501,7 +496,7 @@ class MazeDataset(Dataset):
 		if len(self.mazes_objs) != len(self.mazes_tokenized):
 			raise ValueError(f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokenized) = }")
 
-	def __getitem__(self, idx: int) -> ATensor[("tokens")]:
+	def __getitem__(self, idx: int) -> NDArray[("tokens")]:
 		return self.mazes_tokenized[idx]
 
 	@classmethod
@@ -528,7 +523,7 @@ class MazeDataset(Dataset):
 		"""
 
 		mazes: list[SolvedMaze] = list()
-		endpoint_nodes: ATensor[(("maze_idx", cfg.n_mazes), ("start_end", 2), ("coord", 2)), np.int8] = np.random.randint(0, cfg.grid_shape, (cfg.n_mazes, 2, 2))
+		endpoint_nodes: NDArray[(("maze_idx", cfg.n_mazes), ("start_end", 2), ("coord", 2)), np.int8] = np.random.randint(0, cfg.grid_shape, (cfg.n_mazes, 2, 2))
 
 		print(endpoint_nodes)
 
