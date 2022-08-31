@@ -226,9 +226,8 @@ class LatticeMaze:
 
 
 class LatticeMazeGenerators:
-	@classmethod
+	@staticmethod
 	def gen_dfs(
-			cls, 
 			grid_shape: Coord, 
 			start_coord: Coord|None = None,
 			lattice_dim: int = 2,
@@ -295,7 +294,7 @@ class LatticeMazeGenerators:
 				visited_cells.add(tuple(chosen_neighbor))
 				stack.append(chosen_neighbor)
 
-		return cls(
+		return LatticeMaze(
 			connection_list = connection_list,
 			generation_meta = dict(
 				func_name = "gen_dfs",
@@ -364,7 +363,7 @@ class MazeDatasetConfig:
 	grid_n: int
 	n_mazes: int
 	grid_shape = property(lambda self: (self.grid_n, self.grid_n))
-	maze_ctor: Callable = LatticeMaze.gen_dfs
+	maze_ctor: Callable = LatticeMazeGenerators.gen_dfs
 	device: torch.device = field(
 		default_factory = lambda: torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	)
@@ -548,16 +547,16 @@ class MazeDataset(Dataset):
 		
 
 
-	def 
+	# def 
 
-	def save_obj(self):
-		"""serialize this object"""
+	# def save_obj(self):
+	# 	"""serialize this object"""
 
-	def save_tokens(self):
-		"""serialize this object to tokens"""
-		raise NotImplementedError()
+	# def save_tokens(self):
+	# 	"""serialize this object to tokens"""
+	# 	raise NotImplementedError()
 
-	def save_tokenized(self):
+	# def save_tokenized(self):
 
 
 			
@@ -583,7 +582,7 @@ def _test(shape_x: int = 5, shape_y: int|None = None):
 		shape_y = shape_x
 
 	t = time.time()
-	m = LatticeMaze.gen_dfs(np.array([shape_x, shape_y]))
+	m = LatticeMazeGenerators.gen_dfs(np.array([shape_x, shape_y]))
 	print(f"generation time: {time.time() - t}")
 	# print(m)
 	# show the maze
