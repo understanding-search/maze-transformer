@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 import sys
 import inspect
 from functools import cached_property
@@ -10,12 +11,15 @@ from dataclasses import dataclass, field
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
+from transformers import OpenAIGPTConfig
 from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP, lpad_array
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory, dataclass_loader_factory, try_catch, JSONitem
 from muutils.misc import freeze
 
 from maze_transformer.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray
 from maze_transformer.generators import LatticeMazeGenerators, GENERATORS_MAP
+
+# pylint: disable=unused-import
 
 SPECIAL_TOKENS: dict[str, str] = dict(
 	adjlist_start = "<ADJLIST_START>",
@@ -72,21 +76,69 @@ class SolvedMaze:
 
 
 @dataclass(frozen=True, kw_only=True)
-class MazeDatasetConfig:
+class DatasetConfig:
+	"""base config class"""
+	name: str = "DatasetConfig_default"
+	device: torch.device = field(
+		default_factory = lambda: torch.device("cuda" if torch.cuda.is_available() else "cpu")
+	)
+	dtype: torch.dtype|np.dtype = field(default_factory=lambda : torch.int16)
+	seq_len_min: int = 1
+	seq_len_max: int = 2048
+
+	
+	@cached_property
+	def token_arr(self) -> list[str]:
+		raise NotImplementedError()
+
+	@cached_property
+	def padding_token_idx(self) -> str:
+		raise NotImplementedError()
+
+	@cached_property
+	def tokenizer_map(self) -> dict[str, int]:
+		"""map from token to index"""
+		return {
+			t: i
+			for i, t in enumerate(self.token_arr)
+		}
+
+	@cached_property
+	def gpt_config_kwargs(self) -> dict:
+		"""gpt model config with vocab size, context size, and padding token"""
+		return dict(
+			vocab_size = len(self.token_arr),
+			n_positions = self.seq_len_max,
+			pad_token_id = self.padding_token_idx, # The id of the _padding_ token.
+			bos_token_id = self.padding_token_idx, # The id of the _beginning-of-stream_ token.
+			eos_token_id = self.padding_token_idx, # The id of the _end-of-stream_ token.
+		)
+
+	def tokenize_seq(self, seq: list[str]) -> ATensor:
+		"""tokenize sequence"""
+		return torch.tensor(
+			[ self.tokenizer_map[t] for t in seq ], 
+			dtype=self.dtype,
+			device=self.device,
+		)
+
+	def serialize(self) -> dict:
+		raise NotImplementedError()
+
+	@classmethod
+	def load(cls, data: dict) -> "DatasetConfig":
+		raise NotImplementedError()
+
+
+@dataclass(frozen=True, kw_only=True)
+class MazeDatasetConfig(DatasetConfig):
 	"""maze dataset configuration, including tokenizers"""
 	grid_n: int
 	n_mazes: int
 	grid_shape = property(lambda self: (self.grid_n, self.grid_n))
 	maze_ctor: Callable = LatticeMazeGenerators.gen_dfs
-	device: torch.device = field(
-		default_factory = lambda: torch.device("cuda" if torch.cuda.is_available() else "cpu")
-	)
 	# paths_per_maze: int = 5,
 	# p_min_tgt_dist: float = 0.2,
-	dtype: torch.dtype|np.dtype = field(default_factory=lambda : torch.int16)
-
-	seq_len_min: int = 1
-	seq_len_max: int = 2048
 
 	@cached_property
 	def node_token_map(self) -> dict[CoordTup, str]:
@@ -105,24 +157,9 @@ class MazeDatasetConfig:
 		]
 
 	@cached_property
-	def tokenizer_map(self) -> dict[str, int]:
-		"""map from token to index"""
-		return {
-			t: i
-			for i, t in enumerate(self.token_arr)
-		}
-
-	@cached_property
 	def padding_token_idx(self) -> str:
 		return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
-	def tokenize_seq(self, seq: list[str]) -> ATensor:
-		"""tokenize sequence"""
-		return torch.tensor(
-			[ self.tokenizer_map[t] for t in seq ], 
-			dtype=self.dtype,
-			device=self.device,
-		)
 
 	def serialize(self) -> JSONitem:
 
@@ -175,8 +212,12 @@ class MazeDatasetConfig:
 		return output
 
 
+
 @dataclass(kw_only=True)
 class IndexedArray:
+	"""join a list of arrays into a single big one with indices
+	
+	mainly for allowing __getitem__ to work nice for datasets"""
 	arr: ATensor
 	idxs: ATensor
 
@@ -317,6 +358,7 @@ class MazeDataset(Dataset):
 
 	@freeze
 	class DISK_SAVE_FILES:
+		"""namespace for filenames"""
 		cfg: str = "cfg.json"
 		obj: str = "maze_obj.jsonl"
 		tokens: str = "maze_tokens.jsonl"
@@ -363,10 +405,10 @@ class MazeDataset(Dataset):
 	def disk_load(
 			cls,
 			path_base: str,
-			do_config: bool = True,
+			do_config: bool = False,
 			do_obj: bool = False,
-			do_tokens: bool = True,
-			do_tokenized: bool = True,
+			do_tokens: bool = False,
+			do_tokenized: bool = False,
 		) -> "MazeDataset":
 
 		cfg: MazeDatasetConfig|None = None
