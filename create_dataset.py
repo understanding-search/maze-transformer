@@ -8,7 +8,7 @@ from maze_transformer.generators import LatticeMazeGenerators
 from maze_transformer.tokenizer import MazeDatasetConfig, MazeDataset, SolvedMaze
 
 
-def main(
+def create(
 		path_base: str = "data/test-001/data",
 		grid_n: int = 16,
 		n_mazes: int = 64,
@@ -55,7 +55,21 @@ def main(
 	dataset.disk_save(path_base = path_base)
 
 
+def load(path: str) -> None:
+	d = MazeDataset.disk_load(path)
+
+	print(d.cfg)
+	print(d.mazes_tokenized)
+
+	print("done!")
+
 
 if __name__ == "__main__":
 	import fire
-	fire.Fire(main)
+	fire.Fire(dict(
+		create=create,
+		load=load,
+	))
+
+
+

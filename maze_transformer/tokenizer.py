@@ -57,7 +57,7 @@ class SolvedMaze:
 			SPECIAL_TOKENS["adjlist_end"],
 			# give target
 			SPECIAL_TOKENS["target_start"],
-			node_token_map[tuple(self.pos_start)],
+			node_token_map[tuple(self.pos_end)],
 			SPECIAL_TOKENS["target_end"],
 			# give path
 			SPECIAL_TOKENS["start_path"],
@@ -111,6 +111,10 @@ class MazeDatasetConfig:
 			t: i
 			for i, t in enumerate(self.token_arr)
 		}
+
+	@cached_property
+	def padding_token_idx(self) -> str:
+		return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
 	def tokenize_seq(self, seq: list[str], pad_len: bool|int = True) -> NDArray:
 		"""tokenize sequence"""
@@ -173,8 +177,8 @@ class MazeDatasetConfig:
 		)
 
 		# validate
-		assert output.grid_shape == data["grid_shape"]
-		assert output.node_token_map == data["node_token_map"]
+		assert tuple(output.grid_shape) == tuple(data["grid_shape"]), f"{output.grid_shape = } {data['grid_shape'] = }"
+		assert json_serialize(output.node_token_map) == data["node_token_map"], f"\n{output.node_token_map = }\n\n{data['node_token_map'] = }"
 		assert output.token_arr == data["token_arr"]
 		assert output.tokenizer_map == data["tokenizer_map"]
 
@@ -234,14 +238,20 @@ class MazeDataset(Dataset):
 			])
 
 		# validate
-		if any(x is None for x in (self.mazes_objs, self.mazes_tokens, self.mazes_tokenized)):
-			raise ValueError(f"MazeDataset invalid, something is None: {type(self.mazes_objs) = } {type(self.mazes_tokens) = } {type(self.mazes_tokenized) = }")
+		# if any(x is None for x in (self.mazes_objs, self.mazes_tokens, self.mazes_tokenized)):
+		# 	raise ValueError(f"MazeDataset invalid, something is None: {type(self.mazes_objs) = } {type(self.mazes_tokens) = } {type(self.mazes_tokenized) = }")
 		
-		if len(self.mazes_objs) != len(self.mazes_tokens):
-			raise ValueError(f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokens) = }")
+		if self.mazes_objs is not None and self.mazes_tokens is not None:
+			if len(self.mazes_objs) != len(self.mazes_tokens):
+				raise ValueError(f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokens) = }")
 		
-		if len(self.mazes_objs) != len(self.mazes_tokenized):
-			raise ValueError(f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokenized) = }")
+		if self.mazes_objs is not None and self.mazes_tokenized is not None:
+			if len(self.mazes_objs) != len(self.mazes_tokenized):
+				raise ValueError(f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokenized) = }")
+
+		if self.mazes_tokens is not None and self.mazes_tokenized is not None:
+			if len(self.mazes_tokens) != len(self.mazes_tokenized):
+				raise ValueError(f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_tokenized) = }")
 
 	def __getitem__(self, idx: int) -> NDArray[("tokens")]:
 		return self.mazes_tokenized[idx]
@@ -303,7 +313,7 @@ class MazeDataset(Dataset):
 			path_base: str = "data/test-001",
 			do_config: bool = True,
 			do_obj: bool = False,
-			do_tokens: bool = False,
+			do_tokens: bool = True,
 			do_tokenized: bool = True,
 		) -> None:
 
@@ -314,14 +324,16 @@ class MazeDataset(Dataset):
 		if do_config:
 			# save config as json
 			with open(f"{path_base}/{self.DISK_SAVE_FILES.cfg}", "w") as f:
-				json.dump(json_serialize(self.cfg), f)
+				json.dump(json_serialize(self.cfg), f, indent="\t")
 
 		if do_obj:
 			raise NotImplementedError("do_obj not implemented")
 
 		if do_tokens:
-			raise NotImplementedError("do_tokens not implemented")
-
+			# save tokens as jsonl
+			with open(f"{path_base}/{self.DISK_SAVE_FILES.tokens}", "w") as f:
+				for x in self.mazes_tokens:
+					f.write(' '.join(x) + "\n")
 
 		if do_tokenized:
 			# save tokenized data as npz
@@ -329,33 +341,43 @@ class MazeDataset(Dataset):
 
 	@classmethod
 	def disk_load(
-		cls,
-		path_base: str,
-					do_config: bool = True,
+			cls,
+			path_base: str,
+			do_config: bool = True,
 			do_obj: bool = False,
-			do_tokens: bool = False,
+			do_tokens: bool = True,
 			do_tokenized: bool = True,
 		) -> "MazeDataset":
 
-		if do_obj:
-			raise NotImplementedError("do_obj not implemented")
-		if do_tokens:
-			raise NotImplementedError("do_tokens not implemented")
-
+		cfg: MazeDatasetConfig|None = None
 		if do_config:
 			# load config from json
 			with open(f"{path_base}/{cls.DISK_SAVE_FILES.cfg}", "r") as f:
-				cfg: MazeDatasetConfig = MazeDatasetConfig.load(json.load(f))
-			
+				cfg = MazeDatasetConfig.load(json.load(f))
+		
+		mazes_objs: list[SolvedMaze]|None = None
+		if do_obj:
+			raise NotImplementedError("do_obj not implemented")
+
+		mazes_tokens: list[list[str]]|None = None
+		if do_tokens:
+			# load tokens from jsonl
+			with open(f"{path_base}/{cls.DISK_SAVE_FILES.tokens}", "r") as f:
+				mazes_tokens = [
+					x.split() 
+					for x in f.readlines()
+				]
+		
+		mazes_tokenized: NDArray|None = None
 		if do_tokenized:
 			# load tokenized data from npz
-			tokenized: NDArray = np.load(f"{path_base}/{cls.DISK_SAVE_FILES.tokenized}")
+			mazes_tokenized = np.load(f"{path_base}/{cls.DISK_SAVE_FILES.tokenized}")
 
 		return cls(
-			cfg = cfg if do_config else None,
-			mazes_objs = None, # if do_obj else None,
-			mazes_tokens = None, # if do_tokens else None,
-			mazes_tokenized = tokenized if do_tokenized else None,
+			cfg = cfg,
+			mazes_objs = mazes_objs,
+			mazes_tokens = mazes_tokens,
+			mazes_tokenized = mazes_tokenized,
 		)
 
 
