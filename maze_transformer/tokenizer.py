@@ -3,15 +3,17 @@ import os
 from pathlib import Path
 import sys
 import inspect
-from functools import cached_property
+from functools import cached_property, partial
 from itertools import chain, product
 from typing import Any, Callable, Generic, Literal, NamedTuple, Sequence, TypeVar, Union
 from dataclasses import dataclass, field
+import multiprocessing
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 from transformers import OpenAIGPTConfig
+from tqdm import tqdm
 from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP, lpad_array
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory, dataclass_loader_factory, try_catch, JSONitem
 from muutils.misc import freeze
@@ -238,6 +240,10 @@ class IndexedArray:
 		idxs: ATensor = torch.cumsum( torch.tensor([ 0, *map(len, data) ]), dim = 0 )[:-1]
 		return cls(arr=arr, idxs=idxs)
 
+def maze_to_tokens(maze: SolvedMaze, node_token_map: dict[CoordTup, str]) -> list[str]:
+	"""convert a maze into a list of tokens"""
+	return maze.as_tokens(node_token_map)
+
 
 class MazeDataset(Dataset):
 	"""maze dataset"""
@@ -269,11 +275,20 @@ class MazeDataset(Dataset):
 		self.mazes_array: IndexedArray|None = mazes_array
 
 		# process into tokens
-		# TODO: parallelize this
 		if (self.mazes_objs is not None) and (self.mazes_tokens is None):
-			self.mazes_tokens = [ m.as_tokens(cfg.node_token_map) for m in self.mazes_objs ]
+			with multiprocessing.Pool() as pool:
+				self.mazes_tokens = list(tqdm(
+					pool.imap(
+						partial(maze_to_tokens, node_token_map=cfg.node_token_map),
+						self.mazes_objs,
+					),
+					total = len(self.mazes_objs),
+					desc = "tokenizing mazes",
+					unit = "maze",
+				))
 
 		# process tokens into tokenized
+		print(f"tensorifying mazes...")
 		if (self.mazes_tokens is not None) and (mazes_array is None):
 			max_len: int = max(len(t) for t in self.mazes_tokens)
 			if max_len > cfg.seq_len_max:
