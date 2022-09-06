@@ -83,7 +83,7 @@ class MazeDatasetConfig:
 	)
 	# paths_per_maze: int = 5,
 	# p_min_tgt_dist: float = 0.2,
-	dtype: torch.dtype|np.dtype = field(default_factory=lambda : np.int16)
+	dtype: torch.dtype|np.dtype = field(default_factory=lambda : torch.int16)
 
 	seq_len_min: int = 1
 	seq_len_max: int = 2048
@@ -116,31 +116,13 @@ class MazeDatasetConfig:
 	def padding_token_idx(self) -> str:
 		return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
-	def tokenize_seq(self, seq: list[str], pad_len: bool|int = True) -> NDArray:
+	def tokenize_seq(self, seq: list[str]) -> ATensor:
 		"""tokenize sequence"""
-		if pad_len:
-			# adjust pad length
-			if isinstance(pad_len, bool):
-				pad_len = self.seq_len_max
-			elif isinstance(pad_len, int):
-				assert pad_len >= len(seq)
-			else:
-				raise TypeError(f"pad_len must be bool or int, not {type(pad_len) = } {pad_len = }")
-			
-			return lpad_array(
-				np.array(
-					[ self.tokenizer_map[t] for t in seq ], 
-					dtype=self.dtype,
-				),
-				padded_length=pad_len,
-				pad_value=self.tokenizer_map[SPECIAL_TOKENS["padding"]],
-			)
-
-		else:
-			return np.array(
-				[ self.tokenizer_map[t] for t in seq ], 
-				dtype=self.dtype,
-			)
+		return torch.tensor(
+			[ self.tokenizer_map[t] for t in seq ], 
+			dtype=self.dtype,
+			device=self.device,
+		)
 
 	def serialize(self) -> JSONitem:
 
@@ -193,15 +175,39 @@ class MazeDatasetConfig:
 		return output
 
 
+@dataclass(kw_only=True)
+class IndexedArray:
+	arr: ATensor
+	idxs: ATensor
+
+	def get_len(self, idx: int) -> int:
+		return self.idxs[idx+1] - self.idxs[idx]
+
+	@classmethod
+	def from_sequences(cls, data: list[ATensor[("tokens")]]) -> "IndexedArray":
+		"""process many sequences into a single array, keeping track of sequence start indices
+		
+		example:
+		f( [[a,b,c], [d,e]] ) -> IndexedArray(
+			arr = [a,b,c,d,e],
+			idxs = [0,3],
+		)
+		"""
+		arr: ATensor = torch.cat(data)
+		idxs: ATensor = torch.cumsum( torch.tensor([ 0, *map(len, data) ]), dim = 0 )[:-1]
+		return cls(arr=arr, idxs=idxs)
+
+
 class MazeDataset(Dataset):
 	"""maze dataset"""
 
 	def __init__(
-			self, 
+			self,
 			cfg: MazeDatasetConfig, 
 			mazes_objs: list[SolvedMaze]|None = None,
 			mazes_tokens: list[list[str]]|None = None,
-			mazes_tokenized: list[NDArray[("sequence", "tokens")]]|None = None,
+			# mazes_tokenized: list[NDArray[("sequence", "tokens")]]|None = None,
+			mazes_array: IndexedArray|None = None,
 			paths: dict[str, str] = None,
 		) -> None:
 		super().__init__()
@@ -211,29 +217,29 @@ class MazeDataset(Dataset):
 		# get mode
 		if sum(
 			1 if x is None else 0  
-			for x in [mazes_objs, mazes_tokens, mazes_tokenized]
+			for x in [mazes_objs, mazes_tokens, mazes_array]
 		) < 1:
 			raise ValueError("at least one of mazes_objs, mazes_tokens, mazes_tokenized must be provided to MazeDataset")
 
 		# transfer
 		self.mazes_objs: list[SolvedMaze]|None = mazes_objs
 		self.mazes_tokens: list[list[str]]|None = mazes_tokens
-		self.mazes_tokenized: list[NDArray[("sequence", "tokens")]]|None = mazes_tokenized
+		# self.mazes_tokenized: list[NDArray[("sequence", "tokens")]]|None = mazes_tokenized
+		self.mazes_array: IndexedArray|None = mazes_array
 
 		# process into tokens
 		# TODO: parallelize this
 		if (self.mazes_objs is not None) and (self.mazes_tokens is None):
 			self.mazes_tokens = [ m.as_tokens(cfg.node_token_map) for m in self.mazes_objs ]
 
-		# process tokens into tensors
-		# TODO: parallelize this
-		if (self.mazes_tokens is not None) and (mazes_tokenized is None):
+		# process tokens into tokenized
+		if (self.mazes_tokens is not None) and (mazes_array is None):
 			max_len: int = max(len(t) for t in self.mazes_tokens)
 			if max_len > cfg.seq_len_max:
 				raise ValueError(f"{max_len=} exceeds {cfg.seq_len_max=}")
 			
-			self.mazes_tokenized = np.array([
-				cfg.tokenize_seq(m, pad_len = cfg.seq_len_max)
+			self.mazes_array = IndexedArray.from_sequences([
+				cfg.tokenize_seq(m)
 				for m in self.mazes_tokens
 			])
 
@@ -245,16 +251,24 @@ class MazeDataset(Dataset):
 			if len(self.mazes_objs) != len(self.mazes_tokens):
 				raise ValueError(f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokens) = }")
 		
-		if self.mazes_objs is not None and self.mazes_tokenized is not None:
-			if len(self.mazes_objs) != len(self.mazes_tokenized):
-				raise ValueError(f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokenized) = }")
+		if self.mazes_objs is not None and self.mazes_array.idxs is not None:
+			if len(self.mazes_objs) != len(self.mazes_array.idxs):
+				raise ValueError(f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_array.idxs) = }")
 
-		if self.mazes_tokens is not None and self.mazes_tokenized is not None:
-			if len(self.mazes_tokens) != len(self.mazes_tokenized):
-				raise ValueError(f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_tokenized) = }")
+		if self.mazes_tokens is not None and self.mazes_array.idxs is not None:
+			if len(self.mazes_tokens) != len(self.mazes_array.idxs):
+				raise ValueError(f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_array.idxs) = }")
 
-	def __getitem__(self, idx: int) -> NDArray[("tokens")]:
-		return self.mazes_tokenized[idx]
+	def __getitem__(self, idx: int) -> ATensor[("tokens")]:
+		"""index into mazes_array.arr, getting up to the next sequence start, padding if necessary"""
+		# last element in mazes_array.idxs whose value is smaller than `idx`
+		sequence_idx: int = torch.searchsorted(self.mazes_array.idxs, idx) - 1
+		# slice the array from the start of the sequence to `idx`, including `idx`
+		subseq: ATensor = self.mazes_array.arr[ self.mazes_array.idxs[sequence_idx] : idx+1 ]
+		# left-pad the sequence
+		return torch.nn.functional.pad(subseq, (self.cfg.seq_len_max - len(subseq), 0), value=self.cfg.pad_token)
+
+
 
 	@classmethod
 	def gen_default(
@@ -306,7 +320,7 @@ class MazeDataset(Dataset):
 		cfg: str = "cfg.json"
 		obj: str = "maze_obj.jsonl"
 		tokens: str = "maze_tokens.jsonl"
-		tokenized: str = "maze_tokenized.npy"
+		tokenized: str = "maze_tokenized.npz"
 
 	def disk_save(
 			self, 
@@ -337,7 +351,13 @@ class MazeDataset(Dataset):
 
 		if do_tokenized:
 			# save tokenized data as npz
-			np.save(f"{path_base}/{self.DISK_SAVE_FILES.tokenized}", self.mazes_tokenized)
+			np.savez(
+				f"{path_base}/{self.DISK_SAVE_FILES.tokenized}",
+				**dict(
+					arr=self.mazes_array.arr.cpu().numpy(),
+					idxs=self.mazes_array.idxs.cpu().numpy(),
+				),
+			)
 
 	@classmethod
 	def disk_load(
@@ -368,17 +388,27 @@ class MazeDataset(Dataset):
 					for x in f.readlines()
 				]
 		
-		mazes_tokenized: NDArray|None = None
+		loaded_dict: dict|None = None
 		if do_tokenized:
 			# load tokenized data from npz
-			mazes_tokenized = np.load(f"{path_base}/{cls.DISK_SAVE_FILES.tokenized}")
+			loaded_dict = np.load(
+				f"{path_base}/{cls.DISK_SAVE_FILES.tokenized}",
+				allow_pickle=False,
+			)
+
+			assert "arr" in loaded_dict
+			assert "idxs" in loaded_dict			
 
 		return cls(
 			cfg = cfg,
 			mazes_objs = mazes_objs,
 			mazes_tokens = mazes_tokens,
-			mazes_tokenized = mazes_tokenized,
+			mazes_array = None if loaded_dict is None else IndexedArray(
+				arr=torch.from_numpy(loaded_dict["arr"]),
+				idxs=torch.from_numpy(loaded_dict["idxs"]),
+			),
 		)
+
 
 
 
