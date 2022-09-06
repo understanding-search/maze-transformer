@@ -31,11 +31,14 @@ def generate_solvedmaze(
 
 
 def create(
-		path_base: str = "data/test-001/data",
-		n_mazes: int = 64,
+		path_base: str,
+		n_mazes: int,
 		grid_n: int = 16,
 		**cfg_kwargs,
 	):
+
+	if os.path.exists(path_base):
+		raise FileExistsError(f"path {path_base} already exists!")
 
 	# create config
 	cfg: MazeDatasetConfig = MazeDatasetConfig(

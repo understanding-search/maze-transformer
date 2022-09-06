@@ -17,6 +17,7 @@ from tqdm import tqdm
 from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP, lpad_array
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory, dataclass_loader_factory, try_catch, JSONitem
 from muutils.misc import freeze
+from muutils.statcounter import StatCounter
 
 from maze_transformer.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray
 from maze_transformer.generators import LatticeMazeGenerators, GENERATORS_MAP
@@ -86,7 +87,7 @@ class DatasetConfig:
 	)
 	dtype: torch.dtype|np.dtype = field(default_factory=lambda : torch.int16)
 	seq_len_min: int = 1
-	seq_len_max: int = 2048
+	seq_len_max: int = 256
 
 	
 	@cached_property
@@ -158,6 +159,10 @@ class MazeDatasetConfig(DatasetConfig):
 			*list(self.node_token_map.values()),
 		]
 
+	@property
+	def n_tokens(self) -> int:
+		return len(self.token_arr)
+
 	@cached_property
 	def padding_token_idx(self) -> str:
 		return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
@@ -182,6 +187,7 @@ class MazeDatasetConfig(DatasetConfig):
 			maze_ctor = maze_ctor,
 			device = str(self.device),
 			dtype = str(self.dtype),
+			n_tokens = self.n_tokens,
 			node_token_map = json_serialize(self.node_token_map),
 			token_arr = json_serialize(self.token_arr),
 			tokenizer_map = json_serialize(self.tokenizer_map),
@@ -204,6 +210,8 @@ class MazeDatasetConfig(DatasetConfig):
 		assert output.tokenizer_map == data["tokenizer_map"]
 
 		assert output.maze_ctor.__name__ == data["maze_ctor"]["__name__"]
+
+		assert output.n_tokens == data["n_tokens"]
 		
 		if hash(inspect.getsource(output.maze_ctor)) != data["maze_ctor"]["code_hash"]:
 			print(f"WARNING: code hash mismatch for maze_ctor {output.maze_ctor.__name__}", file=sys.stderr)
@@ -225,6 +233,12 @@ class IndexedArray:
 
 	def get_len(self, idx: int) -> int:
 		return self.idxs[idx+1] - self.idxs[idx]
+
+	def get_all_lengths(self) -> ATensor:
+		return torch.cat([
+			self.idxs[1:] - self.idxs[:-1],
+			torch.tensor([self.arr.shape[0] - self.idxs[-1]], dtype=self.idxs.dtype, device=self.idxs.device),
+		])
 
 	@classmethod
 	def from_sequences(cls, data: list[ATensor[("tokens")]]) -> "IndexedArray":
@@ -288,7 +302,6 @@ class MazeDataset(Dataset):
 				))
 
 		# process tokens into tokenized
-		print(f"tensorifying mazes...")
 		if (self.mazes_tokens is not None) and (mazes_array is None):
 			max_len: int = max(len(t) for t in self.mazes_tokens)
 			if max_len > cfg.seq_len_max:
@@ -322,9 +335,13 @@ class MazeDataset(Dataset):
 		# last element in mazes_array.idxs whose value is smaller than `idx`
 		sequence_idx: int = torch.searchsorted(self.mazes_array.idxs, idx) - 1
 		# slice the array from the start of the sequence to `idx`, including `idx`
-		subseq: ATensor = self.mazes_array.arr[ self.mazes_array.idxs[sequence_idx] : idx+1 ]
+		end_arr_idx: int = min(
+			idx + 1, # up to end of sequence
+			self.mazes_array.idxs[sequence_idx] + self.cfg.seq_len_max, # up to sequence length cutoff
+		)
+		subseq: ATensor = self.mazes_array.arr[ self.mazes_array.idxs[sequence_idx] : end_arr_idx ]
 		# left-pad the sequence
-		return torch.nn.functional.pad(subseq, (self.cfg.seq_len_max - len(subseq), 0), value=self.cfg.padding_token_idx)
+		return torch.nn.functional.pad(subseq, (self.cfg.seq_len_max + 1 - len(subseq), 0), value=self.cfg.padding_token_idx)
 
 	def __len__(self) -> int:
 		return len(self.mazes_array.arr)
@@ -393,12 +410,18 @@ class MazeDataset(Dataset):
 
 		# make the appropriate directories
 		print(f"saving to '{path_base}'")
-		os.makedirs(path_base, exist_ok = True)
+		os.makedirs(path_base, exist_ok = False)
 
 		if do_config:
-			# save config as json
+			# save config as json, with metadata
+			config_out: dict[str, JSONitem] = {
+				**json_serialize(self.cfg),
+				"_postgen_meta": {
+					"seq_len_stats": StatCounter(self.mazes_array.get_all_lengths().tolist()).summary(),
+				}
+			}
 			with open(f"{path_base}/{self.DISK_SAVE_FILES.cfg}", "w") as f:
-				json.dump(json_serialize(self.cfg), f, indent="\t")
+				json.dump(config_out, f, indent="\t")
 
 		if do_obj:
 			raise NotImplementedError("do_obj not implemented")
