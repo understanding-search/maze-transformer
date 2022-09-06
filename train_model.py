@@ -20,9 +20,9 @@ TokenizerFunction = Callable[[list[str]], list[int]]
 @dataclass(frozen=True, kw_only=True)
 class BaseGPTConfig:
 	"""gpt model config without vocab size, context size, or padding token"""
-	n_embed: int = 256
-	n_layer: int = 16
-	n_head: int = 8
+	n_embed: int = 64
+	n_layer: int = 4
+	n_head: int = 2
 	_kwargs: dict = field(default_factory=dict)
 
 	def as_dict(self) -> dict:
@@ -220,6 +220,8 @@ def train(
 		**train_cfg.optimizer_kwargs,
 	)
 	logger.log_elapsed_last()
+	n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+	logger.log(f"model trainable parameters: {n_params = }", 20)
 
 	# train the model
 	# ==================================================

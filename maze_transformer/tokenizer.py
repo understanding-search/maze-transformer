@@ -121,7 +121,7 @@ class DatasetConfig:
 		return torch.tensor(
 			[ self.tokenizer_map[t] for t in seq ], 
 			dtype=self.dtype,
-			device=self.device,
+			device="cpu",
 		)
 
 	def serialize(self) -> dict:
@@ -464,8 +464,8 @@ class MazeDataset(Dataset):
 			mazes_objs = mazes_objs,
 			mazes_tokens = mazes_tokens,
 			mazes_array = None if loaded_dict is None else IndexedArray(
-				arr=torch.from_numpy(loaded_dict["arr"]),
-				idxs=torch.from_numpy(loaded_dict["idxs"]),
+				arr=torch.tensor(loaded_dict["arr"], device="cpu"),
+				idxs=torch.tensor(loaded_dict["idxs"], device="cpu"),
 			),
 		)
 
