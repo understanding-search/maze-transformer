@@ -75,7 +75,7 @@ class SolvedMaze:
 		return tokens
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(kw_only=True)
 class DatasetConfig:
 	"""base config class"""
 	name: str = "DatasetConfig_default"
@@ -130,7 +130,7 @@ class DatasetConfig:
 		raise NotImplementedError()
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(kw_only=True)
 class MazeDatasetConfig(DatasetConfig):
 	"""maze dataset configuration, including tokenizers"""
 	grid_n: int
@@ -302,14 +302,17 @@ class MazeDataset(Dataset):
 
 	def __getitem__(self, idx: int) -> ATensor[("tokens")]:
 		"""index into mazes_array.arr, getting up to the next sequence start, padding if necessary"""
+		# TODO: handling of minimum sequence length
+
 		# last element in mazes_array.idxs whose value is smaller than `idx`
 		sequence_idx: int = torch.searchsorted(self.mazes_array.idxs, idx) - 1
 		# slice the array from the start of the sequence to `idx`, including `idx`
 		subseq: ATensor = self.mazes_array.arr[ self.mazes_array.idxs[sequence_idx] : idx+1 ]
 		# left-pad the sequence
-		return torch.nn.functional.pad(subseq, (self.cfg.seq_len_max - len(subseq), 0), value=self.cfg.pad_token)
+		return torch.nn.functional.pad(subseq, (self.cfg.seq_len_max - len(subseq), 0), value=self.cfg.padding_token_idx)
 
-
+	def __len__(self) -> int:
+		return len(self.mazes_array.arr)
 
 	@classmethod
 	def gen_default(
@@ -453,7 +456,7 @@ class MazeDataset(Dataset):
 
 
 
-
+MazeDatasetConfig._dataset_class = MazeDataset
 			
 
 

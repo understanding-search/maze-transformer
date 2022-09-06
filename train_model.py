@@ -13,37 +13,37 @@ from muutils.logger import Logger, TimerContext
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory
 from muutils.misc import sanitize_fname
 
-from maze_transformer.tokenizer import DatasetConfig
+from maze_transformer.tokenizer import DatasetConfig, MazeDataset, MazeDatasetConfig
 
 TokenizerFunction = Callable[[list[str]], list[int]]
 
 @dataclass(frozen=True, kw_only=True)
 class BaseGPTConfig:
 	"""gpt model config without vocab size, context size, or padding token"""
-	n_embed: int = 128
-	n_layer: int = 4
-	n_head: int = 4
+	n_embed: int = 256
+	n_layer: int = 16
+	n_head: int = 8
 	_kwargs: dict = field(default_factory=dict)
 
 	def as_dict(self) -> dict:
 		return dict(
 			**{
-				k: v 
+				k: getattr(self, k)
 				for k, v in self.__dataclass_fields__.items() 
 				if k != "_kwargs"
 			},
 			**self._kwargs,
 		)
 
+	def serialize(self) -> str:
+		return self.as_dict()
+
 @dataclass(kw_only=True)
 class TrainConfig:
 	"""full training configuration"""
 	name: str
-	jsonl_path: Annotated[Path, "jsonl file to read for training data"]
-	jsonl_tokenized: Annotated[bool, "whether the jsonl data is already tokenized"] = True
-	tokenizer: Annotated[TokenizerFunction|None, "if jsonl is not yet tokenized, provide a tokenizing function"] = None
 
-	base_config: BaseGPTConfig = field(default_factory=BaseGPTConfig)
+	base_gpt_cfg: BaseGPTConfig
 	# wandb_proj: str|None = None
 	device: Annotated[torch.device, "device to use for training"] = torch.device(
 		"cuda" if torch.cuda.is_available() else "cpu"
@@ -71,25 +71,26 @@ class TrainConfig:
 	checkpoint_interval_sequences: int = 100000
 
 	# n_ctx: int = property(lambda self: self.model_config.n_ctx)
+	_gpt_config_ctor_kwargs: dict = field(default_factory=dict)
 	
 	def get_gpt_config(
 			self, 
 			**kwargs,
 		) -> OpenAIGPTConfig:
 
-		return OpenAIGPTConfig(
-			**dict(
-				**self.base_config.as_dict(),
-				**kwargs,
-			)
+		self._gpt_config_ctor_kwargs = dict(
+			**self.base_gpt_cfg.as_dict(),
+			**kwargs,
 		)
+
+		return OpenAIGPTConfig(**self._gpt_config_ctor_kwargs)
 
 TrainConfig.serialize = dataclass_serializer_factory(
 	TrainConfig,
 	special_serializers=dict(
-		gpt_config = lambda self: json_serialize(self.gpt_config().to_dict()),
+		# gpt_config = lambda self: json_serialize(self.get_gpt_config().to_dict()),
 		_optimizer_name = lambda self: self.optimizer.__name__,
-		base_config = lambda self: self.base_config.as_dict,
+		base_gpt_cfg = lambda self: self.base_gpt_cfg.as_dict,
 	),
 	fields_exclude=["optimizer"],
 )
@@ -134,13 +135,15 @@ def setup_train(
 
 	# set up the training config
 	model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(
-		**data_cfg.gpt_config_kwargs,
+		**dict(data_cfg.gpt_config_kwargs),
+		device = train_cfg.device,
 	)
 
 	logger.log("loaded data config, initialized logger")
 	logger.log_config(dict(data_cfg = json_serialize(data_cfg)))
 	logger.log_config(dict(train_cfg = json_serialize(train_cfg)))
-	logger.log_config(dict(model_cfg = json_serialize(model_cfg)))
+	logger.log_config(dict(base_model_cfg = json_serialize(train_cfg._gpt_config_ctor_kwargs)))
+	# logger.log_config(dict(model_cfg = json_serialize(model_cfg)))
 	logger.log_config(dict(logger_cfg =
 		{
 			"data_cfg.name": data_cfg.name,
@@ -189,8 +192,9 @@ def train(
 	logger.log("load, process, and batch")
 	# ==================================================
 	logger.log("loading Dataset", 10)
-	dataset: data_cfg_class = data_cfg_class.disk_load(
+	dataset: data_cfg_class = MazeDatasetConfig._dataset_class.disk_load(
 		path_base = basepath,
+		do_config = True,
 		do_tokenized = True,
 	)
 
@@ -211,7 +215,10 @@ def train(
 	model: OpenAIGPTLMHeadModel = OpenAIGPTLMHeadModel(model_cfg).to(model_cfg.device)
 	logger.log_elapsed_last()
 	logger.log("initializing optimizer", 10)
-	optimizer: torch.optim.Optimizer = model_cfg.optimizer(model.parameters(), **model_cfg.optimizer_kwargs)
+	optimizer: torch.optim.Optimizer = train_cfg.optimizer(
+		model.parameters(), 
+		**train_cfg.optimizer_kwargs,
+	)
 	logger.log_elapsed_last()
 
 	# train the model
@@ -223,15 +230,15 @@ def train(
 	logger.log("starting training")
 	n_batches: int = len(dataloader)
 	logger.log({"n_batches": n_batches}, 10)
-	print_every_iter: int = n_batches // cfg.n_prints_thru_training
+	print_every_iter: int = n_batches // train_cfg.n_prints_thru_training
 
-	for iteration, (batch, labels) in enumerate(dataloader):
+	for iteration, batch in enumerate(dataloader):
 
 		# compute loss
 		with TimerContext() as timer_loss:
 			output = model(
-				batch,
-				labels=labels,
+				batch[:, :-1].to(model_cfg.device).type(dtype=torch.int),
+				labels=batch[:, 1:].to(model_cfg.device).type(dtype=torch.int),
 				# with_backward=True, 
 				# keep_outputs=False,
 			)
@@ -270,7 +277,23 @@ def train(
 	torch.save(model.state_dict(), basepath_train / "model.pt")
 
 
+def main(basepath: str):
+	train_cfg = TrainConfig(
+		name = "test",
+		base_gpt_cfg = BaseGPTConfig(),
+	)
+
+
+	train(
+		basepath = Path(basepath),
+		train_cfg = train_cfg,
+		dataset_class = MazeDataset,
+		data_cfg_class=MazeDatasetConfig,
+		data_cfg_fname="cfg.json",
+	)
+
+
 if __name__ == "__main__":
 	import fire
-	fire.Fire(train)
+	fire.Fire(main)
 
