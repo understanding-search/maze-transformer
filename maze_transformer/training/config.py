@@ -17,8 +17,6 @@ from muutils.misc import sanitize_fname
 from muutils.tensor_utils import ATensor
 from muutils.statcounter import StatCounter
 
-from maze_transformer.training.dataset import DatasetConfig
-
 
 TokenizerFunction = Callable[[list[str]], list[int]]
 
@@ -136,7 +134,7 @@ GPT_CONFIGS: dict[str, BaseGPTConfig] = {
 }
 
 
-_TRAINING_CONFIG_LIST: list[
+_TRAINING_CONFIG_LIST: list[TrainConfig] = [
 	TrainConfig(
 		name = "tiny-v1",
 		base_gpt_cfg = GPT_CONFIGS["tiny-v1"],

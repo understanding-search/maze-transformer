@@ -43,6 +43,7 @@ def create(
 		raise FileExistsError(f"path {path_base} already exists!")
 
 	# create config
+	# TODO: figure out unexpected keyword argument linter error here?
 	cfg: MazeDatasetConfig = MazeDatasetConfig(
 		grid_n = grid_n,
 		n_mazes = n_mazes,

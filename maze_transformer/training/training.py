@@ -17,12 +17,12 @@ from muutils.misc import sanitize_fname, freeze
 from muutils.tensor_utils import ATensor
 from muutils.statcounter import StatCounter
 
-from maze_transformer.training.dataset import DatasetConfig
+from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.config import BaseGPTConfig, TrainConfig
 
 
 TrainingSetup = NamedTuple("TrainingSetup", [
-	("data_cfg", DatasetConfig),
+	("data_cfg", GPTDatasetConfig),
 	("train_cfg", TrainConfig),
 	("model_cfg", OpenAIGPTConfig),
 	("logger", Logger),
@@ -35,7 +35,7 @@ class TRAIN_SAVE_FILES:
 	"""namespace for filenames/formats for saving training data"""
 	cfg: str = "train_config.json"
 	log: str = "log.jsonl"
-	train_dir_format: Callable[[DatasetConfig, TrainConfig], str] = (
+	train_dir_format: Callable[[GPTDatasetConfig, TrainConfig], str] = (
 		lambda d_cfg, t_cfg: 
 		f"{sanitize_fname(d_cfg.name)}_{sanitize_fname(t_cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
 	)
@@ -44,10 +44,10 @@ class TRAIN_SAVE_FILES:
 def setup_train(
 		basepath: Path, 
 		train_cfg: TrainConfig,
-		data_cfg_class: type = DatasetConfig,
+		data_cfg_class: type = GPTDatasetConfig,
 		data_cfg_fname: str = "cfg.json",
 		**cfg_kwargs,
-	) -> tuple[DatasetConfig, Logger, Path]:
+	) -> tuple[GPTDatasetConfig, Logger, Path]:
 	"""setup for training (configs, logger, directories)
 	
 	- loads the dataset configuration from the given `basepath`
@@ -60,7 +60,7 @@ def setup_train(
 	"""
 
 	basepath = Path(basepath)
-	data_cfg_name: str = data_cfg_class.config_save_name()
+	data_cfg_name: str = data_cfg_class._dataset_class.config_save_name()
 
 	# load the dataset config
 	data_cfg_path: Path = Path(basepath) / data_cfg_fname
@@ -126,7 +126,7 @@ def setup_train(
 def train(
 	basepath: Path, 
 	train_cfg: TrainConfig,
-	data_cfg_class: type = DatasetConfig,
+	data_cfg_class: type = GPTDatasetConfig,
 	**cfg_kwargs,
 ) -> None:
 	
@@ -138,7 +138,7 @@ def train(
 		data_cfg_class=data_cfg_class,
 		**cfg_kwargs,
 	)
-	data_cfg: DatasetConfig = training_setup.data_cfg
+	data_cfg: GPTDatasetConfig = training_setup.data_cfg
 	model_cfg: OpenAIGPTConfig = training_setup.model_cfg
 	logger: Logger = training_setup.logger
 	basepath_train: Path = training_setup.basepath_train
