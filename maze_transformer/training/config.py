@@ -104,7 +104,7 @@ TrainConfig.serialize = dataclass_serializer_factory(
 	special_serializers=dict(
 		# gpt_config = lambda self: json_serialize(self.get_gpt_config().to_dict()),
 		_optimizer_name = lambda self: self.optimizer.__name__,
-		base_gpt_cfg = lambda self: self.base_gpt_cfg.as_dict,
+		base_gpt_cfg = lambda self: self.base_gpt_cfg.as_dict(),
 	),
 	fields_exclude=["optimizer"],
 )
@@ -148,7 +148,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
 			drop_last = True,
 		),
 		print_loss_interval = 1000,
-		checkpoint_interval = 50000,
+		checkpoint_interval = 5000,
 		seq_len_max = 90,
 	)
 ]

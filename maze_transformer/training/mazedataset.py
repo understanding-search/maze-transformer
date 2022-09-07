@@ -74,6 +74,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
 			maze_ctor["__exception__"] = str(e)
 
 		return dict(
+			name = self.name,
 			grid_n = self.grid_n,
 			n_mazes = self.n_mazes,
 			grid_shape = self.grid_shape,
@@ -89,6 +90,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
 	@classmethod
 	def load(cls, data: JSONitem) -> "MazeDatasetConfig":
 		output = cls(
+			name = data["name"],
 			grid_n = data["grid_n"],
 			n_mazes = data["n_mazes"],
 			maze_ctor = GENERATORS_MAP[data["maze_ctor"]["__name__"]],
@@ -190,7 +192,7 @@ class MazeDataset(GPTDataset):
 				raise ValueError(f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_array.idxs) = }")
 
 	def __getitem__(self, idx: int) -> ATensor[("tokens")]:
-		"""index into mazes_array.arr, getting up to the next sequence start, padding if necessary"""
+		"""index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
 		# TODO: handling of minimum sequence length
 
 		# last element in mazes_array.idxs whose value is smaller than `idx`

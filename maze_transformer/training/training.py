@@ -90,14 +90,18 @@ def setup_train(
 	)
 
 	# set up the training config
-	model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(
+	model_cfg_inputs: dict = dict(
 		**dict(data_cfg.gpt_config_kwargs),
 		device = train_cfg.device,
+	)
+	model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(
+		**model_cfg_inputs,
 	)
 
 	logger.log("loaded data config, initialized logger")
 	logger.log_config(dict(data_cfg = json_serialize(data_cfg)))
 	logger.log_config(dict(train_cfg = json_serialize(train_cfg)))
+	logger.log_config(dict(model_cfg_inputs = json_serialize(model_cfg_inputs)))
 	logger.log_config(dict(base_model_cfg = json_serialize(train_cfg._gpt_config_ctor_kwargs))) # pylint: disable=protected-access
 	# logger.log_config(dict(model_cfg = json_serialize(model_cfg)))
 	logger.log_config(dict(logger_cfg =
@@ -154,7 +158,11 @@ def train(
 		do_config = True,
 		do_tokenized = True,
 	)
-	# TODO: check equality between `data_cfg` and `dataset.config`
+	# TODO: check (near?) equality between `data_cfg` and `dataset.config` 
+	# ensure the override of the sequence length is applied
+	# TODO: this is hacky
+	dataset.cfg = data_cfg
+
 	logger.log_elapsed_last()
 	logger.mem_usage()
 	length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
