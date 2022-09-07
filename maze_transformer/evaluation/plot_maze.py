@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP
 
-from maze_transformer.latticemaze import LatticeMaze
+from maze_transformer.generation.latticemaze import LatticeMaze
 
 def plot_path(maze: LatticeMaze, path: NDArray, show: bool = True) -> None:
 	# print(m)

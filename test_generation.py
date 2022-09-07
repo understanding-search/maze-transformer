@@ -7,9 +7,9 @@ from torch.utils.data import Dataset, DataLoader
 from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP
 
 
-from maze_transformer.latticemaze import LatticeMaze
-from maze_transformer.generators import LatticeMazeGenerators
-from maze_transformer.plot import plot_path
+from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.generators import LatticeMazeGenerators
+from maze_transformer.evaluation.plot_maze import plot_path
 
 	
 def generate_solve_plot(shape_x: int = 5, shape_y: int|None = None):

@@ -6,7 +6,7 @@ import numpy as np
 from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory, dataclass_loader_factory, try_catch, JSONitem
 
-from maze_transformer.latticemaze import LatticeMaze, Coord, CoordArray, CoordTup, NEIGHBORS_MASK
+from maze_transformer.generation.latticemaze import LatticeMaze, Coord, CoordArray, CoordTup, NEIGHBORS_MASK
 
 class LatticeMazeGenerators:
 	"""namespace for lattice maze generation algorithms"""

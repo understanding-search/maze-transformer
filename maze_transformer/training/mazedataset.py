@@ -1,3 +1,4 @@
+
 import json
 import os
 from pathlib import Path
@@ -19,118 +20,10 @@ from muutils.json_serialize import json_serialize, dataclass_serializer_factory,
 from muutils.misc import freeze
 from muutils.statcounter import StatCounter
 
-from maze_transformer.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray
-from maze_transformer.generators import LatticeMazeGenerators, GENERATORS_MAP
-
-# pylint: disable=unused-import
-
-SPECIAL_TOKENS: dict[str, str] = dict(
-	adjlist_start = "<ADJLIST_START>",
-	adjlist_end = "<ADJLIST_END>",
-	target_start = "<TARGET_START>",
-	target_end = "<TARGET_END>",
-	start_path = "<START_PATH>",
-	end_path = "<END_PATH>",
-	connector = "<-->",
-	adjacency_endline = ";",
-	padding = "<PADDING>",
-)
-
-
-@dataclass(frozen=True, kw_only=True)
-class SolvedMaze:
-	"""solved maze for serialization"""
-	maze: LatticeMaze
-	solution: CoordArray
-	metadata: dict = field(default_factory=dict)
-	
-	pos_start = property(lambda self: self.solution[0])
-	pos_end = property(lambda self: self.solution[-1])
-
-	def as_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
-		"""serialize maze and solution to tokens"""
-		tokens: list[str] = [
-			# give adjacency list
-			SPECIAL_TOKENS["adjlist_start"],
-			*chain.from_iterable([
-				[
-					node_token_map[tuple(c_s.tolist())], 
-					SPECIAL_TOKENS["connector"], 
-					node_token_map[tuple(c_e.tolist())], 
-					SPECIAL_TOKENS["adjacency_endline"],
-				]
-				for c_s, c_e in self.maze.as_adjlist()
-			]),
-			SPECIAL_TOKENS["adjlist_end"],
-			# give target
-			SPECIAL_TOKENS["target_start"],
-			node_token_map[tuple(self.pos_end)],
-			SPECIAL_TOKENS["target_end"],
-			# give path
-			SPECIAL_TOKENS["start_path"],
-			*[ 
-				node_token_map[tuple(c.tolist())] 
-				for c in self.solution
-			],
-			SPECIAL_TOKENS["end_path"],
-		]
-
-		return tokens
-
-
-@dataclass(kw_only=True)
-class DatasetConfig:
-	"""base config class"""
-	name: str = "DatasetConfig_default"
-	device: torch.device = field(
-		default_factory = lambda: torch.device("cuda" if torch.cuda.is_available() else "cpu")
-	)
-	dtype: torch.dtype|np.dtype = field(default_factory=lambda : torch.int16)
-	seq_len_min: int = 1
-	seq_len_max: int = 512
-
-	
-	@cached_property
-	def token_arr(self) -> list[str]:
-		raise NotImplementedError()
-
-	@cached_property
-	def padding_token_idx(self) -> str:
-		raise NotImplementedError()
-
-	@cached_property
-	def tokenizer_map(self) -> dict[str, int]:
-		"""map from token to index"""
-		return {
-			t: i
-			for i, t in enumerate(self.token_arr)
-		}
-
-	@cached_property
-	def gpt_config_kwargs(self) -> dict:
-		"""gpt model config with vocab size, context size, and padding token"""
-		return dict(
-			vocab_size = len(self.token_arr),
-			n_positions = self.seq_len_max,
-			pad_token_id = self.padding_token_idx, # The id of the _padding_ token.
-			bos_token_id = self.padding_token_idx, # The id of the _beginning-of-stream_ token.
-			eos_token_id = self.padding_token_idx, # The id of the _end-of-stream_ token.
-		)
-
-	def tokenize_seq(self, seq: list[str]) -> ATensor:
-		"""tokenize sequence"""
-		return torch.tensor(
-			[ self.tokenizer_map[t] for t in seq ], 
-			dtype=self.dtype,
-			device="cpu",
-		)
-
-	def serialize(self) -> dict:
-		raise NotImplementedError()
-
-	@classmethod
-	def load(cls, data: dict) -> "DatasetConfig":
-		raise NotImplementedError()
+from maze_transformer.generation.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray
+from maze_transformer.generation.generators import LatticeMazeGenerators, GENERATORS_MAP
+from maze_transformer.training.tokenizer import SPECIAL_TOKENS, SolvedMaze
+from maze_transformer.training.dataset import DatasetConfig, IndexedArray
 
 
 @dataclass(kw_only=True)
@@ -221,38 +114,6 @@ class MazeDatasetConfig(DatasetConfig):
 
 		return output
 
-
-
-@dataclass(kw_only=True)
-class IndexedArray:
-	"""join a list of arrays into a single big one with indices
-	
-	mainly for allowing __getitem__ to work nice for datasets"""
-	arr: ATensor
-	idxs: ATensor
-
-	def get_len(self, idx: int) -> int:
-		return self.idxs[idx+1] - self.idxs[idx]
-
-	def get_all_lengths(self) -> ATensor:
-		return torch.cat([
-			self.idxs[1:] - self.idxs[:-1],
-			torch.tensor([self.arr.shape[0] - self.idxs[-1]], dtype=self.idxs.dtype, device=self.idxs.device),
-		])
-
-	@classmethod
-	def from_sequences(cls, data: list[ATensor[("tokens")]]) -> "IndexedArray":
-		"""process many sequences into a single array, keeping track of sequence start indices
-		
-		example:
-		f( [[a,b,c], [d,e]] ) -> IndexedArray(
-			arr = [a,b,c,d,e],
-			idxs = [0,3],
-		)
-		"""
-		arr: ATensor = torch.cat(data)
-		idxs: ATensor = torch.cumsum( torch.tensor([ 0, *map(len, data) ]), dim = 0 )[:-1]
-		return cls(arr=arr, idxs=idxs)
 
 def maze_to_tokens(maze: SolvedMaze, node_token_map: dict[CoordTup, str]) -> list[str]:
 	"""convert a maze into a list of tokens"""
@@ -496,12 +357,3 @@ class MazeDataset(Dataset):
 
 MazeDatasetConfig._dataset_class = MazeDataset
 			
-
-
-
-
-
-
-
-
-
