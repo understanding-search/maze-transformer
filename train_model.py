@@ -58,7 +58,7 @@ class TrainConfig:
 	epochs: int = 1
 	optimizer: torch.optim.Optimizer = torch.optim.RMSprop
 	optimizer_kwargs: dict[str, Any] = field(
-		default_factory = lambda : dict(lr = 0.00001)
+		default_factory = lambda : dict(lr = 0.000001)
 	)
 	batch_size: int = 128
 
@@ -71,8 +71,8 @@ class TrainConfig:
 		# batch_size = None, # see batchsize in the encompassing TrainConfig
 	))
 
-	print_loss_interval: int = 10000
-	checkpoint_interval: int = 100000
+	print_loss_interval: int = 1000
+	checkpoint_interval: int = 50000
 
 	# n_ctx: int = property(lambda self: self.model_config.n_ctx)
 	_gpt_config_ctor_kwargs: dict = field(default_factory=dict)
@@ -253,6 +253,8 @@ def train(
 	logger.log({"n_batches": n_batches}, 10)
 
 	n_sequences: int
+	print_loss_interval_iters: int = int(train_cfg.print_loss_interval // train_cfg.batch_size)
+	checkpoint_interval_iters: int = int(train_cfg.checkpoint_interval // train_cfg.batch_size)
 	for iteration, batch in enumerate(dataloader):
 
 		# compute loss
@@ -297,13 +299,12 @@ def train(
 			log_data, 
 			lvl=50,
 			console_print = (
-				(n_sequences % train_cfg.print_loss_interval == 0) 
-				or (n_sequences % train_cfg.checkpoint_interval == 0) 
-				or (iteration == 0)
+				(iteration % print_loss_interval_iters == 0) 
+				or (iteration % checkpoint_interval_iters == 0) 
 			),
 		)
 
-		if n_sequences % train_cfg.checkpoint_interval == 0:
+		if iteration % checkpoint_interval_iters == 0:
 			model_save_path: Path = basepath_train / f"model.iter_{iteration}.pt"
 			logger.saving(f"saving model to {model_save_path.as_posix()}", 10)
 			torch.save(model.state_dict(), model_save_path)
