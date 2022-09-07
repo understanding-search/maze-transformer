@@ -26,7 +26,7 @@ from maze_transformer.training.tokenizer import SPECIAL_TOKENS, SolvedMaze
 @dataclass(kw_only=True)
 class GPTDatasetConfig:
 	"""base config class"""
-	name: str = "DatasetConfig_default"
+	name: str
 	device: torch.device = field(
 		default_factory = lambda: torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	)

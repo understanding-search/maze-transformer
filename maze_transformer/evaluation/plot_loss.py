@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from muutils.logger import gather_val
+from muutils.logger import gather_val, gather_stream, get_any_from_stream
 
 def plot_loss(
 		log_path: str, 
-		convolve_windows: int|list[int]|str = [10, 50, 100],
-		raw_loss: bool = False,
+		convolve_windows: int|list[int]|str = (10, 50, 100),
+		raw_loss: bool|str = False,
 	):
 	"""
 	Plot the loss of the model.
@@ -14,6 +14,11 @@ def plot_loss(
 		file = log_path,
 		stream = "train",
 		keys = ("iter", "n_sequences", "loss"),
+	)
+
+	data_config: list[dict] = gather_stream(
+		file = log_path,
+		stream = "log_config",
 	)
 
 	print(f"{len(data_raw) = }")
@@ -38,12 +43,20 @@ def plot_loss(
 	]
 
 	if raw_loss:
-		plt.plot(total_sequences, loss, ',', label = "raw losses")
+		raw_loss_fmt: str = raw_loss if isinstance(raw_loss, str) else ","
+		plt.plot(total_sequences, loss, raw_loss_fmt, label = "raw losses")
 	for cv, loss_rolling in zip(convolve_windows, loss_rolling_arr):
 		plt.plot(total_sequences[cv:1-cv], loss_rolling, "-", label = f"rolling avg $(\\pm {cv})$")
 
 	plt.ylabel('Loss')
 	plt.xlabel('Total sequences')
 	plt.yscale('log')
+	title: str = ';  '.join([
+		f"dataset={get_any_from_stream(data_config, 'data_cfg')['name']}",
+		f"train_config={get_any_from_stream(data_config, 'train_cfg')['name']}",
+		f"lr={get_any_from_stream(data_config, 'train_cfg')['optimizer_kwargs']['lr']}",
+		f"vocab_size={get_any_from_stream(data_config, 'model_cfg_inputs')['vocab_size']}",
+	])
+	plt.title(title)
 	plt.legend()
 	plt.show()

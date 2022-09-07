@@ -35,11 +35,14 @@ class TRAIN_SAVE_FILES:
 	"""namespace for filenames/formats for saving training data"""
 	cfg: str = "train_config.json"
 	log: str = "log.jsonl"
+	checkpoints: str = "checkpoints"
 	train_dir_format: Callable[[GPTDatasetConfig, TrainConfig], str] = (
 		lambda d_cfg, t_cfg: 
 		f"{sanitize_fname(d_cfg.name)}_{sanitize_fname(t_cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
 	)
-	
+	model_checkpt: Callable[[int], str] = lambda iteration: f"model.iter_{iteration}.pt"
+	model_final: str = "model.final.pt"
+
 
 def setup_train(
 		basepath: Path, 
@@ -76,6 +79,7 @@ def setup_train(
 	# set up paths
 	basepath_train: Path = basepath / train_dir
 	os.makedirs(basepath_train, exist_ok = True)
+	os.makedirs(basepath_train / TRAIN_SAVE_FILES.checkpoints, exist_ok = True)
 	with open(basepath_train / TRAIN_SAVE_FILES.cfg, "w") as f:
 		json.dump(json_serialize(data_cfg), f, indent = "\t")
 
@@ -195,7 +199,7 @@ def train(
 	)
 	logger.log_elapsed_last()
 	logger.mem_usage()
-	model_n_params:int = sum(p.numel() for p in model.parameters() if p.requires_grad)
+	model_n_params:int = model.num_parameters()
 	logger.log(dict(model_n_params = model_n_params), 20)
 
 	# train the model
@@ -261,12 +265,18 @@ def train(
 		)
 
 		if iteration % checkpoint_interval_iters == 0:
-			model_save_path: Path = basepath_train / f"model.iter_{iteration}.pt"
+			model_save_path: Path = basepath_train / TRAIN_SAVE_FILES.checkpoints / TRAIN_SAVE_FILES.model_checkpt(iteration)
 			logger.saving(f"saving model to {model_save_path.as_posix()}", 10)
 			torch.save(model.state_dict(), model_save_path)
 			logger.log_elapsed_last(stream="saving")
 
 
-	# save the model
+	# save the final model
 	# ==================================================
-	torch.save(model.state_dict(), basepath_train / "model_final.pt")
+	final_model_path: str = basepath_train / TRAIN_SAVE_FILES.model_final
+	logger.saving(f"saving final model to {final_model_path.as_posix()}", 10)
+	torch.save(model.state_dict(), final_model_path)
+	logger.log_elapsed_last(stream="saving")
+	torch.save(model.state_dict(), )
+
+	logger.log("done!", 10)
