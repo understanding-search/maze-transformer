@@ -87,7 +87,7 @@ class DatasetConfig:
 	)
 	dtype: torch.dtype|np.dtype = field(default_factory=lambda : torch.int16)
 	seq_len_min: int = 1
-	seq_len_max: int = 256
+	seq_len_max: int = 512
 
 	
 	@cached_property

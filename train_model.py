@@ -24,16 +24,16 @@ TokenizerFunction = Callable[[list[str]], list[int]]
 @dataclass(frozen=True, kw_only=True)
 class BaseGPTConfig:
 	"""gpt model config without vocab size, context size, or padding token"""
-	n_embed: int = 64
-	n_layer: int = 4
-	n_head: int = 2
+	n_embed: int = 128
+	n_layer: int = 8
+	n_head: int = 4
 	_kwargs: dict = field(default_factory=dict)
 
 	def as_dict(self) -> dict:
 		return dict(
 			**{
 				k: getattr(self, k)
-				for k, v in self.__dataclass_fields__.items() 
+				for k in self.__dataclass_fields__ 
 				if k != "_kwargs"
 			},
 			**self._kwargs,
@@ -58,21 +58,21 @@ class TrainConfig:
 	epochs: int = 1
 	optimizer: torch.optim.Optimizer = torch.optim.RMSprop
 	optimizer_kwargs: dict[str, Any] = field(
-		default_factory = lambda : dict(lr = 0.0001)
+		default_factory = lambda : dict(lr = 0.00001)
 	)
-	batch_size: int = 16
+	batch_size: int = 128
 
 	dataloader_cfg: dict = field(default_factory = lambda : dict(
 		shuffle = True,
-		num_workers = 2, # make this smaller if you're not running on a big cluster probably
+		num_workers = 16, # make this smaller if you're not running on a big cluster probably
 		persistent_workers = True,
 		drop_last = True,
 		# collate_fn = None, # we pad the tensors in the Dataset object
 		# batch_size = None, # see batchsize in the encompassing TrainConfig
 	))
 
-	n_prints_thru_training: int = 100
-	checkpoint_interval_sequences: int = 100000
+	print_loss_interval: int = 10000
+	checkpoint_interval: int = 100000
 
 	# n_ctx: int = property(lambda self: self.model_config.n_ctx)
 	_gpt_config_ctor_kwargs: dict = field(default_factory=dict)
@@ -251,8 +251,8 @@ def train(
 	logger.log("starting training")
 	n_batches: int = len(dataloader)
 	logger.log({"n_batches": n_batches}, 10)
-	print_every_iter: int = n_batches // train_cfg.n_prints_thru_training
 
+	n_sequences: int
 	for iteration, batch in enumerate(dataloader):
 
 		# compute loss
@@ -270,7 +270,6 @@ def train(
 				# with_backward=True, 
 				# keep_outputs=False,
 			)
-			logger.train("forward pass done")
 			loss = output.loss
 			loss.backward()
 
@@ -278,14 +277,14 @@ def train(
 		with TimerContext() as timer_optim:
 			optimizer.step()
 			optimizer.zero_grad()
-		logger.train("optimizer step done")
 
 		# logging
+		n_sequences = iteration * train_cfg.batch_size
 		log_data: dict[str, Any] = json_serialize({
 			"iter": iteration,
 			"loss": loss,
 			# "train/grad_norm": output.grad_norm,
-			"n_sequences": iteration * train_cfg.batch_size,
+			"n_sequences": n_sequences,
 			"time_current": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
 			"timer_loss": round(timer_loss.elapsed_time, 6),
 			"timer_optim": round(timer_optim.elapsed_time, 6),
@@ -298,13 +297,13 @@ def train(
 			log_data, 
 			lvl=50,
 			console_print = (
-				(iteration % print_every_iter == 0) 
-				or (iteration % train_cfg.checkpoint_interval_sequences == 0) 
+				(n_sequences % train_cfg.print_loss_interval == 0) 
+				or (n_sequences % train_cfg.checkpoint_interval == 0) 
 				or (iteration == 0)
 			),
 		)
 
-		if iteration % train_cfg.checkpoint_interval_sequences == 0:
+		if n_sequences % train_cfg.checkpoint_interval == 0:
 			model_save_path: Path = basepath_train / f"model.iter_{iteration}.pt"
 			logger.saving(f"saving model to {model_save_path.as_posix()}", 10)
 			torch.save(model.state_dict(), model_save_path)

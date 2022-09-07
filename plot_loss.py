@@ -1,7 +1,11 @@
 from muutils.logger import gather_val
 import numpy as np
 
-def plot_loss(log_path: str, convolve_window: int = 50):
+def plot_loss(
+		log_path: str, 
+		convolve_windows: int|list[int]|str = [10, 50, 100],
+		raw_loss: bool = False,
+	):
 	"""
 	Plot the loss of the model.
 	"""
@@ -18,14 +22,31 @@ def plot_loss(log_path: str, convolve_window: int = 50):
 	iteration, total_sequences, loss = zip(*data_raw)
 
 	# compute a rolling average
-	loss_rolling = np.convolve(loss, np.ones(convolve_window * 2)/(convolve_window * 2), mode="valid")
+	if isinstance(convolve_windows, int):
+		convolve_windows = [convolve_windows]
+	elif isinstance(convolve_windows, (list, tuple)):
+		pass
+	elif isinstance(convolve_windows, str):
+		convolve_windows = [int(x) for x in convolve_windows.split(",")]
+	else:
+		raise ValueError(f"{convolve_windows = }")
+
+	loss_rolling_arr: list[np.ndarray] = [
+		np.convolve(loss, np.ones(cv * 2)/(cv * 2), mode="valid")
+		for cv in convolve_windows
+	]
 
 	import matplotlib.pyplot as plt
-	plt.plot(total_sequences, loss, '.')
-	plt.plot(total_sequences[convolve_window:1-convolve_window], loss_rolling, "-")
+
+	if raw_loss:
+		plt.plot(total_sequences, loss, ',', label = "raw losses")
+	for cv, loss_rolling in zip(convolve_windows, loss_rolling_arr):
+		plt.plot(total_sequences[cv:1-cv], loss_rolling, "-", label = f"rolling avg $(\\pm {cv})$")
+
 	plt.ylabel('Loss')
 	plt.xlabel('Total sequences')
 	plt.yscale('log')
+	plt.legend()
 	plt.show()
 
 
