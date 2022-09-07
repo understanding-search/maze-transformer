@@ -263,6 +263,9 @@ class MazeDataset(GPTDataset):
 		tokens: str = "maze_tokens.jsonl"
 		tokenized: str = "maze_tokenized.npz"
 
+	def config_save_name(self) -> str:
+		return self.DISK_SAVE_FILES.cfg
+
 	def disk_save(
 			self, 
 			path_base: str = "data/test-001",

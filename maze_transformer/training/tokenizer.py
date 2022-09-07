@@ -19,8 +19,8 @@ from muutils.json_serialize import json_serialize, dataclass_serializer_factory,
 from muutils.misc import freeze
 from muutils.statcounter import StatCounter
 
-from maze_transformer.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray
-from maze_transformer.generators import LatticeMazeGenerators, GENERATORS_MAP
+from maze_transformer.generation.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray
+from maze_transformer.generation.generators import LatticeMazeGenerators, GENERATORS_MAP
 
 # pylint: disable=unused-import
 

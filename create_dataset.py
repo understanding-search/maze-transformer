@@ -6,9 +6,10 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-from maze_transformer.latticemaze import LatticeMaze, Coord, CoordArray, CoordTup
-from maze_transformer.generators import LatticeMazeGenerators
-from maze_transformer.tokenizer import MazeDatasetConfig, MazeDataset, SolvedMaze
+from maze_transformer.generation.latticemaze import LatticeMaze, Coord, CoordArray, CoordTup
+from maze_transformer.generation.generators import LatticeMazeGenerators
+from maze_transformer.training.mazedataset import MazeDatasetConfig, MazeDataset
+from maze_transformer.training.tokenizer import SolvedMaze
 
 
 def generate_solvedmaze(
@@ -43,8 +44,8 @@ def create(
 
 	# create config
 	cfg: MazeDatasetConfig = MazeDatasetConfig(
-		grid_n=grid_n,
-		n_mazes=n_mazes,
+		grid_n = grid_n,
+		n_mazes = n_mazes,
 		**cfg_kwargs,
 	)
 

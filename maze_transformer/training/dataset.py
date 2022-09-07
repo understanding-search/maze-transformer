@@ -126,5 +126,9 @@ class GPTDataset(Dataset):
 		"""get the lengths of all sequences"""
 		raise NotImplementedError()
 
+	def config_save_name(self) -> str:
+		"""name of the config file"""
+		raise NotImplementedError()
+
 
 
