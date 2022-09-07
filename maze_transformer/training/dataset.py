@@ -24,7 +24,7 @@ from maze_transformer.generation.generators import LatticeMazeGenerators, GENERA
 from maze_transformer.training.tokenizer import SPECIAL_TOKENS, SolvedMaze
 
 @dataclass(kw_only=True)
-class DatasetConfig:
+class GPTDatasetConfig:
 	"""base config class"""
 	name: str = "DatasetConfig_default"
 	device: torch.device = field(
@@ -50,6 +50,11 @@ class DatasetConfig:
 			t: i
 			for i, t in enumerate(self.token_arr)
 		}
+
+	@classmethod
+	@property
+	def _dataset_class(cls) -> type:
+		raise NotImplementedError("this should be implemented by subclasses!")
 
 	@cached_property
 	def gpt_config_kwargs(self) -> dict:
@@ -110,6 +115,16 @@ class IndexedArray:
 		idxs: ATensor = torch.cumsum( torch.tensor([ 0, *map(len, data) ]), dim = 0 )[:-1]
 		return cls(arr=arr, idxs=idxs)
 
+
+class GPTDataset(Dataset):
+	"""wrapper for torch dataset with some extra functionality
+	
+	(meaning the functionality should be inherited in downstream classes)
+	"""
+
+	def get_all_lengths(self) -> list[int]:
+		"""get the lengths of all sequences"""
+		raise NotImplementedError()
 
 
 

@@ -23,11 +23,11 @@ from muutils.statcounter import StatCounter
 from maze_transformer.generation.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray
 from maze_transformer.generation.generators import LatticeMazeGenerators, GENERATORS_MAP
 from maze_transformer.training.tokenizer import SPECIAL_TOKENS, SolvedMaze
-from maze_transformer.training.dataset import DatasetConfig, IndexedArray
+from maze_transformer.training.dataset import GPTDatasetConfig, IndexedArray, GPTDataset
 
 
 @dataclass(kw_only=True)
-class MazeDatasetConfig(DatasetConfig):
+class MazeDatasetConfig(GPTDatasetConfig):
 	"""maze dataset configuration, including tokenizers"""
 	grid_n: int
 	n_mazes: int
@@ -120,7 +120,7 @@ def maze_to_tokens(maze: SolvedMaze, node_token_map: dict[CoordTup, str]) -> lis
 	return maze.as_tokens(node_token_map)
 
 
-class MazeDataset(Dataset):
+class MazeDataset(GPTDataset):
 	"""maze dataset"""
 
 	def __init__(
@@ -206,6 +206,9 @@ class MazeDataset(Dataset):
 
 	def __len__(self) -> int:
 		return len(self.mazes_array.arr)
+
+	def get_all_lengths(self) -> list[int]:
+		return self.mazes_array.get_all_lengths().tolist()
 
 	@classmethod
 	def gen_default(
