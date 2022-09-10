@@ -47,7 +47,11 @@ class SolvedMaze:
 	pos_start = property(lambda self: self.solution[0])
 	pos_end = property(lambda self: self.solution[-1])
 
-	def as_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
+	def as_tokens(
+			self, 
+			node_token_map: dict[CoordTup, str],
+			solution: bool = True,
+		) -> list[str]:
 		"""serialize maze and solution to tokens"""
 		tokens: list[str] = [
 			# give adjacency list
@@ -66,14 +70,18 @@ class SolvedMaze:
 			SPECIAL_TOKENS["target_start"],
 			node_token_map[tuple(self.pos_end)],
 			SPECIAL_TOKENS["target_end"],
-			# give path
-			SPECIAL_TOKENS["start_path"],
-			*[ 
-				node_token_map[tuple(c.tolist())] 
-				for c in self.solution
-			],
-			SPECIAL_TOKENS["end_path"],
 		]
+
+		if solution:
+			# give path
+			tokens.extend([
+				SPECIAL_TOKENS["start_path"],
+				*[ 
+					node_token_map[tuple(c.tolist())] 
+					for c in self.solution
+				],
+				SPECIAL_TOKENS["end_path"],
+			])
 
 		return tokens
 
