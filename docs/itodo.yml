@@ -1,0 +1,51 @@
+config:
+  cfg_read: itodo.yml
+  searchDir: ../
+  file_todo: todo-inline.md
+  verbose: false
+read:
+  tags:
+    list:
+    - CRIT
+    - TODO
+    - FIXME
+    - FIX
+    - BUG
+    - DEBUG
+    - UGLY
+    - HACK
+    - NOTE
+    - IDEA
+    - REVIEW
+    - OPTIMIZE
+    - CONFIG
+    - '!!!'
+    - OLD
+  SOURCE_FILES:
+  - c
+  - cpp
+  - h
+  - hpp
+  - py
+  - m
+  - tex
+  - sh
+  - java
+  - js
+  EXCLUDE:
+  - inline_todo.py
+  - itodo.yml
+  - todo-inline.md
+  - itodo.yml
+  - todo-inline.md
+  MAX_SEARCH_LEN: 15
+  context:
+    enabled: true
+    lines: 15
+write:
+  attr_sort_order:
+  - tag
+  - file
+  - lineNum
+  item_format: md_det
+
