@@ -28,22 +28,12 @@ def load_model(model_path: str):
 	return model
 
 
-def temperature_sample(model: OpenAIGPTLMHeadModel, inputs: ATensor, temperature: float = 0.5):
-	"""
-	Sample the next token.
-	"""
-	with torch.no_grad():
-		outputs = model(tokens)
-		predictions = outputs[0]
-
-
-def predict_tokens(model: OpenAIGPTLMHeadModel, inputs: ATensor, n_tokens: int = 32):
+def predict_tokens(model: OpenAIGPTLMHeadModel, inputs: ATensor, n_tokens: int = 32, **generate_kwargs):
 	"""
 	Predict the next token.
 	"""
 	with torch.no_grad():
-		outputs = model(tokens)
-		predictions = outputs[0]
+		predictions = model.generate(inputs, max_length=n_tokens, min_length=n_tokens, **generate_kwargs)
 	return predictions
 
 
