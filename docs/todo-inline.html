@@ -142,6 +142,69 @@
     div.column{display: inline-block; vertical-align: top; width: 50%;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
     ul.task-list{list-style: none;}
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
   <!--[if lt IE 9]>
@@ -167,51 +230,149 @@
 <h2 id="create_dataset.py-1-item"><a href="../create_dataset.py"><code>../create_dataset.py</code></a> – 1 item</h2>
 <ul class="task-list">
 <li><p><input type="checkbox" disabled="" />
-TODO: figure out unexpected keyword argument linter error here? (line 55)</p><details>
-<p>```python {.numberLines startFrom=“55”} # TODO: figure out unexpected keyword argument linter error here? cfg: MazeDatasetConfig = MazeDatasetConfig( name = name, grid_n = grid_n, n_mazes = n_mazes, **cfg_kwargs, ) # create and solve mazes c_start = (0, 0) c_end = (cfg.grid_n - 1, cfg.grid_n - 1) mazes: list[SolvedMaze]</p>
-<p>with multiprocessing.Pool() as pool: ```</p>
+TODO: figure out unexpected keyword argument linter error here? <a href="../create_dataset.py#L55">(line 55)</a></p><details>
+<div class="sourceCode" id="cb1" data-startFrom="55"><pre class="sourceCode numberSource python numberLines"><code class="sourceCode python" style="counter-reset: source-line 54;"><span id="cb1-55"><a href="#cb1-55"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: figure out unexpected keyword argument linter error here?</span></span>
+<span id="cb1-56"><a href="#cb1-56"></a>cfg: MazeDatasetConfig <span class="op">=</span> MazeDatasetConfig(</span>
+<span id="cb1-57"><a href="#cb1-57"></a>    name <span class="op">=</span> name,</span>
+<span id="cb1-58"><a href="#cb1-58"></a>    grid_n <span class="op">=</span> grid_n,</span>
+<span id="cb1-59"><a href="#cb1-59"></a>    n_mazes <span class="op">=</span> n_mazes,</span>
+<span id="cb1-60"><a href="#cb1-60"></a>    <span class="op">**</span>cfg_kwargs,</span>
+<span id="cb1-61"><a href="#cb1-61"></a>)</span>
+<span id="cb1-62"><a href="#cb1-62"></a><span class="co"># create and solve mazes</span></span>
+<span id="cb1-63"><a href="#cb1-63"></a>c_start <span class="op">=</span> (<span class="dv">0</span>, <span class="dv">0</span>)</span>
+<span id="cb1-64"><a href="#cb1-64"></a>c_end <span class="op">=</span> (cfg.grid_n <span class="op">-</span> <span class="dv">1</span>, cfg.grid_n <span class="op">-</span> <span class="dv">1</span>)</span>
+<span id="cb1-65"><a href="#cb1-65"></a>mazes: <span class="bu">list</span>[SolvedMaze] </span>
+<span id="cb1-66"><a href="#cb1-66"></a></span>
+<span id="cb1-67"><a href="#cb1-67"></a><span class="cf">with</span> multiprocessing.Pool() <span class="im">as</span> pool:</span></code></pre></div>
 </details></li>
 </ul>
 <h2 id="maze_transformertrainingmazedataset.py-2-items"><a href="../maze_transformer/training/mazedataset.py"><code>../maze_transformer/training/mazedataset.py</code></a> – 2 items</h2>
 <ul class="task-list">
 <li><p><input type="checkbox" disabled="" />
-TODO: handling of minimum sequence length (line 196)</p><details>
-<p><code>python {.numberLines startFrom="196"}      # TODO: handling of minimum sequence length      # last element in mazes_array.idxs whose value is smaller than `idx`      sequence_idx: int = torch.searchsorted(self.mazes_array.idxs, idx) - 1      # slice the array from the start of the sequence to `idx`, including `idx`      end_arr_idx: int = min(          idx + 1, # up to end of sequence          self.mazes_array.idxs[sequence_idx] + self.cfg.seq_len_max, # up to sequence length cutoff      )      subseq: ATensor = self.mazes_array.arr[ self.mazes_array.idxs[sequence_idx] : end_arr_idx ]      # left-pad the sequence      return torch.nn.functional.pad(subseq, (self.cfg.seq_len_max + 1 - len(subseq), 0), value=self.cfg.padding_token_idx)  def __len__(self) -&gt; int:      return len(self.mazes_array.arr)</code></p>
+TODO: handling of minimum sequence length <a href="../maze_transformer/training/mazedataset.py#L196">(line 196)</a></p><details>
+<div class="sourceCode" id="cb2" data-startFrom="196"><pre class="sourceCode numberSource python numberLines"><code class="sourceCode python" style="counter-reset: source-line 195;"><span id="cb2-196"><a href="#cb2-196"></a>    <span class="co"># </span><span class="al">TODO</span><span class="co">: handling of minimum sequence length</span></span>
+<span id="cb2-197"><a href="#cb2-197"></a>    <span class="co"># last element in mazes_array.idxs whose value is smaller than `idx`</span></span>
+<span id="cb2-198"><a href="#cb2-198"></a>    sequence_idx: <span class="bu">int</span> <span class="op">=</span> torch.searchsorted(<span class="va">self</span>.mazes_array.idxs, idx) <span class="op">-</span> <span class="dv">1</span></span>
+<span id="cb2-199"><a href="#cb2-199"></a>    <span class="co"># slice the array from the start of the sequence to `idx`, including `idx`</span></span>
+<span id="cb2-200"><a href="#cb2-200"></a>    end_arr_idx: <span class="bu">int</span> <span class="op">=</span> <span class="bu">min</span>(</span>
+<span id="cb2-201"><a href="#cb2-201"></a>        idx <span class="op">+</span> <span class="dv">1</span>, <span class="co"># up to end of sequence</span></span>
+<span id="cb2-202"><a href="#cb2-202"></a>        <span class="va">self</span>.mazes_array.idxs[sequence_idx] <span class="op">+</span> <span class="va">self</span>.cfg.seq_len_max, <span class="co"># up to sequence length cutoff</span></span>
+<span id="cb2-203"><a href="#cb2-203"></a>    )</span>
+<span id="cb2-204"><a href="#cb2-204"></a>    subseq: ATensor <span class="op">=</span> <span class="va">self</span>.mazes_array.arr[ <span class="va">self</span>.mazes_array.idxs[sequence_idx] : end_arr_idx ]</span>
+<span id="cb2-205"><a href="#cb2-205"></a>    <span class="co"># left-pad the sequence</span></span>
+<span id="cb2-206"><a href="#cb2-206"></a>    <span class="cf">return</span> torch.nn.functional.pad(subseq, (<span class="va">self</span>.cfg.seq_len_max <span class="op">+</span> <span class="dv">1</span> <span class="op">-</span> <span class="bu">len</span>(subseq), <span class="dv">0</span>), value<span class="op">=</span><span class="va">self</span>.cfg.padding_token_idx)</span>
+<span id="cb2-207"><a href="#cb2-207"></a><span class="kw">def</span> <span class="fu">__len__</span>(<span class="va">self</span>) <span class="op">-&gt;</span> <span class="bu">int</span>:</span>
+<span id="cb2-208"><a href="#cb2-208"></a>    <span class="cf">return</span> <span class="bu">len</span>(<span class="va">self</span>.mazes_array.arr)</span></code></pre></div>
 </details></li>
 <li><p><input type="checkbox" disabled="" />
-TODO: minimum separation (line 226)</p><details>
-<p><code>python {.numberLines startFrom="226"}  # TODO: minimum separation  # n_min_tgt_dist: int = int(max(maze.grid_shape) * p_min_tgt_dist)  """if np.abs(start_node - end_node).sum() &lt; n_min_tgt_dist:      # if too close, move end node towards the corner opposite the start node      opposite_corner: CoordTup = (          maze.grid_shape[0] * round(start_node[0] / maze.grid_shape[0]),          maze.grid_shape[1] * round(start_node[1] / maze.grid_shape[1]),      )      # end_node +=  """  mazes: list[SolvedMaze] = list()  endpoint_nodes: NDArray[(("maze_idx", cfg.n_mazes), ("start_end", 2), ("coord", 2)), np.int8] = np.random.randint(0, cfg.grid_shape, (cfg.n_mazes, 2, 2))</code></p>
+TODO: minimum separation <a href="../maze_transformer/training/mazedataset.py#L226">(line 226)</a></p><details>
+<div class="sourceCode" id="cb3" data-startFrom="226"><pre class="sourceCode numberSource python numberLines"><code class="sourceCode python" style="counter-reset: source-line 225;"><span id="cb3-226"><a href="#cb3-226"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: minimum separation</span></span>
+<span id="cb3-227"><a href="#cb3-227"></a><span class="co"># n_min_tgt_dist: int = int(max(maze.grid_shape) * p_min_tgt_dist)</span></span>
+<span id="cb3-228"><a href="#cb3-228"></a><span class="co">&quot;&quot;&quot;if np.abs(start_node - end_node).sum() &lt; n_min_tgt_dist:</span></span>
+<span id="cb3-229"><a href="#cb3-229"></a><span class="co">    # if too close, move end node towards the corner opposite the start node</span></span>
+<span id="cb3-230"><a href="#cb3-230"></a><span class="co">    opposite_corner: CoordTup = (</span></span>
+<span id="cb3-231"><a href="#cb3-231"></a><span class="co">        maze.grid_shape[0] * round(start_node[0] / maze.grid_shape[0]),</span></span>
+<span id="cb3-232"><a href="#cb3-232"></a><span class="co">        maze.grid_shape[1] * round(start_node[1] / maze.grid_shape[1]),</span></span>
+<span id="cb3-233"><a href="#cb3-233"></a><span class="co">    )</span></span>
+<span id="cb3-234"><a href="#cb3-234"></a><span class="co">    # end_node +=</span></span>
+<span id="cb3-235"><a href="#cb3-235"></a><span class="co">&quot;&quot;&quot;</span></span>
+<span id="cb3-236"><a href="#cb3-236"></a>mazes: <span class="bu">list</span>[SolvedMaze] <span class="op">=</span> <span class="bu">list</span>()</span>
+<span id="cb3-237"><a href="#cb3-237"></a>endpoint_nodes: NDArray[((<span class="st">&quot;maze_idx&quot;</span>, cfg.n_mazes), (<span class="st">&quot;start_end&quot;</span>, <span class="dv">2</span>), (<span class="st">&quot;coord&quot;</span>, <span class="dv">2</span>)), np.int8] <span class="op">=</span> np.random.randint(<span class="dv">0</span>, cfg.grid_shape, (cfg.n_mazes, <span class="dv">2</span>, <span class="dv">2</span>))</span></code></pre></div>
 </details></li>
 </ul>
 <h2 id="maze_transformertrainingtraining.py-3-items"><a href="../maze_transformer/training/training.py"><code>../maze_transformer/training/training.py</code></a> – 3 items</h2>
 <ul class="task-list">
 <li><p><input type="checkbox" disabled="" />
-TODO: check (near?) equality between <code>data_cfg</code> and <code>dataset.config</code> (line 165)</p><details>
-<p><code>python {.numberLines startFrom="165"}  # TODO: check (near?) equality between `data_cfg` and `dataset.config`   # ensure the override of the sequence length is applied  # TODO: this is hacky  dataset.cfg = data_cfg  logger.log_elapsed_last()  logger.mem_usage()  length_stats: StatCounter = StatCounter(dataset.get_all_lengths())  logger.log({"dataset_seq_len_stats": length_stats.summary()})  logger.log({"dataset_seq_len_stats": length_stats.serialize()}, lvl=50)  logger.log(f"loaded {len(dataset)} sequences", 20)  logger.log("creating dataloader", 10)  dataloader: DataLoader = DataLoader(      dataset,</code></p>
+TODO: check (near?) equality between <code>data_cfg</code> and <code>dataset.config</code> <a href="../maze_transformer/training/training.py#L165">(line 165)</a></p><details>
+<div class="sourceCode" id="cb4" data-startFrom="165"><pre class="sourceCode numberSource python numberLines"><code class="sourceCode python" style="counter-reset: source-line 164;"><span id="cb4-165"><a href="#cb4-165"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: check (near?) equality between `data_cfg` and `dataset.config` </span></span>
+<span id="cb4-166"><a href="#cb4-166"></a><span class="co"># ensure the override of the sequence length is applied</span></span>
+<span id="cb4-167"><a href="#cb4-167"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: this is hacky</span></span>
+<span id="cb4-168"><a href="#cb4-168"></a>dataset.cfg <span class="op">=</span> data_cfg</span>
+<span id="cb4-169"><a href="#cb4-169"></a>logger.log_elapsed_last()</span>
+<span id="cb4-170"><a href="#cb4-170"></a>logger.mem_usage()</span>
+<span id="cb4-171"><a href="#cb4-171"></a>length_stats: StatCounter <span class="op">=</span> StatCounter(dataset.get_all_lengths())</span>
+<span id="cb4-172"><a href="#cb4-172"></a>logger.log({<span class="st">&quot;dataset_seq_len_stats&quot;</span>: length_stats.summary()})</span>
+<span id="cb4-173"><a href="#cb4-173"></a>logger.log({<span class="st">&quot;dataset_seq_len_stats&quot;</span>: length_stats.serialize()}, lvl<span class="op">=</span><span class="dv">50</span>)</span>
+<span id="cb4-174"><a href="#cb4-174"></a>logger.log(<span class="ss">f&quot;loaded </span><span class="sc">{</span><span class="bu">len</span>(dataset)<span class="sc">}</span><span class="ss"> sequences&quot;</span>, <span class="dv">20</span>)</span>
+<span id="cb4-175"><a href="#cb4-175"></a>logger.log(<span class="st">&quot;creating dataloader&quot;</span>, <span class="dv">10</span>)</span>
+<span id="cb4-176"><a href="#cb4-176"></a>dataloader: DataLoader <span class="op">=</span> DataLoader(</span>
+<span id="cb4-177"><a href="#cb4-177"></a>    dataset, </span></code></pre></div>
 </details></li>
 <li><p><input type="checkbox" disabled="" />
-TODO: this is hacky (line 167)</p><details>
-<p><code>python {.numberLines startFrom="167"}  # TODO: this is hacky  dataset.cfg = data_cfg  logger.log_elapsed_last()  logger.mem_usage()  length_stats: StatCounter = StatCounter(dataset.get_all_lengths())  logger.log({"dataset_seq_len_stats": length_stats.summary()})  logger.log({"dataset_seq_len_stats": length_stats.serialize()}, lvl=50)  logger.log(f"loaded {len(dataset)} sequences", 20)  logger.log("creating dataloader", 10)  dataloader: DataLoader = DataLoader(      dataset,       batch_size = train_cfg.batch_size,      **train_cfg.dataloader_cfg,</code></p>
+TODO: this is hacky <a href="../maze_transformer/training/training.py#L167">(line 167)</a></p><details>
+<div class="sourceCode" id="cb5" data-startFrom="167"><pre class="sourceCode numberSource python numberLines"><code class="sourceCode python" style="counter-reset: source-line 166;"><span id="cb5-167"><a href="#cb5-167"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: this is hacky</span></span>
+<span id="cb5-168"><a href="#cb5-168"></a>dataset.cfg <span class="op">=</span> data_cfg</span>
+<span id="cb5-169"><a href="#cb5-169"></a>logger.log_elapsed_last()</span>
+<span id="cb5-170"><a href="#cb5-170"></a>logger.mem_usage()</span>
+<span id="cb5-171"><a href="#cb5-171"></a>length_stats: StatCounter <span class="op">=</span> StatCounter(dataset.get_all_lengths())</span>
+<span id="cb5-172"><a href="#cb5-172"></a>logger.log({<span class="st">&quot;dataset_seq_len_stats&quot;</span>: length_stats.summary()})</span>
+<span id="cb5-173"><a href="#cb5-173"></a>logger.log({<span class="st">&quot;dataset_seq_len_stats&quot;</span>: length_stats.serialize()}, lvl<span class="op">=</span><span class="dv">50</span>)</span>
+<span id="cb5-174"><a href="#cb5-174"></a>logger.log(<span class="ss">f&quot;loaded </span><span class="sc">{</span><span class="bu">len</span>(dataset)<span class="sc">}</span><span class="ss"> sequences&quot;</span>, <span class="dv">20</span>)</span>
+<span id="cb5-175"><a href="#cb5-175"></a>logger.log(<span class="st">&quot;creating dataloader&quot;</span>, <span class="dv">10</span>)</span>
+<span id="cb5-176"><a href="#cb5-176"></a>dataloader: DataLoader <span class="op">=</span> DataLoader(</span>
+<span id="cb5-177"><a href="#cb5-177"></a>    dataset, </span>
+<span id="cb5-178"><a href="#cb5-178"></a>    batch_size <span class="op">=</span> train_cfg.batch_size,</span>
+<span id="cb5-179"><a href="#cb5-179"></a>    <span class="op">**</span>train_cfg.dataloader_cfg,</span></code></pre></div>
 </details></li>
 <li><p><input type="checkbox" disabled="" />
-TODO: this is a bit hacky (line 75)</p><details>
-<p><code>python {.numberLines startFrom="75"}  # TODO: this is a bit hacky  if train_cfg.seq_len_max is not None:      data_cfg.seq_len_max = train_cfg.seq_len_max  # set up paths  basepath_train: Path = basepath / train_dir  os.makedirs(basepath_train, exist_ok = True)  os.makedirs(basepath_train / TRAIN_SAVE_FILES.checkpoints, exist_ok = True)  with open(basepath_train / TRAIN_SAVE_FILES.cfg, "w") as f:      json.dump(json_serialize(data_cfg), f, indent = "\t")  # set up logger  logger: Logger = Logger(      log_path=Path(basepath_train / TRAIN_SAVE_FILES.log).as_posix(),      console_print_threshold=30,</code></p>
+TODO: this is a bit hacky <a href="../maze_transformer/training/training.py#L75">(line 75)</a></p><details>
+<div class="sourceCode" id="cb6" data-startFrom="75"><pre class="sourceCode numberSource python numberLines"><code class="sourceCode python" style="counter-reset: source-line 74;"><span id="cb6-75"><a href="#cb6-75"></a><span class="co"># </span><span class="al">TODO</span><span class="co">: this is a bit hacky</span></span>
+<span id="cb6-76"><a href="#cb6-76"></a><span class="cf">if</span> train_cfg.seq_len_max <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb6-77"><a href="#cb6-77"></a>    data_cfg.seq_len_max <span class="op">=</span> train_cfg.seq_len_max</span>
+<span id="cb6-78"><a href="#cb6-78"></a><span class="co"># set up paths</span></span>
+<span id="cb6-79"><a href="#cb6-79"></a>basepath_train: Path <span class="op">=</span> basepath <span class="op">/</span> train_dir</span>
+<span id="cb6-80"><a href="#cb6-80"></a>os.makedirs(basepath_train, exist_ok <span class="op">=</span> <span class="va">True</span>)</span>
+<span id="cb6-81"><a href="#cb6-81"></a>os.makedirs(basepath_train <span class="op">/</span> TRAIN_SAVE_FILES.checkpoints, exist_ok <span class="op">=</span> <span class="va">True</span>)</span>
+<span id="cb6-82"><a href="#cb6-82"></a><span class="cf">with</span> <span class="bu">open</span>(basepath_train <span class="op">/</span> TRAIN_SAVE_FILES.cfg, <span class="st">&quot;w&quot;</span>) <span class="im">as</span> f:</span>
+<span id="cb6-83"><a href="#cb6-83"></a>    json.dump(json_serialize(data_cfg), f, indent <span class="op">=</span> <span class="st">&quot;</span><span class="ch">\t</span><span class="st">&quot;</span>)</span>
+<span id="cb6-84"><a href="#cb6-84"></a><span class="co"># set up logger</span></span>
+<span id="cb6-85"><a href="#cb6-85"></a>logger: Logger <span class="op">=</span> Logger(</span>
+<span id="cb6-86"><a href="#cb6-86"></a>    log_path<span class="op">=</span>Path(basepath_train <span class="op">/</span> TRAIN_SAVE_FILES.log).as_posix(),</span>
+<span id="cb6-87"><a href="#cb6-87"></a>    console_print_threshold<span class="op">=</span><span class="dv">30</span>,</span></code></pre></div>
 </details></li>
 </ul>
 <h1 id="config-3-items"><strong>CONFIG</strong> – 3 items</h1>
 <h2 id="maze_transformertrainingconfig.py-3-items"><a href="../maze_transformer/training/config.py"><code>../maze_transformer/training/config.py</code></a> – 3 items</h2>
 <ul class="task-list">
 <li><p><input type="checkbox" disabled="" />
-CONFIGS_LIST: list[BaseGPTConfig] = [ (line 116)</p><details>
-<p><code>python {.numberLines startFrom="116"}  _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [      BaseGPTConfig(          gpt_cfg_name = "tiny-v1",          n_embed=32,          n_layer=4,          n_head=2,      ),      BaseGPTConfig(          gpt_cfg_name = "medium-v1",          n_embed=128,          n_layer=8,          n_head=4,      ),  ]</code></p>
+CONFIGS_LIST: list[BaseGPTConfig] = [ <a href="../maze_transformer/training/config.py#L116">(line 116)</a></p><details>
+<div class="sourceCode" id="cb7" data-startFrom="116"><pre class="sourceCode numberSource python numberLines"><code class="sourceCode python" style="counter-reset: source-line 115;"><span id="cb7-116"><a href="#cb7-116"></a>_GPT_CONFIGS_LIST: <span class="bu">list</span>[BaseGPTConfig] <span class="op">=</span> [</span>
+<span id="cb7-117"><a href="#cb7-117"></a>    BaseGPTConfig(</span>
+<span id="cb7-118"><a href="#cb7-118"></a>        gpt_cfg_name <span class="op">=</span> <span class="st">&quot;tiny-v1&quot;</span>,</span>
+<span id="cb7-119"><a href="#cb7-119"></a>        n_embed<span class="op">=</span><span class="dv">32</span>,</span>
+<span id="cb7-120"><a href="#cb7-120"></a>        n_layer<span class="op">=</span><span class="dv">4</span>,</span>
+<span id="cb7-121"><a href="#cb7-121"></a>        n_head<span class="op">=</span><span class="dv">2</span>,</span>
+<span id="cb7-122"><a href="#cb7-122"></a>    ),</span>
+<span id="cb7-123"><a href="#cb7-123"></a>    BaseGPTConfig(</span>
+<span id="cb7-124"><a href="#cb7-124"></a>        gpt_cfg_name <span class="op">=</span> <span class="st">&quot;medium-v1&quot;</span>,</span>
+<span id="cb7-125"><a href="#cb7-125"></a>        n_embed<span class="op">=</span><span class="dv">128</span>,</span>
+<span id="cb7-126"><a href="#cb7-126"></a>        n_layer<span class="op">=</span><span class="dv">8</span>,</span>
+<span id="cb7-127"><a href="#cb7-127"></a>        n_head<span class="op">=</span><span class="dv">4</span>,</span>
+<span id="cb7-128"><a href="#cb7-128"></a>    ),</span>
+<span id="cb7-129"><a href="#cb7-129"></a>]</span></code></pre></div>
 </details></li>
 <li><p><input type="checkbox" disabled="" />
-CONFIGS: dict[str, BaseGPTConfig] = { (line 131)</p><details>
-<p><code>python {.numberLines startFrom="131"}  GPT_CONFIGS: dict[str, BaseGPTConfig] = {      cfg.gpt_cfg_name: cfg       for cfg in _GPT_CONFIGS_LIST  }  _TRAINING_CONFIG_LIST: list[TrainConfig] = [      TrainConfig(          name = "tiny-v1",          base_gpt_cfg = GPT_CONFIGS["tiny-v1"],          optimizer = torch.optim.RMSprop,          optimizer_kwargs = dict(lr = 0.000001),          batch_size = 32,          dataloader_cfg = dict(              shuffle = True,</code></p>
+CONFIGS: dict[str, BaseGPTConfig] = { <a href="../maze_transformer/training/config.py#L131">(line 131)</a></p><details>
+<div class="sourceCode" id="cb8" data-startFrom="131"><pre class="sourceCode numberSource python numberLines"><code class="sourceCode python" style="counter-reset: source-line 130;"><span id="cb8-131"><a href="#cb8-131"></a>GPT_CONFIGS: <span class="bu">dict</span>[<span class="bu">str</span>, BaseGPTConfig] <span class="op">=</span> {</span>
+<span id="cb8-132"><a href="#cb8-132"></a>    cfg.gpt_cfg_name: cfg </span>
+<span id="cb8-133"><a href="#cb8-133"></a>    <span class="cf">for</span> cfg <span class="kw">in</span> _GPT_CONFIGS_LIST</span>
+<span id="cb8-134"><a href="#cb8-134"></a>}</span>
+<span id="cb8-135"><a href="#cb8-135"></a>_TRAINING_CONFIG_LIST: <span class="bu">list</span>[TrainConfig] <span class="op">=</span> [</span>
+<span id="cb8-136"><a href="#cb8-136"></a>    TrainConfig(</span>
+<span id="cb8-137"><a href="#cb8-137"></a>        name <span class="op">=</span> <span class="st">&quot;tiny-v1&quot;</span>,</span>
+<span id="cb8-138"><a href="#cb8-138"></a>        base_gpt_cfg <span class="op">=</span> GPT_CONFIGS[<span class="st">&quot;tiny-v1&quot;</span>],</span>
+<span id="cb8-139"><a href="#cb8-139"></a>        optimizer <span class="op">=</span> torch.optim.RMSprop,</span>
+<span id="cb8-140"><a href="#cb8-140"></a>        optimizer_kwargs <span class="op">=</span> <span class="bu">dict</span>(lr <span class="op">=</span> <span class="fl">0.000001</span>),</span>
+<span id="cb8-141"><a href="#cb8-141"></a>        batch_size <span class="op">=</span> <span class="dv">32</span>,</span>
+<span id="cb8-142"><a href="#cb8-142"></a>        dataloader_cfg <span class="op">=</span> <span class="bu">dict</span>(</span>
+<span id="cb8-143"><a href="#cb8-143"></a>            shuffle <span class="op">=</span> <span class="va">True</span>,</span></code></pre></div>
 </details></li>
 <li><p><input type="checkbox" disabled="" />
-CONFIGS: dict[str, TrainConfig] = { (line 157)</p><details>
-<p><code>python {.numberLines startFrom="157"}  TRAINING_CONFIGS: dict[str, TrainConfig] = {      cfg.name: cfg       for cfg in _TRAINING_CONFIG_LIST  }</code></p>
+CONFIGS: dict[str, TrainConfig] = { <a href="../maze_transformer/training/config.py#L157">(line 157)</a></p><details>
+<div class="sourceCode" id="cb9" data-startFrom="157"><pre class="sourceCode numberSource python numberLines"><code class="sourceCode python" style="counter-reset: source-line 156;"><span id="cb9-157"><a href="#cb9-157"></a>TRAINING_CONFIGS: <span class="bu">dict</span>[<span class="bu">str</span>, TrainConfig] <span class="op">=</span> {</span>
+<span id="cb9-158"><a href="#cb9-158"></a>    cfg.name: cfg </span>
+<span id="cb9-159"><a href="#cb9-159"></a>    <span class="cf">for</span> cfg <span class="kw">in</span> _TRAINING_CONFIG_LIST</span>
+<span id="cb9-160"><a href="#cb9-160"></a>}</span></code></pre></div>
 </details></li>
 </ul>
 </body>

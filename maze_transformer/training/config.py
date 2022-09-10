@@ -12,7 +12,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
 from muutils.logger import Logger, TimerContext
-from muutils.json_serialize import json_serialize, dataclass_serializer_factory
+from muutils.json_serialize import json_serialize, dataclass_serializer_factory, JSONitem
 from muutils.misc import sanitize_fname
 from muutils.tensor_utils import ATensor
 from muutils.statcounter import StatCounter
@@ -98,6 +98,13 @@ class TrainConfig:
 		}
 
 		return OpenAIGPTConfig(**self._gpt_config_ctor_kwargs)
+
+
+	# TODO: TrainConfig loader is a placeholder to avoid function load/unload complexity
+	@classmethod
+	def load(cls, data: JSONitem) -> dict:
+		return data
+
 
 TrainConfig.serialize = dataclass_serializer_factory(
 	TrainConfig,

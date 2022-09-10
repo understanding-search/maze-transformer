@@ -45,6 +45,11 @@ class MazeDatasetConfig(GPTDatasetConfig):
 		}
 
 	@cached_property
+	def token_node_map(self) -> dict[str, CoordTup]:
+		"""map from token to node"""
+		return { v: k for k, v in self.node_token_map.items() }
+
+	@cached_property
 	def token_arr(self) -> list[str]:
 		"""map from index to token"""
 		return [

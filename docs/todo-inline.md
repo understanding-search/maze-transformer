@@ -2,7 +2,7 @@
 header-includes: "<style>\nbody {\n  max-width: 50em;\n}\n</style>"
 source: https://github.com/knc-neural-calculus/knc-tools
 title: todo-inline
-updated: '2022-09-09 22:20:09'
+updated: '2022-09-09 22:30:22'
 
 metadata:
   files_with_todos: 4
@@ -70,11 +70,11 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 # **TODO** -- 6 items
 ## [`../create_dataset.py`](../create_dataset.py) -- 1 item
  - [ ] TODO: figure out unexpected keyword argument linter error here? 
-	(line 55)
+	[(line 55)](../create_dataset.py#L55)
 	
 	<details>
 
-	```python {.numberLines startFrom="55"}
+	```{.python .numberLines startFrom="55"}
 	# TODO: figure out unexpected keyword argument linter error here?
 	cfg: MazeDatasetConfig = MazeDatasetConfig(
 	    name = name,
@@ -94,11 +94,11 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 
 ## [`../maze_transformer/training/mazedataset.py`](../maze_transformer/training/mazedataset.py) -- 2 items
  - [ ] TODO: handling of minimum sequence length 
-	(line 196)
+	[(line 196)](../maze_transformer/training/mazedataset.py#L196)
 	
 	<details>
 
-	```python {.numberLines startFrom="196"}
+	```{.python .numberLines startFrom="196"}
 	    # TODO: handling of minimum sequence length
 	    # last element in mazes_array.idxs whose value is smaller than `idx`
 	    sequence_idx: int = torch.searchsorted(self.mazes_array.idxs, idx) - 1
@@ -117,11 +117,11 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 	</details>
 
  - [ ] TODO: minimum separation 
-	(line 226)
+	[(line 226)](../maze_transformer/training/mazedataset.py#L226)
 	
 	<details>
 
-	```python {.numberLines startFrom="226"}
+	```{.python .numberLines startFrom="226"}
 	# TODO: minimum separation
 	# n_min_tgt_dist: int = int(max(maze.grid_shape) * p_min_tgt_dist)
 	"""if np.abs(start_node - end_node).sum() < n_min_tgt_dist:
@@ -140,11 +140,11 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 
 ## [`../maze_transformer/training/training.py`](../maze_transformer/training/training.py) -- 3 items
  - [ ] TODO: check (near?) equality between `data_cfg` and `dataset.config` 
-	(line 165)
+	[(line 165)](../maze_transformer/training/training.py#L165)
 	
 	<details>
 
-	```python {.numberLines startFrom="165"}
+	```{.python .numberLines startFrom="165"}
 	# TODO: check (near?) equality between `data_cfg` and `dataset.config` 
 	# ensure the override of the sequence length is applied
 	# TODO: this is hacky
@@ -163,11 +163,11 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 	</details>
 
  - [ ] TODO: this is hacky 
-	(line 167)
+	[(line 167)](../maze_transformer/training/training.py#L167)
 	
 	<details>
 
-	```python {.numberLines startFrom="167"}
+	```{.python .numberLines startFrom="167"}
 	# TODO: this is hacky
 	dataset.cfg = data_cfg
 	logger.log_elapsed_last()
@@ -186,11 +186,11 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 	</details>
 
  - [ ] TODO: this is a bit hacky 
-	(line 75)
+	[(line 75)](../maze_transformer/training/training.py#L75)
 	
 	<details>
 
-	```python {.numberLines startFrom="75"}
+	```{.python .numberLines startFrom="75"}
 	# TODO: this is a bit hacky
 	if train_cfg.seq_len_max is not None:
 	    data_cfg.seq_len_max = train_cfg.seq_len_max
@@ -211,11 +211,11 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 # **CONFIG** -- 3 items
 ## [`../maze_transformer/training/config.py`](../maze_transformer/training/config.py) -- 3 items
  - [ ] CONFIGS_LIST: list[BaseGPTConfig] = [ 
-	(line 116)
+	[(line 116)](../maze_transformer/training/config.py#L116)
 	
 	<details>
 
-	```python {.numberLines startFrom="116"}
+	```{.python .numberLines startFrom="116"}
 	_GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
 	    BaseGPTConfig(
 	        gpt_cfg_name = "tiny-v1",
@@ -235,11 +235,11 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 	</details>
 
  - [ ] CONFIGS: dict[str, BaseGPTConfig] = { 
-	(line 131)
+	[(line 131)](../maze_transformer/training/config.py#L131)
 	
 	<details>
 
-	```python {.numberLines startFrom="131"}
+	```{.python .numberLines startFrom="131"}
 	GPT_CONFIGS: dict[str, BaseGPTConfig] = {
 	    cfg.gpt_cfg_name: cfg 
 	    for cfg in _GPT_CONFIGS_LIST
@@ -258,11 +258,11 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 	</details>
 
  - [ ] CONFIGS: dict[str, TrainConfig] = { 
-	(line 157)
+	[(line 157)](../maze_transformer/training/config.py#L157)
 	
 	<details>
 
-	```python {.numberLines startFrom="157"}
+	```{.python .numberLines startFrom="157"}
 	TRAINING_CONFIGS: dict[str, TrainConfig] = {
 	    cfg.name: cfg 
 	    for cfg in _TRAINING_CONFIG_LIST

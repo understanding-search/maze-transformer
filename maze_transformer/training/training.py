@@ -11,7 +11,7 @@ import tracemalloc
 import torch
 from torch.utils.data import Dataset, DataLoader
 from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
-from muutils.logger import Logger, TimerContext
+from muutils.logger import Logger, LoggingStream, TimerContext
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory
 from muutils.misc import sanitize_fname, freeze
 from muutils.tensor_utils import ATensor
@@ -33,7 +33,8 @@ TrainingSetup = NamedTuple("TrainingSetup", [
 @freeze
 class TRAIN_SAVE_FILES:
 	"""namespace for filenames/formats for saving training data"""
-	cfg: str = "train_config.json"
+	data_cfg: str = "data_config.json"
+	train_cfg: str = "train_config.json"
 	log: str = "log.jsonl"
 	checkpoints: str = "checkpoints"
 	train_dir_format: Callable[[GPTDatasetConfig, TrainConfig], str] = (
@@ -80,17 +81,22 @@ def setup_train(
 	basepath_train: Path = basepath / train_dir
 	os.makedirs(basepath_train, exist_ok = True)
 	os.makedirs(basepath_train / TRAIN_SAVE_FILES.checkpoints, exist_ok = True)
-	with open(basepath_train / TRAIN_SAVE_FILES.cfg, "w") as f:
+	# store data config
+	with open(basepath_train / TRAIN_SAVE_FILES.data_cfg, "w") as f:
 		json.dump(json_serialize(data_cfg), f, indent = "\t")
 
 	# set up logger
 	logger: Logger = Logger(
 		log_path=Path(basepath_train / TRAIN_SAVE_FILES.log).as_posix(),
 		console_print_threshold=30,
-		stream_default_levels={"log_config": 40, "train": 50, "mem_usage": 40},
-		stream_default_contents={"mem_usage": {"traced_memory": (
-			lambda : dict(zip(("current", "peak"), tracemalloc.get_traced_memory()))
-		)}},
+		streams=(
+			LoggingStream(name = "log_config", aliases = ("cfg", "config"), default_level=40),
+			LoggingStream(name = "train", aliases = ("log_train",), default_level=50),
+			LoggingStream(
+				name = "mem_usage", aliases = ("traced_memory", "mem"), default_level=40, 
+				default_contents={"traced_memory": (lambda : dict(zip(("current", "peak"), tracemalloc.get_traced_memory())))},
+			),
+		),
 	)
 
 	# set up the training config
@@ -101,6 +107,15 @@ def setup_train(
 	model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(
 		**model_cfg_inputs,
 	)
+	# store model config (after init so kwargs are correct)
+	with open(basepath_train / TRAIN_SAVE_FILES.train_cfg, "w") as f:
+		json.dump(
+			dict(
+				model_cfg_inputs = json_serialize(model_cfg_inputs),
+				**json_serialize(train_cfg),
+			),
+			f, indent = "\t",
+		)
 
 	logger.log("loaded data config, initialized logger")
 	logger.log_config(dict(data_cfg = json_serialize(data_cfg)))

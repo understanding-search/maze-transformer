@@ -28,6 +28,8 @@ class LatticeMazeGenerators:
 				3. Remove the wall between the current cell and the chosen cell
 				4. Mark the chosen cell as visited and push it to the stack
 		"""
+		# TODO: for some reason, there are sometimes either loops or self-connections in the generated mazes. review this code
+
 		# n_directions: int = lattice_dim * 2
 
 		# initialize the maze with no connections)
