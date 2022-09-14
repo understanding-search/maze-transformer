@@ -41,21 +41,23 @@ def load_model_with_configs(model_path: str, data_cfg_class: type) -> tuple[Open
 		assert check_configs_present(model_folder), f"Couldn't find configs in directory of or parent directory of {model_path}"
 
 	# load the configs
-	train_cfg: TrainConfig = TrainConfig.load(
-		json.loads((model_folder / TRAIN_SAVE_FILES.train_cfg).read_text()),
-	)
+	with open(model_folder / TRAIN_SAVE_FILES.train_cfg, "r") as f:
+		train_cfg_raw: dict = json.load(f)
+	
+	train_cfg: TrainConfig = TrainConfig.load(train_cfg_raw)
+	
 	data_cfg: GPTDatasetConfig = data_cfg_class.load(
-		json.loads((model_folder / TRAIN_SAVE_FILES.data_cfg).read_text())
+		json.loads(model_folder / TRAIN_SAVE_FILES.data_cfg)
 	)
 
 
-	model = OpenAIGPTLMHeadModel(OpenAIGPTConfig(**model_cfg_inputs))
-	state_dict = torch.load(model_path)
-	print(state_dict.keys())
+	model: OpenAIGPTLMHeadModel = OpenAIGPTLMHeadModel(OpenAIGPTConfig(**model_cfg_inputs))
+	state_dict: dict = torch.load(model_path)
+	# print(state_dict.keys())
 	model.load_state_dict(state_dict)
 	model.eval()
 	print(f"loaded model with {shorten_numerical_to_str(model.num_parameters())} parameters")
-	return model
+	return (model, train_cfg, data_cfg)
 
 
 def predict_tokens(model: OpenAIGPTLMHeadModel, inputs: ATensor, n_tokens: int = 32, **generate_kwargs):

@@ -12,9 +12,9 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
 from muutils.logger import Logger, TimerContext
-from muutils.json_serialize import json_serialize, dataclass_serializer_factory, JSONitem
+from muutils.json_serialize import json_serialize, dataclass_serializer_factory, dataclass_loader_factory, JSONitem
 from muutils.misc import sanitize_fname
-from muutils.tensor_utils import ATensor
+from muutils.tensor_utils import ATensor, TORCH_OPTIMIZERS_MAP
 from muutils.statcounter import StatCounter
 
 
@@ -25,7 +25,10 @@ TokenizerFunction = Callable[[list[str]], list[int]]
 
 @dataclass(frozen=True, kw_only=True)
 class BaseGPTConfig:
-	"""gpt model config without vocab size, context size, or padding token"""
+	"""gpt model config without vocab size, context size, or padding token
+	
+	TODO: honestly this complexity is pointless, refactor to a dict?
+	"""
 	gpt_cfg_name: str
 	n_embed: int = 128
 	n_layer: int = 8
@@ -45,8 +48,28 @@ class BaseGPTConfig:
 	def serialize(self) -> str:
 		return self.as_dict()
 
+	def load(self, d: dict) -> 'BaseGPTConfig':
+		"""load from dict, putting unknown fields into _kwargs"""
+		ctor_kwargs: dict = {
+			k: v
+			for k, v in d.items()
+			if k in self.__dataclass_fields__
+		}
+		extra_kwargs: dict = {
+			k: v
+			for k, v in d.items()
+			if k not in self.__dataclass_fields__
+		}
+
+		return BaseGPTConfig(
+			**ctor_kwargs,
+			_kwargs=extra_kwargs,
+		)
+
 
 # ==================================================
+
+
 
 @dataclass(kw_only=True)
 class TrainConfig:
@@ -83,7 +106,9 @@ class TrainConfig:
 	seq_len_max: int|None = None
 
 	# n_ctx: int = property(lambda self: self.model_config.n_ctx)
-	_gpt_config_ctor_kwargs: dict = field(default_factory=dict)
+	_gpt_config_ctor_kwargs: dict|None = None
+
+
 	
 	def get_gpt_config(
 			self, 
@@ -93,17 +118,11 @@ class TrainConfig:
 
 		self._gpt_config_ctor_kwargs = {
 			**self.base_gpt_cfg.as_dict(),
-			**kwargs,
 			**dict(device = self.device),
+			**kwargs,
 		}
 
 		return OpenAIGPTConfig(**self._gpt_config_ctor_kwargs)
-
-
-	# TODO: TrainConfig loader is a placeholder to avoid function load/unload complexity
-	@classmethod
-	def load(cls, data: JSONitem) -> dict:
-		return data
 
 
 TrainConfig.serialize = dataclass_serializer_factory(
@@ -114,6 +133,14 @@ TrainConfig.serialize = dataclass_serializer_factory(
 		base_gpt_cfg = lambda self: self.base_gpt_cfg.as_dict(),
 	),
 	fields_exclude=["optimizer"],
+)
+
+TrainConfig.load = dataclass_loader_factory(
+	TrainConfig,
+	special_loaders=dict(
+		optimizer = lambda d: TORCH_OPTIMIZERS_MAP[d["_optimizer_name"]],
+		base_gpt_cfg = lambda d: BaseGPTConfig(**d["base_gpt_cfg"]), 
+	),
 )
 
 

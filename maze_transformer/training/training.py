@@ -100,27 +100,18 @@ def setup_train(
 	)
 
 	# set up the training config
-	model_cfg_inputs: dict = dict(
+	model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(dict(
 		**dict(data_cfg.gpt_config_kwargs),
 		device = train_cfg.device,
-	)
-	model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(
-		**model_cfg_inputs,
-	)
+	))
+
 	# store model config (after init so kwargs are correct)
 	with open(basepath_train / TRAIN_SAVE_FILES.train_cfg, "w") as f:
-		json.dump(
-			dict(
-				model_cfg_inputs = json_serialize(model_cfg_inputs),
-				**json_serialize(train_cfg),
-			),
-			f, indent = "\t",
-		)
+		json.dump(json_serialize(train_cfg), f, indent = "\t")
 
 	logger.log("loaded data config, initialized logger")
 	logger.log_config(dict(data_cfg = json_serialize(data_cfg)))
 	logger.log_config(dict(train_cfg = json_serialize(train_cfg)))
-	logger.log_config(dict(model_cfg_inputs = json_serialize(model_cfg_inputs)))
 	logger.log_config(dict(base_model_cfg = json_serialize(train_cfg._gpt_config_ctor_kwargs))) # pylint: disable=protected-access
 	# logger.log_config(dict(model_cfg = json_serialize(model_cfg)))
 	logger.log_config(dict(logger_cfg =
@@ -130,8 +121,8 @@ def setup_train(
 			"train_cfg.name": train_cfg.name,
 			"basepath": basepath,
 			"basepath_train": basepath_train,
-			"log_file": logger._log_path,
 			"model_cfg.device": model_cfg.device,
+			"logger.__dict__": json_serialize(logger.__dict__),
 		},
 		lvl = 0,
 	))
