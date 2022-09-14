@@ -14,7 +14,7 @@ from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
 from muutils.logger import Logger, TimerContext
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory, dataclass_loader_factory, JSONitem
 from muutils.misc import sanitize_fname
-from muutils.tensor_utils import ATensor, TORCH_OPTIMIZERS_MAP
+from muutils.tensor_utils import ATensor, TORCH_OPTIMIZERS_MAP, DTYPE_MAP
 from muutils.statcounter import StatCounter
 
 
@@ -134,15 +134,34 @@ TrainConfig.serialize = dataclass_serializer_factory(
 		# gpt_config = lambda self: json_serialize(self.get_gpt_config().to_dict()),
 		_optimizer_name = lambda self: self.optimizer.__name__,
 		base_gpt_cfg = lambda self: self.base_gpt_cfg.as_dict(),
+		device = lambda self: str(self.device),
 	),
 	fields_exclude=["optimizer"],
 )
+
+
+def process_config_kwargs(kwargs: dict|None) -> dict|None:
+	"""process config kwargs, converting device and dtype"""
+
+	if kwargs is None:
+		return None
+
+	if "device" in kwargs:
+		kwargs["device"] = torch.device(kwargs["device"])
+	
+	if "dtype" in kwargs:
+		kwargs["dtype"] = DTYPE_MAP[kwargs["dtype"]]
+
+	return kwargs
+
 
 TrainConfig.load = dataclass_loader_factory(
 	TrainConfig,
 	special_loaders=dict(
 		optimizer = lambda d: TORCH_OPTIMIZERS_MAP[d["_optimizer_name"]],
 		base_gpt_cfg = lambda d: BaseGPTConfig(**d["base_gpt_cfg"]), 
+		device = lambda d: torch.device(d["device"]),
+		_gpt_config_ctor_kwargs = lambda d: process_config_kwargs(d.get("_gpt_config_ctor_kwargs", None)),
 	),
 )
 

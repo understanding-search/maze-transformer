@@ -54,11 +54,11 @@ def load_model_with_configs(model_path: str, data_cfg_class: type) -> tuple[Open
 	
 	train_cfg: TrainConfig = TrainConfig.load(train_cfg_raw)
 
-	data_cfg: GPTDatasetConfig = data_cfg_class.load(
-		json.loads(model_folder / TRAIN_SAVE_FILES.data_cfg)
-	)
+	with open(model_folder / TRAIN_SAVE_FILES.data_cfg, "r") as f:
+		data_cfg: GPTDatasetConfig = data_cfg_class.load(json.load(f))
 
-	model: OpenAIGPTLMHeadModel = OpenAIGPTLMHeadModel(train_cfg._gpt_config_ctor_kwargs)
+	model_cfg: OpenAIGPTConfig = OpenAIGPTConfig(train_cfg._gpt_config_ctor_kwargs)
+	model: OpenAIGPTLMHeadModel = OpenAIGPTLMHeadModel(model_cfg)
 	state_dict: dict = torch.load(model_path)
 	# print(state_dict.keys())
 	model.load_state_dict(state_dict)
