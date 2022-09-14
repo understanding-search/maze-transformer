@@ -33,7 +33,14 @@ def check_configs_present(folder: Path) -> bool:
 		and (folder / TRAIN_SAVE_FILES.train_cfg).exists()
 	)
 
-def load_model_with_configs(model_path: str, data_cfg_class: type, verbose: bool = False) -> tuple[OpenAIGPTLMHeadModel, TrainConfig, GPTDatasetConfig, OpenAIGPTConfig]:
+LoadedModelConfigs = NamedTuple("LoadedModelConfigs", [
+	("data_cfg", GPTDatasetConfig),
+	("train_cfg", TrainConfig),
+	("model_cfg", OpenAIGPTConfig),
+	("model", OpenAIGPTLMHeadModel),
+])
+
+def load_model_with_configs(model_path: str, data_cfg_class: type, verbose: bool = False) -> LoadedModelConfigs:
 	"""
 	Load a model and associated config files from a path.
 	"""
@@ -56,7 +63,7 @@ def load_model_with_configs(model_path: str, data_cfg_class: type, verbose: bool
 		print(f"{train_cfg = }")
 		print('-'*40)
 
-	model_cfg: OpenAIGPTConfig = OpenAIGPTConfig(**train_cfg.get_gpt_config())
+	model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config()
 	if verbose:
 		print("model_cfg = ", json_serialize(model_cfg.to_dict(), error_mode = "warn"))
 		print('-'*40)
@@ -69,8 +76,15 @@ def load_model_with_configs(model_path: str, data_cfg_class: type, verbose: bool
 	# print(state_dict.keys())
 	model.load_state_dict(state_dict)
 	model.eval()
+
 	print(f"loaded model with {shorten_numerical_to_str(model.num_parameters())} parameters")
-	return (model, train_cfg, data_cfg, model_cfg)
+
+	return LoadedModelConfigs(
+		data_cfg=data_cfg,
+		train_cfg=train_cfg,
+		model_cfg=model_cfg,
+		model=model,
+	)
 
 
 def predict_tokens(model: OpenAIGPTLMHeadModel, inputs: ATensor, n_tokens: int = 32, **generate_kwargs):
@@ -86,13 +100,25 @@ def predict_tokens(model: OpenAIGPTLMHeadModel, inputs: ATensor, n_tokens: int =
 		)
 	return predictions
 
+
+def pad_sequence(seq: ATensor, model_cfg: OpenAIGPTConfig) -> ATensor:
+	"""pads the token according to the context length and padding token in the config"""
+	return torch.nn.functional.pad(
+		seq, 
+		(model_cfg.n_positions - seq.shape[0], 0),
+		value=model_cfg.pad_token_id,
+	)
+
+
 def plot_predicted_path(
 		model_path: str,
 		n_tokens_pred: int = 5,
 	):
 
-	model: OpenAIGPTLMHeadModel; train_cfg: TrainConfig; data_cfg: MazeDatasetConfig
-	model, train_cfg, data_cfg = load_model_with_configs(model_path, MazeDatasetConfig)
+	data_cfg: MazeDatasetConfig; train_cfg: TrainConfig
+	model_cfg: OpenAIGPTConfig; model: OpenAIGPTLMHeadModel
+	loaded_model_and_configs: LoadedModelConfigs = load_model_with_configs(model_path, MazeDatasetConfig)
+	data_cfg, train_cfg, model_cfg, model = loaded_model_and_configs
 
 	# generate a maze
 	grid_n: int = data_cfg.grid_n
@@ -125,11 +151,7 @@ def plot_predicted_path(
 		device="cpu",
 	)
 
-	array = torch.nn.functional.pad(
-		array_nopad, 
-		(train_cfg.seq_len_max - array_nopad.shape[0], 0),
-		value=data_cfg.padding_token_idx,
-	)
+	array: ATensor = pad_sequence(array_nopad, model_cfg)
 
 	# have the model predict some tokens
 	predictions = predict_tokens(model, array.unsqueeze(0), n_tokens_pred)

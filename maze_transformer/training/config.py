@@ -121,8 +121,9 @@ class TrainConfig:
 				raise ValueError("gpt_config_ctor_kwargs already set!")
 			else:
 				pass
-				# the _gpt_config_ctor_kwargs is already set, so we don't need to do anything
+				# the _gpt_config_ctor_kwargs is already set, so we just return it
 		else:
+			# generate the _gpt_config_ctor_kwargs
 			self._gpt_config_ctor_kwargs = {
 				**self.base_gpt_cfg.as_dict(),
 				**dict(device = self.device),
