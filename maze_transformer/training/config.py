@@ -116,6 +116,9 @@ class TrainConfig:
 		) -> OpenAIGPTConfig:
 		"""passes base_gpt_cfg, device, and _gpt_config_ctor_kwargs to OpenAIGPTConfig"""
 
+		if self._gpt_config_ctor_kwargs is not None:
+			raise ValueError("gpt_config_ctor_kwargs already set!")
+
 		self._gpt_config_ctor_kwargs = {
 			**self.base_gpt_cfg.as_dict(),
 			**dict(device = self.device),
