@@ -117,13 +117,17 @@ class TrainConfig:
 		"""passes base_gpt_cfg, device, and _gpt_config_ctor_kwargs to OpenAIGPTConfig"""
 
 		if self._gpt_config_ctor_kwargs is not None:
-			raise ValueError("gpt_config_ctor_kwargs already set!")
-
-		self._gpt_config_ctor_kwargs = {
-			**self.base_gpt_cfg.as_dict(),
-			**dict(device = self.device),
-			**kwargs,
-		}
+			if len(kwargs) > 0:
+				raise ValueError("gpt_config_ctor_kwargs already set!")
+			else:
+				pass
+				# the _gpt_config_ctor_kwargs is already set, so we don't need to do anything
+		else:
+			self._gpt_config_ctor_kwargs = {
+				**self.base_gpt_cfg.as_dict(),
+				**dict(device = self.device),
+				**kwargs,
+			}
 
 		return OpenAIGPTConfig(**self._gpt_config_ctor_kwargs)
 

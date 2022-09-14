@@ -27,14 +27,13 @@ from maze_transformer.training.training import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access
 
-
 def check_configs_present(folder: Path) -> bool:
 	return (
 		(folder / TRAIN_SAVE_FILES.data_cfg).exists()
 		and (folder / TRAIN_SAVE_FILES.train_cfg).exists()
 	)
 
-def load_model_with_configs(model_path: str, data_cfg_class: type) -> tuple[OpenAIGPTLMHeadModel, TrainConfig, GPTDatasetConfig]:
+def load_model_with_configs(model_path: str, data_cfg_class: type, verbose: bool = False) -> tuple[OpenAIGPTLMHeadModel, TrainConfig, GPTDatasetConfig, OpenAIGPTConfig]:
 	"""
 	Load a model and associated config files from a path.
 	"""
@@ -42,29 +41,36 @@ def load_model_with_configs(model_path: str, data_cfg_class: type) -> tuple[Open
 	# TODO: make this less fragile
 	# load the configs
 	# get path to the folder containing the model
-	model_folder: Path = Path(model_path).parent
+	config_folder: Path = Path(model_path).parent
 	# check for the filenames, go up a dir if they don't exist
-	if not check_configs_present(model_folder):
-		model_folder = model_folder.parent
-		assert check_configs_present(model_folder), f"Couldn't find configs in directory of or parent directory of {model_path}"
+	if not check_configs_present(config_folder):
+		config_folder = config_folder.parent
+		assert check_configs_present(config_folder), f"Couldn't find configs in directory of or parent directory of {model_path}"
 
 	# load the configs
-	with open(model_folder / TRAIN_SAVE_FILES.train_cfg, "r") as f:
+	with open(config_folder / TRAIN_SAVE_FILES.train_cfg, "r") as f:
 		train_cfg_raw: dict = json.load(f)
 	
 	train_cfg: TrainConfig = TrainConfig.load(train_cfg_raw)
+	if verbose:
+		print(f"{train_cfg = }")
+		print('-'*40)
 
-	with open(model_folder / TRAIN_SAVE_FILES.data_cfg, "r") as f:
+	model_cfg: OpenAIGPTConfig = OpenAIGPTConfig(**train_cfg.get_gpt_config())
+	if verbose:
+		print("model_cfg = ", json_serialize(model_cfg.to_dict(), error_mode = "warn"))
+		print('-'*40)
+
+	with open(config_folder / TRAIN_SAVE_FILES.data_cfg, "r") as f:
 		data_cfg: GPTDatasetConfig = data_cfg_class.load(json.load(f))
 
-	model_cfg: OpenAIGPTConfig = OpenAIGPTConfig(train_cfg._gpt_config_ctor_kwargs)
 	model: OpenAIGPTLMHeadModel = OpenAIGPTLMHeadModel(model_cfg)
 	state_dict: dict = torch.load(model_path)
 	# print(state_dict.keys())
 	model.load_state_dict(state_dict)
 	model.eval()
 	print(f"loaded model with {shorten_numerical_to_str(model.num_parameters())} parameters")
-	return (model, train_cfg, data_cfg)
+	return (model, train_cfg, data_cfg, model_cfg)
 
 
 def predict_tokens(model: OpenAIGPTLMHeadModel, inputs: ATensor, n_tokens: int = 32, **generate_kwargs):
@@ -82,13 +88,14 @@ def predict_tokens(model: OpenAIGPTLMHeadModel, inputs: ATensor, n_tokens: int =
 
 def plot_predicted_path(
 		model_path: str,
-		grid_n: int = 4,
+		n_tokens_pred: int = 5,
 	):
 
 	model: OpenAIGPTLMHeadModel; train_cfg: TrainConfig; data_cfg: MazeDatasetConfig
 	model, train_cfg, data_cfg = load_model_with_configs(model_path, MazeDatasetConfig)
 
 	# generate a maze
+	grid_n: int = data_cfg.grid_n
 	maze: LatticeMaze = LatticeMazeGenerators.gen_dfs((grid_n, grid_n))
 	c_start = (0, 0)
 	c_end = (grid_n - 1, grid_n - 1)
@@ -120,12 +127,12 @@ def plot_predicted_path(
 
 	array = torch.nn.functional.pad(
 		array_nopad, 
-		(90 - len(array_nopad), 0), 
-		value=8,
+		(train_cfg.seq_len_max - array_nopad.shape[0], 0),
+		value=data_cfg.padding_token_idx,
 	)
 
 	# have the model predict some tokens
-	predictions = predict_tokens(model, array.unsqueeze(0), 5)
+	predictions = predict_tokens(model, array.unsqueeze(0), n_tokens_pred)
 
 	print(predictions)
 
