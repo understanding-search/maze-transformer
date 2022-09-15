@@ -241,7 +241,7 @@ TODO: figure out unexpected keyword argument linter error here? <a href="../crea
 <span id="cb1-62"><a href="#cb1-62"></a><span class="co"># create and solve mazes</span></span>
 <span id="cb1-63"><a href="#cb1-63"></a>c_start <span class="op">=</span> (<span class="dv">0</span>, <span class="dv">0</span>)</span>
 <span id="cb1-64"><a href="#cb1-64"></a>c_end <span class="op">=</span> (cfg.grid_n <span class="op">-</span> <span class="dv">1</span>, cfg.grid_n <span class="op">-</span> <span class="dv">1</span>)</span>
-<span id="cb1-65"><a href="#cb1-65"></a>mazes: <span class="bu">list</span>[SolvedMaze] </span>
+<span id="cb1-65"><a href="#cb1-65"></a>mazes: <span class="bu">list</span>[MazeTokenizer] </span>
 <span id="cb1-66"><a href="#cb1-66"></a></span>
 <span id="cb1-67"><a href="#cb1-67"></a><span class="cf">with</span> multiprocessing.Pool() <span class="im">as</span> pool:</span></code></pre></div>
 </details></li>
@@ -276,7 +276,7 @@ TODO: minimum separation <a href="../maze_transformer/training/mazedataset.py#L2
 <span id="cb3-233"><a href="#cb3-233"></a><span class="co">    )</span></span>
 <span id="cb3-234"><a href="#cb3-234"></a><span class="co">    # end_node +=</span></span>
 <span id="cb3-235"><a href="#cb3-235"></a><span class="co">&quot;&quot;&quot;</span></span>
-<span id="cb3-236"><a href="#cb3-236"></a>mazes: <span class="bu">list</span>[SolvedMaze] <span class="op">=</span> <span class="bu">list</span>()</span>
+<span id="cb3-236"><a href="#cb3-236"></a>mazes: <span class="bu">list</span>[MazeTokenizer] <span class="op">=</span> <span class="bu">list</span>()</span>
 <span id="cb3-237"><a href="#cb3-237"></a>endpoint_nodes: NDArray[((<span class="st">&quot;maze_idx&quot;</span>, cfg.n_mazes), (<span class="st">&quot;start_end&quot;</span>, <span class="dv">2</span>), (<span class="st">&quot;coord&quot;</span>, <span class="dv">2</span>)), np.int8] <span class="op">=</span> np.random.randint(<span class="dv">0</span>, cfg.grid_shape, (cfg.n_mazes, <span class="dv">2</span>, <span class="dv">2</span>))</span></code></pre></div>
 </details></li>
 </ul>

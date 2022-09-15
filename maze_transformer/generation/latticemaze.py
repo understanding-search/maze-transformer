@@ -105,7 +105,9 @@ class LatticeMaze:
 
 				# flip if shuffling
 				if shuffle_d1 and (flip_d1[idx] > 0.5):
-					adjlist[idx, 0], adjlist[idx, 1] = adjlist[idx, 1], adjlist[idx, 0]
+					c_s, c_e = adjlist[idx, 0].copy(), adjlist[idx, 1].copy()
+					adjlist[idx, 0] = c_e
+					adjlist[idx, 1] = c_s
 				
 				idx += 1
 

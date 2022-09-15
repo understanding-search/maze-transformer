@@ -21,7 +21,7 @@ from muutils.statcounter import StatCounter
 
 from maze_transformer.generation.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray
 from maze_transformer.generation.generators import LatticeMazeGenerators, GENERATORS_MAP
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS, SolvedMaze
+from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
 
 @dataclass(kw_only=True)
 class GPTDatasetConfig:

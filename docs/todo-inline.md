@@ -85,7 +85,7 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 	# create and solve mazes
 	c_start = (0, 0)
 	c_end = (cfg.grid_n - 1, cfg.grid_n - 1)
-	mazes: list[SolvedMaze] 
+	mazes: list[MazeTokenizer] 
 	
 	with multiprocessing.Pool() as pool:
 	```
@@ -132,7 +132,7 @@ cmd: "pandoc todo-inline.md -o todo-inline.html --from markdown+backtick_code_bl
 	    )
 	    # end_node +=
 	"""
-	mazes: list[SolvedMaze] = list()
+	mazes: list[MazeTokenizer] = list()
 	endpoint_nodes: NDArray[(("maze_idx", cfg.n_mazes), ("start_end", 2), ("coord", 2)), np.int8] = np.random.randint(0, cfg.grid_shape, (cfg.n_mazes, 2, 2))
 	```
 

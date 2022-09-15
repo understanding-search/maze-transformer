@@ -38,7 +38,7 @@ SPECIAL_TOKENS: dict[str, str] = dict(
 
 
 @dataclass(frozen=True, kw_only=True)
-class SolvedMaze:
+class MazeTokenizer:
 	"""solved maze for serialization"""
 	maze: LatticeMaze
 	solution: CoordArray

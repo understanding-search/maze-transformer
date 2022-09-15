@@ -11,21 +11,21 @@ from muutils.misc import shorten_numerical_to_str
 from maze_transformer.generation.latticemaze import LatticeMaze, Coord, CoordArray, CoordTup
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.training.mazedataset import MazeDatasetConfig, MazeDataset
-from maze_transformer.training.tokenizer import SolvedMaze
+from maze_transformer.training.tokenizer import MazeTokenizer
 
 
-def generate_solvedmaze(
+def generate_MazeTokenizer(
 		junk,
 		grid_n: int,
 		c_start: tuple[int, int],
 		c_end: tuple[int, int],
-	) -> SolvedMaze:
+	) -> MazeTokenizer:
 	
 	maze = LatticeMazeGenerators.gen_dfs(
 		grid_shape=(grid_n, grid_n),
 		lattice_dim=2,
 	)
-	return SolvedMaze(
+	return MazeTokenizer(
 		maze=maze,
 		solution=np.array(maze.find_shortest_path(
 			c_start=c_start,
@@ -64,12 +64,12 @@ def create(
 	c_start = (0, 0)
 	c_end = (cfg.grid_n - 1, cfg.grid_n - 1)
 
-	mazes: list[SolvedMaze] 
+	mazes: list[MazeTokenizer] 
 	
 	with multiprocessing.Pool() as pool:
 		mazes = list(tqdm(
 			pool.imap(
-				partial(generate_solvedmaze, grid_n=grid_n, c_start=c_start, c_end=c_end),
+				partial(generate_MazeTokenizer, grid_n=grid_n, c_start=c_start, c_end=c_end),
 				range(cfg.n_mazes),
 			),
 			total = cfg.n_mazes,
