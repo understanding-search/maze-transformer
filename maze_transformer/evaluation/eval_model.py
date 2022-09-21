@@ -91,10 +91,11 @@ def predict_tokens(model: OpenAIGPTLMHeadModel, inputs: ATensor, n_tokens: int =
 	"""
 	Predict the next token.
 	"""
+
+	print(f"{inputs.shape = } {n_tokens = } {model.config.n_positions = }")
 	with torch.no_grad():
 		predictions = model.generate(
-			inputs, 
-			max_length=n_tokens, 
+			inputs,
 			min_length=n_tokens, 
 			**generate_kwargs,
 		)
