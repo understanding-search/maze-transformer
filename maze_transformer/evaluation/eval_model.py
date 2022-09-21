@@ -20,7 +20,7 @@ from maze_transformer.generation.latticemaze import LatticeMaze
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.training.tokenizer import MazeTokenizer, SPECIAL_TOKENS
 from maze_transformer.training.mazedataset import MazeDatasetConfig, MazeDataset
-from maze_transformer.evaluation.plot_maze import plot_multi_paths
+from maze_transformer.evaluation.plot_maze import plot_multi_paths, PathFormat
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.config import TrainConfig
 from maze_transformer.training.training import TRAIN_SAVE_FILES
@@ -266,8 +266,8 @@ def generate_plot_predicted_path(
 	plot_multi_paths(
 		maze = maze,
 		paths = [
-			(path_true, "true", "-", "red"),
-			(np.array(path_predicted), "predicted", ":", "blue"),
+			PathFormat(path_true, "true", "-", "red", {'width': 0.015}),
+			PathFormat(np.array(path_predicted), "predicted", ":", "blue", {}),
 		],
 	)
 

@@ -33,11 +33,11 @@ class PathFormat:
 	label: str|None = None
 	fmt: str|None = None
 	color: str|None = None
+	quiver_kwargs: dict|None = None,
 
 def plot_multi_paths(
 		maze: LatticeMaze, 
 		paths: list[PathFormat|tuple|list],
-		use_quiver: bool = True,
 		show: bool = True,
 	) -> None:
 
@@ -61,10 +61,10 @@ def plot_multi_paths(
 		# p_transformed: NDArray = maze.points_transform_to_img(pf.path)
 		p_transformed: NDArray = pf.path
 
-		if use_quiver:
+		if pf.quiver_kwargs is not None:
 			x: NDArray = p_transformed[:, 0]
 			y: NDArray = p_transformed[:, 1]
-			plt.quiver(x[:-1], y[:-1], x[1:]-x[:-1], y[1:]-y[:-1], scale_units='xy', angles='xy', scale=1, color=pf.color)
+			plt.quiver(x[:-1], y[:-1], x[1:]-x[:-1], y[1:]-y[:-1], scale_units='xy', angles='xy', scale=1, color=pf.color, **pf.quiver_kwargs)
 		else:
 			plt.plot(*zip(*p_transformed), pf.fmt, color=pf.color, label=pf.label)
 		# mark endpoints
