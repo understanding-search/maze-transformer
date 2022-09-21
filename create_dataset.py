@@ -42,8 +42,11 @@ def create(
 		**cfg_kwargs,
 	):
 
+	name_base: str = f"g{grid_n}-n{shorten_numerical_to_str(n_mazes, small_as_decimal = False)}"
 	if name is None:
-		name = f"g{grid_n}-n{shorten_numerical_to_str(n_mazes, small_as_decimal = False)}"
+		name = name_base
+	else:
+		name = f"{name_base}-{name}"
 
 	data_path: str = Path(path_base) / name
 	print(f"generating dataset: {data_path.as_posix() = } {n_mazes = } {grid_n = } {name = } {cfg_kwargs = }")

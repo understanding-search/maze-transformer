@@ -87,16 +87,21 @@ def load_model_with_configs(model_path: str, data_cfg_class: type, verbose: bool
 	)
 
 
-def predict_tokens(model: OpenAIGPTLMHeadModel, inputs: ATensor, n_tokens: int = 32, **generate_kwargs):
+def predict_tokens(
+		model: OpenAIGPTLMHeadModel, 
+		inputs: ATensor, 
+		n_tokens: int = 32, 
+		**generate_kwargs,
+	):
 	"""
 	Predict the next token.
 	"""
-
-	print(f"{inputs.shape = } {n_tokens = } {model.config.n_positions = }")
+	# print(f"{inputs.shape = } {n_tokens = } {model.config.n_positions = }")
 	with torch.no_grad():
 		predictions = model.generate(
 			inputs,
 			min_length=n_tokens, 
+			max_length=n_tokens,
 			**generate_kwargs,
 		)
 	return predictions
@@ -141,7 +146,7 @@ def predict_maze_path(
 		model: OpenAIGPTLMHeadModel, 
 		n_tokens_pred: int, 
 		**generate_kwargs,
-	) -> tuple[MazePath, MazePath]:
+	) -> tuple[LatticeMaze, MazePath, MazePath]:
 	"""given tokens from a dataset, predict the next tokens with the model, decode both true and predicted to paths
 	
 	### Parameters:
@@ -169,7 +174,7 @@ def predict_maze_path(
 
 	# encode + pad the maze tokens
 	maze_arr_nopad: ATensor = torch.tensor(
-		[ data_cfg.tokenizer_map[t] for t in tokens ], 
+		[ data_cfg.tokenizer_map[t] for t in maze_tokens ], 
 		dtype=torch.int32,
 		device="cpu",
 	)
@@ -179,26 +184,40 @@ def predict_maze_path(
 	predictions: ATensor = predict_tokens(
 		model = model, 
 		inputs = maze_arr.unsqueeze(0), 
-		n_tokens = n_tokens_pred,
+		# n_tokens = n_tokens_pred,
 	)
 
 	# decode the tokens
-	predicted_tokens = [ data_cfg.token_arr[t] for t in predictions[0] ]
+	predicted_and_context_tokens: list[str] = [ data_cfg.token_arr[t] for t in predictions[0] ]
+	pac_path_start_idx: int = predicted_and_context_tokens.index(path_start_token) + 1
+	predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_idx:]
+
+	print(f"{maze_tokens = }\n{path_true_tokens = }\n{predicted_tokens = }")
 	
 	# convert tokens to coordinates
-	path_predicted: list[tuple[int,int]] = decode_maze_tokens_to_coords(
-		predicted_tokens[path_start_token:],
-		mazedata_cfg = data_cfg, 
-		when_noncoord = "skip",
-	)
-
 	path_true: list[tuple[int,int]] = decode_maze_tokens_to_coords(
 		path_true_tokens,
 		mazedata_cfg = data_cfg,
 		when_noncoord = "skip",
 	)
 
-	return (path_true, path_predicted)
+	path_predicted: list[tuple[int,int]] = decode_maze_tokens_to_coords(
+		predicted_tokens,
+		mazedata_cfg = data_cfg, 
+		when_noncoord = "skip",
+	)
+
+	# remove start and end tokens from maze_tokens
+	maze_tokens = maze_tokens[
+		maze_tokens.index(SPECIAL_TOKENS["adjlist_start"]) + 1
+		:maze_tokens.index(SPECIAL_TOKENS["adjlist_end"])
+	]
+
+	return (
+		LatticeMaze.from_tokens(maze_tokens),
+		path_true, 
+		path_predicted,
+	)
 
 
 

@@ -59,7 +59,7 @@ def plot_multi_paths(
 			pf = PathFormat(*pf)
 
 		# p_transformed: NDArray = maze.points_transform_to_img(pf.path)
-		p_transformed: NDArray = pf.path
+		p_transformed: NDArray = np.array(pf.path)
 
 		if pf.quiver_kwargs is not None:
 			x: NDArray = p_transformed[:, 0]

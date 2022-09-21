@@ -5,11 +5,25 @@ import torch
 import numpy as np
 from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory, dataclass_loader_factory, try_catch, JSONitem
+from muutils.misc import list_split
 
 # @dataclass(frozen=True, kw_only=True)
 # class Maze:
 # 	"""generalized maze class"""
 # 	n_nodes: int
+
+
+SPECIAL_TOKENS: dict[str, str] = dict(
+	adjlist_start = "<ADJLIST_START>",
+	adjlist_end = "<ADJLIST_END>",
+	target_start = "<TARGET_START>",
+	target_end = "<TARGET_END>",
+	start_path = "<START_PATH>",
+	end_path = "<END_PATH>",
+	connector = "<-->",
+	adjacency_endline = ";",
+	padding = "<PADDING>",
+)
 	
 DIRECTIONS_MAP: NDArray[(("direction", 4), ("axes", 2)), int] = np.array([
 	[0, 1], # down
@@ -41,6 +55,13 @@ CoordArray =  NDArray[(("points", Any), ("coord", 2)), np.int8]
 # 		for x, y in neighbors
 # 		if (0 <= x < maze_shape[0]) and (0 <= y < maze_shape[1])
 # 	]
+
+
+def coord_str_to_tuple(coord_str: str) -> CoordTup:
+	"""convert a coordinate string to a tuple"""
+
+	stripped: str = coord_str.lstrip("(").rstrip(")")
+	return tuple(int(x) for x in stripped.split(","))
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -116,7 +137,7 @@ class LatticeMaze:
 
 		return adjlist
 
-
+	
 
 	def points_transform_to_img(self, points: CoordArray) -> CoordArray:
 		"""transform points to img coordinates"""
@@ -211,4 +232,75 @@ class LatticeMaze:
 				source[neighbor] = c_current
 				g_score[neighbor] = g_temp
 				f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, c_end)
+
+	
+	@classmethod
+	def from_adjlist(
+			cls,
+			adjlist: NDArray[( ("conn", Any), ("start_end", 2), ("coord", 2) ), np.int8],
+		) -> "LatticeMaze":
+		"""create a LatticeMaze from a list of connections"""
+
+		# TODO: this is only for square mazes
+		grid_n: int = adjlist.max() + 1
+
+		connection_list: NDArray[("lattice_dim", "x", "y"), bool] = np.zeros(
+			(2, grid_n, grid_n),
+			dtype=bool,
+		)
+
+		for c_start, c_end in adjlist:
+			# check that exactly 1 coordinate matches
+			if (c_start == c_end).sum() != 1:
+				raise ValueError("invalid connection")
+
+			# get the direction
+			d: int = (c_start != c_end).argmax()
+			
+			x: int; y: int
+			# pick whichever has the lesser value in the direction `d`
+			if c_start[d] < c_end[d]:
+				x, y = c_start
+			else:
+				x, y = c_end
+			
+			connection_list[d, x, y] = True
+
+		return LatticeMaze(
+			connection_list=connection_list,
+		)
+
+	@classmethod
+	def from_tokens(cls, maze_tokens: list[str]) -> "LatticeMaze":
+		"""create a LatticeMaze from a list of tokens"""
+
+		edges: list[str] = list_split(
+			maze_tokens,
+			SPECIAL_TOKENS["adjacency_endline"],
+		)
+
+		coordinates: list[tuple[str, str]] = list()
+		for e in edges:
+			# skip last endline
+			if len(e) != 0:
+				# split into start and end
+				e_split: list[list] = list_split(e, SPECIAL_TOKENS["connector"])
+				# print(f"{e = } {e_split = }")
+				assert (len(e_split) == 2), f"invalid edge: {e = } {e_split = }"
+				assert ( all(len(c) == 1 for c in e_split) ), f"invalid edge: {e = } {e_split = }"
+				coordinates.append(tuple([ c[0] for c in e_split ]))
+
+		assert all(len(c) == 2 for c in coordinates), f"invalid coordinates: {coordinates = }"
+
+
+		adjlist: NDArray[( ("conn", Any), ("start_end", 2), ("coord", 2) ), np.int8] = np.full(
+			(len(coordinates), 2, 2),
+			-1,
+		)
+
+		for i, (c_start, c_end) in enumerate(coordinates):
+			adjlist[i, 0] = np.array(coord_str_to_tuple(c_start))
+			adjlist[i, 1] = np.array(coord_str_to_tuple(c_end))
+
+		return cls.from_adjlist(adjlist)
 

@@ -16,25 +16,13 @@ from transformers import OpenAIGPTConfig
 from tqdm import tqdm
 from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP, lpad_array
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory, dataclass_loader_factory, try_catch, JSONitem
-from muutils.misc import freeze
+from muutils.misc import freeze, list_split
 from muutils.statcounter import StatCounter
 
-from maze_transformer.generation.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray
+from maze_transformer.generation.latticemaze import LatticeMaze, Coord, CoordTup, CoordArray, SPECIAL_TOKENS
 from maze_transformer.generation.generators import LatticeMazeGenerators, GENERATORS_MAP
 
 # pylint: disable=unused-import
-
-SPECIAL_TOKENS: dict[str, str] = dict(
-	adjlist_start = "<ADJLIST_START>",
-	adjlist_end = "<ADJLIST_END>",
-	target_start = "<TARGET_START>",
-	target_end = "<TARGET_END>",
-	start_path = "<START_PATH>",
-	end_path = "<END_PATH>",
-	connector = "<-->",
-	adjacency_endline = ";",
-	padding = "<PADDING>",
-)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -84,8 +72,6 @@ class MazeTokenizer:
 			])
 
 		return tokens
-
-
 
 
 
