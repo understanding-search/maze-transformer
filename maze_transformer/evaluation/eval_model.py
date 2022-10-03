@@ -94,17 +94,19 @@ def predict_tokens(
 		**generate_kwargs,
 	):
 	"""
-	Predict the next token.
+	Predict the next tokens
 	"""
 	# print(f"{inputs.shape = } {n_tokens = } {model.config.n_positions = }")
+	sequence = pad_sequence(inputs, model.config)
 	with torch.no_grad():
-		predictions = model.generate(
-			inputs,
-			min_length=n_tokens, 
-			max_length=n_tokens,
-			**generate_kwargs,
-		)
-	return predictions
+		for _ in range(n_tokens):
+			sequence = model.generate(
+				sequence[:, -model.config.n_positions:],
+				do_sample=True,
+				**generate_kwargs,
+			)
+
+	return sequence
 
 
 def pad_sequence(seq: ATensor, model_cfg: OpenAIGPTConfig) -> ATensor:
@@ -178,13 +180,13 @@ def predict_maze_path(
 		dtype=torch.int32,
 		device="cpu",
 	)
-	maze_arr: ATensor = pad_sequence(maze_arr_nopad, model.config)
+	# maze_arr: ATensor = pad_sequence(maze_arr_nopad, model.config)
 
 	# have the model predict some tokens
 	predictions: ATensor = predict_tokens(
 		model = model, 
-		inputs = maze_arr.unsqueeze(0), 
-		# n_tokens = n_tokens_pred,
+		inputs = maze_arr_nopad.unsqueeze(0), 
+		n_tokens = n_tokens_pred,
 	)
 
 	# decode the tokens
@@ -192,7 +194,7 @@ def predict_maze_path(
 	pac_path_start_idx: int = predicted_and_context_tokens.index(path_start_token) + 1
 	predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_idx:]
 
-	print(f"{maze_tokens = }\n{path_true_tokens = }\n{predicted_tokens = }")
+	print(f"{maze_tokens = }\n{path_true_tokens = }\n{predicted_and_context_tokens = }\n{predicted_tokens = }")
 	
 	# convert tokens to coordinates
 	path_true: list[tuple[int,int]] = decode_maze_tokens_to_coords(
