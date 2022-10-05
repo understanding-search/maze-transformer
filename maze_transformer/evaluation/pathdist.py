@@ -28,8 +28,8 @@ class MazeEvalFuncs:
 	def node_overlap(m: LatticeMaze, a: MazePath, b: MazePath, /) -> float:
 		"""number of shared nodes (any order) / total number of (unique) nodes"""
 
-		if len(b) == 0:
-			return float("nan")
+		if len(b) <= 1:
+			return 0.0
 
 		n_shared: int = 0
 		a_set: set[CoordTup] = set(a)
@@ -41,6 +41,12 @@ class MazeEvalFuncs:
 
 		return n_shared / len(a_set)
 
+	# @staticmethod
+	# def path_len_diff(m: LatticeMaze, a: MazePath, b: MazePath, /) -> float:
+	# 	"""absolute difference in path length"""
+
+	# 	return float(len(a) - len(b))
+
 class ArrMazeEvalFuncs:
 	"""array path based eval functions. first path is always the "ground truth" path"""
 
@@ -48,8 +54,8 @@ class ArrMazeEvalFuncs:
 	def fraction_connections_adjacent_lattice(m: LatticeMaze, a: ArrMazePath, b: ArrMazePath, /) -> float:
 		"""fraction of the connections in `b` which actually connect nodes that are adjacent on the lattice `m`, ignoring if they are adjacent on the maze"""
 
-		if len(b) == 0:
-			return float("nan")
+		if len(b) <= 1:
+			return 0.0
 		
 		n_adj: int = 0
 		for n_s, n_e in path_as_segments_iter(b):
@@ -58,14 +64,14 @@ class ArrMazeEvalFuncs:
 			if (np.abs(n_s - n_e).sum() <= 1).all():
 				n_adj += 1
 
-		return n_adj / len(b[-1])
+		return n_adj / len(b)
 
 	@staticmethod
 	def fraction_connections_adjacent(m: LatticeMaze, a: ArrMazePath, b: ArrMazePath, /) -> float:
 		"""fraction of connections in `b` which are are valid paths on the maze"""
 
-		if len(b) == 0:
-			return float("nan")
+		if len(b) <= 1:
+			return 0.0
 
 		n_connected: int = 0
 		for n_s, n_e in path_as_segments_iter(b):
@@ -73,7 +79,7 @@ class ArrMazeEvalFuncs:
 			if m.nodes_connected(n_s, n_e):
 				n_connected += 1
 
-		return n_connected / len(b[-1])
+		return n_connected / len(b)
 		
 
 
