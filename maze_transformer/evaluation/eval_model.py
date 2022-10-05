@@ -12,20 +12,23 @@ import torch
 from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
 from muutils.logger import Logger, TimerContext
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory
-from muutils.tensor_utils import ATensor
+from muutils.tensor_utils import ATensor, NDArray
 from muutils.statcounter import StatCounter
 from muutils.misc import shorten_numerical_to_str
 
-from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.latticemaze import LatticeMaze, CoordTup
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.training.tokenizer import MazeTokenizer, SPECIAL_TOKENS
-from maze_transformer.training.mazedataset import MazeDatasetConfig, MazeDataset
+from maze_transformer.training.mazedataset import MazeDatasetConfig
 from maze_transformer.evaluation.plot_maze import plot_multi_paths, PathFormat
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.config import TrainConfig
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access
+
+MazePath = list[CoordTup]
+ArrMazePath = NDArray[((Any, "node"), (2, "xypos")), int]
 
 def check_configs_present(folder: Path) -> bool:
 	return (
@@ -139,8 +142,6 @@ def decode_maze_tokens_to_coords(
 			else:
 				raise ValueError(f"invalid value for {when_noncoord = }")
 	return output
-
-MazePath = list[tuple[int,int]]
 
 def predict_maze_path(
 		tokens: list[str],

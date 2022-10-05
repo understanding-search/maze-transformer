@@ -100,10 +100,11 @@ def load(path: str) -> None:
 
 if __name__ == "__main__":
 	import fire
-	fire.Fire(dict(
-		create=create,
-		load=load,
-	))
+	fire.Fire(create)
+	# fire.Fire(dict(
+	# 	create=create,
+	# 	load=load,
+	# ))
 
 
 

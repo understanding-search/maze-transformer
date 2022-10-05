@@ -100,7 +100,7 @@ def setup_train(
 	)
 
 	# set up the training config
-	model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(dict(
+	model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(**dict(
 		**dict(data_cfg.gpt_config_kwargs),
 		device = train_cfg.device,
 	))
@@ -122,7 +122,7 @@ def setup_train(
 			"basepath": basepath,
 			"basepath_train": basepath_train,
 			"model_cfg.device": model_cfg.device,
-			"logger.__dict__": json_serialize(logger.__dict__),
+			# "logger.__dict__": json_serialize(logger.__dict__),
 		},
 		lvl = 0,
 	))
@@ -283,6 +283,5 @@ def train(
 	logger.saving(f"saving final model to {final_model_path.as_posix()}", 10)
 	torch.save(model.state_dict(), final_model_path)
 	logger.log_elapsed_last(stream="saving")
-	torch.save(model.state_dict(), )
 
 	logger.log("done!", 10)

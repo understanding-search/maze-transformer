@@ -55,7 +55,7 @@ def plot_loss(
 		f"dataset={get_any_from_stream(data_config, 'data_cfg')['name']}",
 		f"train_config={get_any_from_stream(data_config, 'train_cfg')['name']}",
 		f"lr={get_any_from_stream(data_config, 'train_cfg')['optimizer_kwargs']['lr']}",
-		f"vocab_size={get_any_from_stream(data_config, 'model_cfg_inputs')['vocab_size']}",
+		f"vocab_size={get_any_from_stream(data_config, 'base_model_cfg')['vocab_size']}",
 	])
 	plt.title(title)
 	plt.legend()
