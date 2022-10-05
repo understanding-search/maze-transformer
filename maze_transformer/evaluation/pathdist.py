@@ -51,8 +51,8 @@ class ArrMazeEvalFuncs:
 	"""array path based eval functions. first path is always the "ground truth" path"""
 
 	@staticmethod
-	def fraction_connections_adjacent_lattice(m: LatticeMaze, a: ArrMazePath, b: ArrMazePath, /) -> float:
-		"""fraction of the connections in `b` which actually connect nodes that are adjacent on the lattice `m`, ignoring if they are adjacent on the maze"""
+	def num_connections_adjacent_lattice(m: LatticeMaze, a: ArrMazePath, b: ArrMazePath, /) -> float:
+		"""number of the connections in `b` which actually connect nodes that are adjacent on the lattice `m`, ignoring if they are adjacent on the maze"""
 
 		if len(b) <= 1:
 			return 0.0
@@ -61,14 +61,20 @@ class ArrMazeEvalFuncs:
 		for n_s, n_e in path_as_segments_iter(b):
 			# print(f"{n_s = } {n_e = }")
 
-			if (np.abs(n_s - n_e).sum() <= 1).all():
+			if (np.abs(n_s - n_e).sum() == 1).all():
 				n_adj += 1
 
-		return n_adj / len(b)
+		return n_adj
 
 	@staticmethod
-	def fraction_connections_adjacent(m: LatticeMaze, a: ArrMazePath, b: ArrMazePath, /) -> float:
-		"""fraction of connections in `b` which are are valid paths on the maze"""
+	def fraction_connections_adjacent_lattice(m: LatticeMaze, a: ArrMazePath, b: ArrMazePath, /) -> float:
+		"""fraction of the connections in `b` which actually connect nodes that are adjacent on the lattice `m`, ignoring if they are adjacent on the maze"""
+
+		return ArrMazeEvalFuncs.num_connections_adjacent_lattice(m, a, b) / len(b)
+
+	@staticmethod
+	def num_connections_adjacent(m: LatticeMaze, a: ArrMazePath, b: ArrMazePath, /) -> float:
+		"""number of connections in `b` which are are valid paths on the maze"""
 
 		if len(b) <= 1:
 			return 0.0
@@ -79,9 +85,13 @@ class ArrMazeEvalFuncs:
 			if m.nodes_connected(n_s, n_e):
 				n_connected += 1
 
-		return n_connected / len(b)
+		return n_connected
 		
+	@staticmethod
+	def fraction_connections_adjacent(m: LatticeMaze, a: ArrMazePath, b: ArrMazePath, /) -> float:
+		"""fraction of connections in `b` which are are valid paths on the maze"""
 
+		return ArrMazeEvalFuncs.num_connections_adjacent(m, a, b) / len(b)
 
 
 

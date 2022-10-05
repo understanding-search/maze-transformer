@@ -151,7 +151,7 @@ class LatticeMaze:
 	def nodes_connected(self, a: Coord, b: Coord, /) -> bool:
 		"""returns whether two nodes are connected"""
 		delta: Coord = b - a
-		if np.abs(delta).sum() > 1:
+		if np.abs(delta).sum() != 1:
 			# return false if not even adjacent
 			return False
 		else:
