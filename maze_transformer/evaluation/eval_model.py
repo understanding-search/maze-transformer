@@ -148,6 +148,7 @@ def predict_maze_path(
 		data_cfg: MazeDatasetConfig,
 		model: OpenAIGPTLMHeadModel, 
 		n_tokens_pred: int, 
+		verbose: bool = False,
 		**generate_kwargs,
 	) -> tuple[LatticeMaze, MazePath, MazePath]:
 	"""given tokens from a dataset, predict the next tokens with the model, decode both true and predicted to paths
@@ -195,7 +196,8 @@ def predict_maze_path(
 	pac_path_start_idx: int = predicted_and_context_tokens.index(path_start_token) + 1
 	predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_idx:]
 
-	print(f"{maze_tokens = }\n{path_true_tokens = }\n{predicted_and_context_tokens = }\n{predicted_tokens = }")
+	if verbose:
+		print(f"{maze_tokens = }\n{path_true_tokens = }\n{predicted_and_context_tokens = }\n{predicted_tokens = }")
 	
 	# convert tokens to coordinates
 	path_true: list[tuple[int,int]] = decode_maze_tokens_to_coords(

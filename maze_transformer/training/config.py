@@ -18,6 +18,8 @@ from muutils.tensor_utils import ATensor, TORCH_OPTIMIZERS_MAP, DTYPE_MAP
 from muutils.statcounter import StatCounter
 
 
+DEVICE_OVERRIDE: torch.device|None = torch.device("cuda:0") if torch.cuda.is_available() else None
+
 TokenizerFunction = Callable[[list[str]], list[int]]
 
 
@@ -145,6 +147,16 @@ TrainConfig.serialize = dataclass_serializer_factory(
 )
 
 
+def load_device(d: dict|str) -> torch.device:
+	if DEVICE_OVERRIDE is not None:
+		return DEVICE_OVERRIDE
+	elif isinstance(d, str):
+		return torch.device(d)
+	elif isinstance(d, dict):
+		return torch.device(d["str"])
+	else:
+		raise TypeError(f"invalid type for loading device from serialization: {type(d) = } {d = }")
+
 def process_config_kwargs(kwargs: dict|None) -> dict|None:
 	"""process config kwargs, converting device and dtype"""
 
@@ -152,7 +164,7 @@ def process_config_kwargs(kwargs: dict|None) -> dict|None:
 		return None
 
 	if "device" in kwargs:
-		kwargs["device"] = torch.device(kwargs["device"])
+		kwargs["device"] = load_device(kwargs["device"])
 	
 	if "dtype" in kwargs:
 		kwargs["dtype"] = DTYPE_MAP[kwargs["dtype"]]
@@ -165,7 +177,7 @@ TrainConfig.load = dataclass_loader_factory(
 	special_loaders=dict(
 		optimizer = lambda d: TORCH_OPTIMIZERS_MAP[d["_optimizer_name"]],
 		base_gpt_cfg = lambda d: BaseGPTConfig(**d["base_gpt_cfg"]), 
-		device = lambda d: torch.device(d["device"]),
+		device = lambda d: load_device(d["device"]),
 		_gpt_config_ctor_kwargs = lambda d: process_config_kwargs(d.get("_gpt_config_ctor_kwargs", None)),
 	),
 )

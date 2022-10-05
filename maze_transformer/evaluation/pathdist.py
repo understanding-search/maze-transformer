@@ -38,7 +38,7 @@ class MazeEvalFuncs:
 
 		return n_shared / len(a_set)
 
-class ArrayMazeEvalFunc:
+class ArrMazeEvalFuncs:
 	"""array path based eval functions. first path is always the "ground truth" path"""
 
 	@staticmethod
@@ -64,17 +64,6 @@ class ArrayMazeEvalFunc:
 				n_connected += 1
 
 		return n_connected / len(b[-1])
-
-	@staticmethod
-
-
-
-			
-
-
-
-			
-
 		
 
 
