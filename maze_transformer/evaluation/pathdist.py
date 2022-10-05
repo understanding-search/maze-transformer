@@ -15,8 +15,8 @@ def path_as_segments_iter(path: MazePath|ArrMazePath) -> Iterable[tuple]:
 	"""
 	Iterate over the segments of a path.
 	"""
-	i: int; n_s: Coord; n_e: Coord
-	for i, n_s in enumerate(path[-1]):
+	i: int; n_s: Coord|CoordTup; n_e: Coord|CoordTup
+	for i, n_s in enumerate(path[:-1]):
 		n_e = path[i + 1]
 		yield (n_s, n_e)
 
@@ -47,6 +47,7 @@ class ArrMazeEvalFuncs:
 		
 		n_adj: int = 0
 		for n_s, n_e in path_as_segments_iter(b):
+			# print(f"{n_s = } {n_e = }")
 
 			if (np.abs(n_s - n_e).sum() <= 1).all():
 				n_adj += 1
