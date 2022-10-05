@@ -148,6 +148,7 @@ def predict_maze_path(
 		data_cfg: MazeDatasetConfig,
 		model: OpenAIGPTLMHeadModel, 
 		n_tokens_pred: int, 
+		include_start_coord: bool = True,
 		verbose: bool = False,
 		**generate_kwargs,
 	) -> tuple[LatticeMaze, MazePath, MazePath]:
@@ -175,6 +176,10 @@ def predict_maze_path(
 	path_start_idx: int = tokens.index(path_start_token) + 1
 	maze_tokens: list[str] = tokens[:path_start_idx]
 	path_true_tokens: list[str] = tokens[path_start_idx:]
+
+	if include_start_coord:
+		# add the first coordinate to `maze_tokens`
+		maze_tokens.append(path_true_tokens[0])
 
 	# encode + pad the maze tokens
 	maze_arr_nopad: ATensor = torch.tensor(
