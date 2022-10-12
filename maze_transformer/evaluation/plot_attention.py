@@ -30,8 +30,7 @@ def _test():
 	tokens: list[str] = mystr.split()
 	weights: list[float] = np.random.rand(len(tokens)).tolist()
 	colored: str = colorize(tokens, weights)
-	print(colored)
-	IPython.display.HTML(colored)
+	IPython.display.display(IPython.display.HTML(colored))
 
 if __name__ == "__main__":
 	_test()
