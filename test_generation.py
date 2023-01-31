@@ -7,29 +7,28 @@ from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import LatticeMaze
 
 
-def generate_solve_plot(shape_x: int = 5, shape_y: int | None = None):
-    if shape_y is None:
-        shape_y = shape_x
+def generate_solve_plot(width: int = 5, height: int | None = None):
+    if height is None:
+        height = width
 
-    t: float = time.time()
-    m: LatticeMaze = LatticeMazeGenerators.gen_dfs(np.array([shape_x, shape_y]))
-    print(f"generation time: {time.time() - t}")
+    generation_start: float = time.time()
+    maze: LatticeMaze = LatticeMazeGenerators.gen_dfs(np.array([width, height]))
+    print(f"generation time: {time.time() - generation_start}")
 
     # show a path
     c_start = (0, 0)
-    c_end = (shape_x - 1, shape_y - 1)
+    c_end = (width - 1, height - 1)
 
-    t = time.time()
+    solution_start = time.time()
     path = np.array(
-        m.find_shortest_path(
+        maze.find_shortest_path(
             c_start=c_start,
             c_end=c_end,
         )
     )
+    print(f"solving time: {time.time() - solution_start}")
 
-    print(f"solving time: {time.time() - t}")
-
-    plot_path(m, path, show=True)
+    plot_path(maze, path, show=True)
 
 
 if __name__ == "__main__":
