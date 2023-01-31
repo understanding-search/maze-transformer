@@ -7,7 +7,20 @@ Solving mazes with transformer models.
 ## `test_generation`
 Generate a maze and solve it algorithmically.
 
-```python test_generation.py [width] [height]```
+### Example
+```
+python3 test_generation.py
+```
+
+## `create_dataset`
+Create or load a dataset of mazes.
+
+### Example
+create 10 4x4 mazes in the directory ./data/maze:
+```
+python3 create_dataset.py create ./data/maze 10 --grid_n=4
+```
+
 
 # Development
 
@@ -25,6 +38,8 @@ Generate a maze and solve it algorithmically.
     ```pip install -r requirements.txt```
 
 * Install muutils in editable mode
+
+    **TODO: the package@commit seems to have been added to requirements.txt, so this step may not be necessary. Need to test.**
 
     ```
     pushd /path/to/muutils/

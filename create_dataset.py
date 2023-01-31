@@ -42,6 +42,9 @@ def create(
     **cfg_kwargs,
 ):
 
+    if n_mazes < 0:
+        raise ValueError("m_mazes must be >= 0")
+
     name_base: str = (
         f"g{grid_n}-n{shorten_numerical_to_str(n_mazes, small_as_decimal = False)}"
     )
@@ -60,7 +63,7 @@ def create(
 
     # create config
     # TODO: figure out unexpected keyword argument linter error here?
-    cfg: MazeDatasetConfig = MazeDatasetConfig(
+    config: MazeDatasetConfig = MazeDatasetConfig(
         name=name,
         grid_n=grid_n,
         n_mazes=n_mazes,
@@ -68,8 +71,8 @@ def create(
     )
 
     # create and solve mazes
-    c_start = (0, 0)
-    c_end = (cfg.grid_n - 1, cfg.grid_n - 1)
+    top_left = (0, 0)
+    bottom_right = (config.grid_n - 1, config.grid_n - 1)
 
     mazes: list[MazeTokenizer]
 
@@ -80,12 +83,12 @@ def create(
                     partial(
                         generate_MazeTokenizer,
                         grid_n=grid_n,
-                        c_start=c_start,
-                        c_end=c_end,
+                        c_start=top_left,
+                        c_end=bottom_right,
                     ),
-                    range(cfg.n_mazes),
+                    range(config.n_mazes),
                 ),
-                total=cfg.n_mazes,
+                total=config.n_mazes,
                 unit="maze",
                 desc="generating & solving mazes",
             )
@@ -93,7 +96,7 @@ def create(
 
     # create and save dataset
     dataset: MazeDataset = MazeDataset(
-        cfg=cfg,
+        cfg=config,
         mazes_objs=mazes,
     )
 
@@ -101,7 +104,7 @@ def create(
 
 
 def load(path: str) -> None:
-    d = MazeDataset.disk_load(path)
+    d = MazeDataset.disk_load(path, do_tokenized=True)
 
     print(d.cfg)
     print(d.mazes_array)
@@ -112,8 +115,9 @@ def load(path: str) -> None:
 if __name__ == "__main__":
     import fire
 
-    fire.Fire(create)
-    # fire.Fire(dict(
-    # 	create=create,
-    # 	load=load,
-    # ))
+    fire.Fire(
+        dict(
+            create=create,
+            load=load,
+        )
+    )
