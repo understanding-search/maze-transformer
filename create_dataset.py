@@ -1,21 +1,14 @@
-from functools import partial
-from pathlib import Path
-import typing
 import multiprocessing
 import os
+from functools import partial
+from pathlib import Path
 
 import numpy as np
-from tqdm import tqdm
 from muutils.misc import shorten_numerical_to_str
+from tqdm import tqdm
 
-from maze_transformer.generation.latticemaze import (
-    LatticeMaze,
-    Coord,
-    CoordArray,
-    CoordTup,
-)
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.training.mazedataset import MazeDatasetConfig, MazeDataset
+from maze_transformer.training.mazedataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.tokenizer import MazeTokenizer
 
 
