@@ -48,7 +48,7 @@ class LatticeMazeGenerators:
 
         # initialize the maze with no connections)
         connection_list: np.ndarray = np.zeros(
-            (lattice_dim, grid_shape[0], grid_shape[0]), dtype=bool
+            (lattice_dim, grid_shape[0], grid_shape[1]), dtype=bool
         )
 
         if start_coord is None:
