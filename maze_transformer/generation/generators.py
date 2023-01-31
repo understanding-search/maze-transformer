@@ -60,7 +60,8 @@ class LatticeMazeGenerators:
         # print(f"{grid_shape = } {start_coord = }")
 
         # initialize the stack with the target coord
-        visited_cells: set[tuple[int, int]] = set(tuple(start_coord))
+        visited_cells: set[tuple[int, int]] = set()
+        visited_cells.add(tuple(start_coord))
         stack: list[Coord] = [start_coord]
 
         # loop until the stack is empty
