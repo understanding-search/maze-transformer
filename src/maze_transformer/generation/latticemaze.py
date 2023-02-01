@@ -79,6 +79,40 @@ class LatticeMaze:
     """lattice maze (nodes on a lattice, connections only to neighboring nodes)"""
 
     lattice_dim: int = 2
+
+    """
+    Connection List represents which nodes (N) are connected in each direction.
+
+    First and second elements represent rightward and downward connections,
+    respectively.
+
+    Example:
+      Connection list:
+        [
+          [ # down
+            [F T],
+            [F F]
+          ],
+          [ # right
+            [T F],
+            [T F]
+          ]
+        ]
+
+      Nodes with connections
+        N T N F
+        F   T
+        N T N F
+        F   F
+
+      Graph:
+        N - N
+            |
+        N - N
+
+    Note: the bottom row connections going down, and the
+    right-hand connections going right, will always be False.
+    """
     connection_list: NDArray[("lattice_dim", "x", "y"), bool]
     generation_meta: dict | None = None
 
@@ -87,6 +121,27 @@ class LatticeMaze:
     n_connections = property(lambda self: self.connection_list.sum())
 
     def as_img(self) -> NDArray[("x", "y"), bool]:
+        """
+        Plot an image to visualise the maze.
+
+        Returns a matrix of side length 2n + 1 where n is the number of nodes.
+
+        Example:
+          Connection List:
+          DOWN        RIGHT
+          [F, T, T]   [T, T, F]
+          [T, F, T]   [T, F, F]
+          [F, F, F]   [T, F, F]
+
+          Image:
+                                              x x x x x x x
+            N T N T N F       N - N - N       x           x
+            F   T   T             |   |       x x x   x   x
+            N T N F N F -->   N - N   N   --> x       x   x
+            T   F   T         |       |       x   x x x   x
+            N T N F N F       N - N   N       x       x   x
+            F   F   F                         x x x x x x x
+        """
         # set up the background
         print(self.grid_shape)
         img: NDArray[("x", "y"), bool] = np.zeros(
