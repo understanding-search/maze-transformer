@@ -39,11 +39,10 @@ python3 create_dataset.py create ./data/maze 10 --grid_n=4
 
 * Install muutils in editable mode
 
-    **TODO: the package@commit seems to have been added to requirements.txt, so this step may not be necessary. Need to test.**
-
     ```
+    mkdir -p /path/to/muutils/
     pushd /path/to/muutils/
-    git clone git@github.com:mivanit/muutils
+    git clone git@github.com:mivanit/muutils .
 
     popd
     pip install -e /path/to/muutils
