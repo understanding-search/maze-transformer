@@ -1,7 +1,8 @@
+import numpy as np
+
+from maze_transformer.evaluation.plot_maze import plot_path
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import Coord
-
-import numpy as np
 
 
 def test_gen_dfs_square():
