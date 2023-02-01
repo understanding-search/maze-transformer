@@ -9,7 +9,7 @@ Generate a maze and solve it algorithmically.
 
 ### Example
 ```
-python3 test_generation.py
+python3 scripts/test_generation.py
 ```
 
 ## `create_dataset`
@@ -18,7 +18,7 @@ Create or load a dataset of mazes.
 ### Example
 create 10 4x4 mazes in the directory ./data/maze:
 ```
-python3 create_dataset.py create ./data/maze 10 --grid_n=4
+python3 scripts/create_dataset.py create ./data/maze 10 --grid_n=4
 ```
 
 
