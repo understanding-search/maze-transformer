@@ -32,9 +32,9 @@ def test_bool_array_from_string_wrong_shape():
 def test_bool_array_from_string_custom_symbol():
     actual = bool_array_from_string(
         """
-        xxx
-        x_x
-        xxx
+        x x x
+        x _ x
+        x x x
         """,
         shape=[3, 3],
         true_symbol="_",

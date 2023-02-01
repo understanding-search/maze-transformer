@@ -30,7 +30,7 @@ def test_as_img():
         x _ x x x _ x
         x _ _ _ x _ x
         x x x x x x x
-    """,
+        """,
         shape=[7, 7],
         true_symbol="_",
     )
