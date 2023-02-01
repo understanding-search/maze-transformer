@@ -249,7 +249,6 @@ def generate_plot_predicted_path(
     model_path: str,
     n_tokens_pred: int = 5,
 ):
-
     data_cfg: MazeDatasetConfig
     train_cfg: TrainConfig
     model_cfg: OpenAIGPTConfig

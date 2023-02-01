@@ -5,3 +5,6 @@ format:
 
 freeze:
 	pip freeze --exclude-editable > requirements.txt
+
+test:
+	python -m pytest .

@@ -39,6 +39,7 @@ python3 create_dataset.py create ./data/maze 10 --grid_n=4
 
 * Install muutils in editable mode
 
+    TODO: release update to muutils to remove this step
     ```
     mkdir -p /path/to/muutils/
     pushd /path/to/muutils/
@@ -48,8 +49,22 @@ python3 create_dataset.py create ./data/maze 10 --grid_n=4
     pip install -e /path/to/muutils
     ````
 
+* Install current package in editable mode
+
+    This allows pytest to resolve the project packages.
+    ```
+    pip install -e .
+    ```
+
+* (Optional) Run unit tests
+
+    ```
+    make test
+    ```
 
 
 ## Testing & Static analysis
+
+- unit tests via `make test`
 
 - formatter (black and isort) via `make format`

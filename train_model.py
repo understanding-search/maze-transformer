@@ -28,7 +28,6 @@ from maze_transformer.training.config import (
 
 
 def main(basepath: str, cfg_name: str = "tiny-v1"):
-
     train_cfg: TrainConfig = TRAINING_CONFIGS[cfg_name]
 
     train(

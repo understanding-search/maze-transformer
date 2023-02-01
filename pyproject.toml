@@ -1,0 +1,7 @@
+[build]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "maze_transformer"
+version = "0.0.1"

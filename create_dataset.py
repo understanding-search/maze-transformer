@@ -18,7 +18,6 @@ def generate_MazeTokenizer(
     c_start: tuple[int, int],
     c_end: tuple[int, int],
 ) -> MazeTokenizer:
-
     maze = LatticeMazeGenerators.gen_dfs(
         grid_shape=(grid_n, grid_n),
         lattice_dim=2,
@@ -41,7 +40,6 @@ def create(
     name: str | None = None,
     **cfg_kwargs,
 ):
-
     if n_mazes < 0:
         raise ValueError("m_mazes must be >= 0")
 
