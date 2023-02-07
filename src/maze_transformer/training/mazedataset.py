@@ -74,7 +74,6 @@ class MazeDatasetConfig(GPTDatasetConfig):
         return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
     def serialize(self) -> JSONitem:
-
         maze_ctor: dict = {"__name__": self.maze_ctor.__name__}
         try:
             maze_ctor["code_hash"] = hash(inspect.getsource(self.maze_ctor))
@@ -101,7 +100,6 @@ class MazeDatasetConfig(GPTDatasetConfig):
 
     @classmethod
     def load(cls, data: JSONitem) -> "MazeDatasetConfig":
-
         # TODO: figure out why these args are unexpected (when linting)
         output = cls(  # pylint: disable=unexpected-keyword-arg
             name=data["name"],
@@ -323,7 +321,6 @@ class MazeDataset(GPTDataset):
         do_tokens: bool = True,
         do_tokenized: bool = True,
     ) -> None:
-
         # make the appropriate directories
         print(f"saving to '{path_base}'")
         os.makedirs(path_base, exist_ok=False)
@@ -369,7 +366,6 @@ class MazeDataset(GPTDataset):
         do_tokens: bool = False,
         do_tokenized: bool = False,
     ) -> "MazeDataset":
-
         cfg: MazeDatasetConfig | None = None
         if do_config:
             # load config from json

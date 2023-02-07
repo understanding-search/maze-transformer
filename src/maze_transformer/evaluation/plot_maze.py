@@ -44,7 +44,6 @@ def plot_multi_paths(
     paths: list[PathFormat | tuple | list],
     show: bool = True,
 ) -> None:
-
     # show the maze
     img = maze.as_img()
     plt.imshow(
@@ -60,7 +59,6 @@ def plot_multi_paths(
 
     # plot paths
     for pf in paths:
-
         if isinstance(pf, (tuple, list)):
             pf = PathFormat(*pf)
 

@@ -163,7 +163,6 @@ def train(
     data_cfg_class: type = GPTDatasetConfig,
     **cfg_kwargs,
 ) -> None:
-
     # setup paths and logger
     # ==================================================
     training_setup: TrainingSetup = setup_train(
@@ -247,7 +246,6 @@ def train(
         train_cfg.checkpoint_interval // train_cfg.batch_size
     )
     for iteration, batch in enumerate(dataloader):
-
         # compute loss
         with TimerContext() as timer_loss:
             batch_on_device: ATensor[("batch", "sequence")] = batch.type(

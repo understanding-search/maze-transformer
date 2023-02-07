@@ -90,7 +90,6 @@ class ArrMazeEvalFuncs:
 
         n_connected: int = 0
         for n_s, n_e in path_as_segments_iter(b):
-
             if m.nodes_connected(n_s, n_e):
                 n_connected += 1
 

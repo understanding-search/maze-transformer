@@ -1,0 +1,11 @@
+[build]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "maze_transformer"
+version = "0.0.1"
+
+[tool.pytest.ini_options]
+# Ignore numpy deprecation warnings triggered by muutils
+filterwarnings = "ignore:`np\\.\\w*` is a deprecated alias for:DeprecationWarning"

@@ -87,7 +87,6 @@ class LatticeMaze:
     n_connections = property(lambda self: self.connection_list.sum())
 
     def as_img(self) -> NDArray[("x", "y"), bool]:
-
         # set up the background
         print(self.grid_shape)
         img: NDArray[("x", "y"), bool] = np.zeros(
@@ -111,7 +110,6 @@ class LatticeMaze:
     def as_adjlist(
         self, shuffle_d0: bool = True, shuffle_d1: bool = True
     ) -> NDArray[(("conn", Any), ("start_end", 2), ("coord", 2)), np.int8]:
-
         adjlist: NDArray[
             (("conn", Any), ("start_end", 2), ("coord", 2)), np.int8
         ] = np.full(

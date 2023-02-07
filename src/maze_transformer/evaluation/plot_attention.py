@@ -11,7 +11,8 @@ def colorize(
 ) -> str:
     """given a sequence of tokens and their weights, colorize the tokens according to the weights (output is html)
 
-    originally from https://stackoverflow.com/questions/59220488/to-visualize-attention-color-tokens-using-attention-weights"""
+    originally from https://stackoverflow.com/questions/59220488/to-visualize-attention-color-tokens-using-attention-weights
+    """
 
     if isinstance(cmap, str):
         cmap = matplotlib.cm.get_cmap(cmap)
