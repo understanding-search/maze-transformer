@@ -5,6 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "maze_transformer"
 version = "0.0.1"
+dependencies = [
+  "numpy == 1.23.1",
+  "matplotlib",
+  "muutils",
+  "fire",
+]
 
 [tool.pytest.ini_options]
 # Ignore numpy deprecation warnings triggered by muutils
