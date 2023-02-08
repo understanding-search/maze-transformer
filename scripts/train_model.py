@@ -1,30 +1,9 @@
-from functools import cache
-import os
-from datetime import datetime
-import json
 from pathlib import Path
-from typing import Annotated, Callable, Any, NamedTuple
-from dataclasses import dataclass, field
-import tracemalloc
 
-import torch
-from torch.utils.data import Dataset, DataLoader
-from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
-from muutils.logger import Logger, TimerContext
-from muutils.json_serialize import json_serialize, dataclass_serializer_factory
-from muutils.misc import sanitize_fname
-from muutils.tensor_utils import ATensor
-from muutils.statcounter import StatCounter
-
-from maze_transformer.training.dataset import GPTDatasetConfig
-from maze_transformer.training.mazedataset import MazeDataset, MazeDatasetConfig
-from maze_transformer.training.training import setup_train, TrainingSetup, train
-from maze_transformer.training.config import (
-    BaseGPTConfig,
-    GPT_CONFIGS,
-    TrainConfig,
-    TRAINING_CONFIGS,
-)
+from maze_transformer.training.config import TRAINING_CONFIGS, TrainConfig
+from maze_transformer.training.mazedataset import (MazeDataset,
+                                                   MazeDatasetConfig)
+from maze_transformer.training.training import train
 
 
 def main(basepath: str, cfg_name: str = "tiny-v1"):
