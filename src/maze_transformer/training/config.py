@@ -211,7 +211,6 @@ GPT_CONFIGS: dict[str, BaseGPTConfig] = {
     cfg.gpt_cfg_name: cfg for cfg in _GPT_CONFIGS_LIST
 }
 
-
 _TRAINING_CONFIG_LIST: list[TrainConfig] = [
     TrainConfig(
         name="tiny-v1",
@@ -221,7 +220,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
         batch_size=32,
         dataloader_cfg=dict(
             shuffle=True,
-            num_workers=16,  # make this smaller if you're not running on a big cluster probably
+            num_workers=16,
             persistent_workers=True,
             drop_last=True,
         ),
