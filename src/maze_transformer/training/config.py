@@ -1,27 +1,13 @@
-from functools import cache
-import os
-from datetime import datetime
-import json
-from pathlib import Path
-from typing import Annotated, Callable, Any, NamedTuple
 from dataclasses import dataclass, field
-import tracemalloc
-
+from typing import Annotated, Any, Callable
 
 import torch
-from torch.utils.data import Dataset, DataLoader
-from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
-from muutils.logger import Logger, TimerContext
 from muutils.json_serialize import (
-    json_serialize,
-    dataclass_serializer_factory,
     dataclass_loader_factory,
-    JSONitem,
+    dataclass_serializer_factory,
 )
-from muutils.misc import sanitize_fname
-from muutils.tensor_utils import ATensor, TORCH_OPTIMIZERS_MAP, DTYPE_MAP
-from muutils.statcounter import StatCounter
-
+from muutils.tensor_utils import DTYPE_MAP, TORCH_OPTIMIZERS_MAP
+from transformers import OpenAIGPTConfig
 
 DEVICE_OVERRIDE: torch.device | None = (
     torch.device("cuda:0") if torch.cuda.is_available() else None
