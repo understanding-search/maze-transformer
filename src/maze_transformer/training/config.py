@@ -1,26 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, ClassVar, Type
+from typing import Any, Type
 
 import torch
 from muutils.json_serialize import (  # type: ignore[import]
     dataclass_loader_factory,
     dataclass_serializer_factory,
 )
-from muutils.tensor_utils import DTYPE_MAP, TORCH_OPTIMIZERS_MAP  # type: ignore[import]
+from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig  # type: ignore[import]
 
 from maze_transformer.training.dataset import GPTDatasetConfig
-
-DEVICE_OVERRIDE: torch.device | None = (
-    torch.device("cuda:0") if torch.cuda.is_available() else None
-)
-
-TokenizerFunction = Callable[[list[str]], list[int]]
-
-
-# ==================================================
 
 @dataclass(kw_only=True)
 class BaseGPTConfig(HookedTransformerConfig):
@@ -29,9 +20,6 @@ class BaseGPTConfig(HookedTransformerConfig):
     """
 
     name: str
-    # TODO:HookedTransformer requires that either d_mlp == None or act_fn != None
-    # This might be the wrong choice of default.
-    act_fn: str | None = "relu"
 
     def serialize(self) -> str:
         return self.to_dict()
@@ -101,6 +89,7 @@ TrainConfig.load = dataclass_loader_factory( # type: ignore[attr-defined]
 _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
     BaseGPTConfig(
         name="tiny-v1",
+        act_fn="relu",
         d_model=32,
         d_head=16,
         n_ctx=90,
