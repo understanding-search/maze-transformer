@@ -57,6 +57,8 @@ python scripts/train-model.py ./data/maze/g4-n10
     mkdir -p /path/to/muutils/
     pushd /path/to/muutils/
     git clone git@github.com:mivanit/muutils .
+    # This commit is known to be working
+    git checkout 4a9dae2d
 
     popd
     pip install -e /path/to/muutils
