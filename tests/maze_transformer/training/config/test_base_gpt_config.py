@@ -24,7 +24,7 @@ def test_load_custom_values():
 
 def test_load_invalid_data():
     with pytest.raises(TypeError):
-        config = BaseGPTConfig.load("not a dict")
+        BaseGPTConfig.load("not a dict")
 
 
 def test_load_missing_fields():
