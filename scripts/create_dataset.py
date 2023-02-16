@@ -111,7 +111,7 @@ def load(path: str) -> None:
 
 
 if __name__ == "__main__":
-    import fire # type: ignore[import]
+    import fire
 
     fire.Fire(
         dict(
