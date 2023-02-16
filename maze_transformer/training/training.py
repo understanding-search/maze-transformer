@@ -7,10 +7,10 @@ from typing import Annotated, Callable, Any, NamedTuple
 from dataclasses import dataclass, field
 import tracemalloc
 
-
 import torch
 from torch.utils.data import Dataset, DataLoader
-from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
+from transformer_lens import HookedTransformer, HookedTransformerConfig
+
 from muutils.logger import Logger, LoggingStream, TimerContext # type: ignore[import]
 from muutils.json_serialize import json_serialize, dataclass_serializer_factory # type: ignore[import]
 from muutils.misc import sanitize_fname, freeze # type: ignore[import]
@@ -22,16 +22,6 @@ from maze_transformer.training.config import BaseGPTConfig, TopLevelConfig, Trai
 from maze_transformer.training.mazedataset import MazeDataset
 
 
-TrainingSetup = NamedTuple(
-    "TrainingSetup",
-    [
-        ("data_cfg", GPTDatasetConfig),
-        ("train_cfg", TrainConfig),
-        ("model_cfg", OpenAIGPTConfig),
-        ("logger", Logger),
-        ("basepath_train", Path),
-    ],
-)
 
 
 @freeze
@@ -51,6 +41,48 @@ class TRAIN_SAVE_FILES:
     model_final: str = "model.final.pt"
 
 
+def setup_logger(output_dir: Path, config: TopLevelConfig) -> Logger:
+    logger: Logger = Logger(
+        log_path=Path(output_dir / "log.jsonl").as_posix(),
+        console_print_threshold=30,
+        streams=(
+            LoggingStream(
+                name="log_config", aliases=("cfg", "config"), default_level=40
+            ),
+            LoggingStream(name="train", aliases=("log_train",), default_level=50),
+            LoggingStream(
+                name="mem_usage",
+                aliases=("traced_memory", "mem"),
+                default_level=40,
+                default_contents={
+                    "traced_memory": (
+                        lambda: dict(
+                            zip(("current", "peak"), tracemalloc.get_traced_memory())
+                        )
+                    )
+                },
+            ),
+        ),
+    )
+
+    logger.log("loaded data config, initialized logger")
+    logger.log_config(json_serialize(config))
+    logger.log_config(
+        dict(
+            logger_cfg={
+                "output_dir": output_dir,
+                "data_cfg.name": config.data_cfg.name,
+                "train_cfg.name": config.train_cfg.name,
+                "model_cfg.device": config.model_cfg.device,
+            },
+            lvl=0,
+        )
+    )
+
+    return logger
+
+
+
 def setup_train(
     basepath: Path,
     train_cfg: TrainConfig,
@@ -68,6 +100,8 @@ def setup_train(
     - returns `TrainingSetup` namedtuple
 
     """
+
+    raise DeprecationWarning("this is no longer used")
 
     basepath = Path(basepath)
 
@@ -136,6 +170,7 @@ def train(
     config: TopLevelConfig,
     logger: Logger,
     output_dir: Path,
+    device: torch.device,
 ) -> None:
     logger.log("load, process, and batch")
     # ==================================================
@@ -161,15 +196,15 @@ def train(
     logger.log("initialize the model and optimizer")
     # ==================================================
     logger.log("initializing model", 10)
-    model: OpenAIGPTLMHeadModel = OpenAIGPTLMHeadModel(model_cfg).to(model_cfg.device)
+    model: HookedTransformer = HookedTransformer(config.model_cfg).to(device)
     logger.log_elapsed_last()
     logger.mem_usage()
-    logger.log({"model_cfg.device": model_cfg.device, "model.device": model.device}, 20)
+    logger.log({"device": device, "model.device": model.device}, 20)
 
     logger.log("initializing optimizer", 10)
-    optimizer: torch.optim.Optimizer = train_cfg.optimizer(
+    optimizer: torch.optim.Optimizer = config.train_cfg.optimizer(
         model.parameters(),
-        **train_cfg.optimizer_kwargs,
+        **config.train_cfg.optimizer_kwargs,
     )
     logger.log_elapsed_last()
     logger.mem_usage()
@@ -178,7 +213,7 @@ def train(
 
     # train the model
     # ==================================================
-    if train_cfg.epochs > 1:
+    if config.train_cfg.epochs > 1:
         raise NotImplementedError(
             "multiple epochs not implemented, get more data instead"
         )
@@ -190,10 +225,10 @@ def train(
 
     n_sequences: int
     print_loss_interval_iters: int = int(
-        train_cfg.print_loss_interval // train_cfg.batch_size
+        config.train_cfg.print_loss_interval // config.train_cfg.batch_size
     )
     checkpoint_interval_iters: int = int(
-        train_cfg.checkpoint_interval // train_cfg.batch_size
+        config.train_cfg.checkpoint_interval // config.train_cfg.batch_size
     )
     for iteration, batch in enumerate(dataloader):
         # compute loss
@@ -222,7 +257,7 @@ def train(
             optimizer.zero_grad()
 
         # logging
-        n_sequences = iteration * train_cfg.batch_size
+        n_sequences = iteration * config.train_cfg.batch_size
         log_data: dict[str, Any] = json_serialize(
             {
                 "iter": iteration,
@@ -249,7 +284,7 @@ def train(
 
         if iteration % checkpoint_interval_iters == 0:
             model_save_path: Path = (
-                basepath_train
+                output_dir
                 / TRAIN_SAVE_FILES.checkpoints
                 / TRAIN_SAVE_FILES.model_checkpt(iteration)
             )
@@ -259,7 +294,7 @@ def train(
 
     # save the final model
     # ==================================================
-    final_model_path: str = basepath_train / TRAIN_SAVE_FILES.model_final
+    final_model_path: str = output_dir / TRAIN_SAVE_FILES.model_final
     logger.saving(f"saving final model to {final_model_path.as_posix()}", 10)
     torch.save(model.state_dict(), final_model_path)
     logger.log_elapsed_last(stream="saving")
