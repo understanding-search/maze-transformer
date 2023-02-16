@@ -18,7 +18,8 @@ from muutils.tensor_utils import ATensor # type: ignore[import]
 from muutils.statcounter import StatCounter # type: ignore[import]
 
 from maze_transformer.training.dataset import GPTDatasetConfig
-from maze_transformer.training.config import BaseGPTConfig, TrainConfig
+from maze_transformer.training.config import BaseGPTConfig, TopLevelConfig, TrainConfig
+from maze_transformer.training.mazedataset import MazeDataset
 
 
 TrainingSetup = NamedTuple(
@@ -69,18 +70,12 @@ def setup_train(
     """
 
     basepath = Path(basepath)
-    data_cfg_name: str = data_cfg_class._dataset_class.config_save_name()
 
     # load the dataset config
     data_cfg_path: Path = Path(basepath) / data_cfg_fname
     with open(data_cfg_path, "r") as f:
         data_cfg: data_cfg_class = data_cfg_class.load(json.load(f))
     train_dir: str = TRAIN_SAVE_FILES.train_dir_format(data_cfg, train_cfg)
-
-    # override sequence length if necessary
-    # TODO: this is a bit hacky
-    if train_cfg.seq_len_max is not None:
-        data_cfg.seq_len_max = train_cfg.seq_len_max
 
     # set up paths
     basepath_train: Path = basepath / train_dir
@@ -115,6 +110,7 @@ def setup_train(
     )
 
     # set up the training config
+    model_cfg: BaseGPTConfig = 
     model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(
         **dict(
             **dict(data_cfg.gpt_config_kwargs),
@@ -126,27 +122,6 @@ def setup_train(
     with open(basepath_train / TRAIN_SAVE_FILES.train_cfg, "w") as f:
         json.dump(json_serialize(train_cfg), f, indent="\t")
 
-    logger.log("loaded data config, initialized logger")
-    logger.log_config(dict(data_cfg=json_serialize(data_cfg)))
-    logger.log_config(dict(train_cfg=json_serialize(train_cfg)))
-    logger.log_config(
-        dict(base_model_cfg=json_serialize(train_cfg._gpt_config_ctor_kwargs))
-    )  # pylint: disable=protected-access
-    # logger.log_config(dict(model_cfg = json_serialize(model_cfg)))
-    logger.log_config(
-        dict(
-            logger_cfg={
-                "train_dir": train_dir,
-                "data_cfg.name": data_cfg.name,
-                "train_cfg.name": train_cfg.name,
-                "basepath": basepath,
-                "basepath_train": basepath_train,
-                "model_cfg.device": model_cfg.device,
-                # "logger.__dict__": json_serialize(logger.__dict__),
-            },
-            lvl=0,
-        )
-    )
 
     return TrainingSetup(
         data_cfg=data_cfg,
@@ -156,44 +131,19 @@ def setup_train(
         basepath_train=basepath_train,
     )
 
-
 def train(
-    basepath: Path,
-    train_cfg: TrainConfig,
-    data_cfg_class: type = GPTDatasetConfig,
-    **cfg_kwargs,
+    dataset: MazeDataset,
+    config: TopLevelConfig,
+    logger: Logger,
+    output_dir: Path,
 ) -> None:
-    # setup paths and logger
-    # ==================================================
-    training_setup: TrainingSetup = setup_train(
-        basepath=basepath,
-        train_cfg=train_cfg,
-        data_cfg_class=data_cfg_class,
-        **cfg_kwargs,
-    )
-    data_cfg: GPTDatasetConfig = training_setup.data_cfg
-    model_cfg: OpenAIGPTConfig = training_setup.model_cfg
-    logger: Logger = training_setup.logger
-    basepath_train: Path = training_setup.basepath_train
-
-    logger.log("finished setting up paths and logger")
-
     logger.log("load, process, and batch")
     # ==================================================
-    logger.log("loading Dataset", 10)
     tracemalloc.start()
-    dataset: data_cfg_class = data_cfg_class._dataset_class.disk_load(
-        path_base=basepath,
-        do_config=True,
-        do_tokenized=True,
-    )
-    # TODO: check (near?) equality between `data_cfg` and `dataset.config`
-    # ensure the override of the sequence length is applied
-    # TODO: this is hacky
-    dataset.cfg = data_cfg
 
     logger.log_elapsed_last()
     logger.mem_usage()
+
     length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
     logger.log({"dataset_seq_len_stats": length_stats.summary()})
     logger.log({"dataset_seq_len_stats": length_stats.serialize()}, lvl=50)
@@ -202,8 +152,8 @@ def train(
     logger.log("creating dataloader", 10)
     dataloader: DataLoader = DataLoader(
         dataset,
-        batch_size=train_cfg.batch_size,
-        **train_cfg.dataloader_cfg,
+        batch_size=config.train.batch_size,
+        **config.train.dataloader_cfg,
     )
     logger.log_elapsed_last()
     logger.mem_usage()

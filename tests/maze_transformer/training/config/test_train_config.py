@@ -5,6 +5,7 @@ import torch
 
 from maze_transformer.training.config import TrainConfig
 
+
 def test_serialize_and_load_default_values():
     config = TrainConfig(name="test")
     serialized = config.serialize()
@@ -51,7 +52,7 @@ def _custom_serialized_config() -> Dict[Any, Any]:
 
 
 def test_load_invalid_data():
-    with (pytest.raises(TypeError)):
+    with pytest.raises(TypeError):
         TrainConfig.load("not a dictionary")
 
 
@@ -63,6 +64,7 @@ def test_load_invalid_data():
 def test_load_missing_fields():
     loaded = TrainConfig.load({"name": "test"})
     assert loaded == TrainConfig(name="test")
+
 
 def test_load_extra_field_is_ignored():
     serialized = _custom_serialized_config()
