@@ -61,15 +61,10 @@ def main(basepath: str, cfg_name: str = "tiny-v1"):
             lvl=0,
         )
     )
-    
-    cfg = TopLevelConfig(
-        dataset=data_cfg,
-        model_config=model_cfg, 
-        train=train_cfg
-    )
 
+    cfg = TopLevelConfig(dataset=data_cfg, model_config=model_cfg, train=train_cfg)
 
-    train( dataset, cfg, logger, output_dir)
+    train(dataset, cfg, logger, output_dir)
 
 
 if __name__ == "__main__":
