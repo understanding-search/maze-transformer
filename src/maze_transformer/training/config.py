@@ -130,3 +130,6 @@ class TopLevelConfig:
     train_config: TrainConfig | None
     dataset_config: GPTDatasetConfig | None
     model_config: BaseGPTConfig | None
+
+TopLevelConfig.serialize = dataclass_serializer_factory(TopLevelConfig)
+TopLevelConfig.load = dataclass_loader_factory(TopLevelConfig)
