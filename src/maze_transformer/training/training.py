@@ -11,11 +11,11 @@ import tracemalloc
 import torch
 from torch.utils.data import Dataset, DataLoader
 from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
-from muutils.logger import Logger, LoggingStream, TimerContext
-from muutils.json_serialize import json_serialize, dataclass_serializer_factory
-from muutils.misc import sanitize_fname, freeze
-from muutils.tensor_utils import ATensor
-from muutils.statcounter import StatCounter
+from muutils.logger import Logger, LoggingStream, TimerContext # type: ignore[import]
+from muutils.json_serialize import json_serialize, dataclass_serializer_factory # type: ignore[import]
+from muutils.misc import sanitize_fname, freeze # type: ignore[import]
+from muutils.tensor_utils import ATensor # type: ignore[import]
+from muutils.statcounter import StatCounter # type: ignore[import]
 
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.config import BaseGPTConfig, TrainConfig
