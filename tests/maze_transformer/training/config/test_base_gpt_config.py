@@ -1,4 +1,6 @@
 import pytest
+import torch
+from transformer_lens import HookedTransformer  # type: ignore[import]
 
 from maze_transformer.training.config import GPT_CONFIGS, BaseGPTConfig
 
@@ -42,7 +44,18 @@ def test_load_extra_field_is_ignored():
     serialized = _custom_serialized_config()
     serialized["extra_field"] = "extra_field_value"
     with pytest.raises(TypeError):
-        loaded = BaseGPTConfig.load(serialized)
+        BaseGPTConfig.load(serialized)
+
+
+def test_create_hooked_transformer():
+    cfg = _custom_base_gpt_config()
+    cfg.d_vocab = 10
+
+    model = HookedTransformer(cfg)
+    tokens = torch.randint(0, 10, (5,))
+    logits = model(tokens)
+
+    assert logits.shape == (1, 5, 10)
 
 
 def _custom_base_gpt_config():

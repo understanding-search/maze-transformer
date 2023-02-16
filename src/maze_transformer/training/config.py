@@ -13,6 +13,7 @@ from transformer_lens import HookedTransformerConfig  # type: ignore[import]
 
 from maze_transformer.training.dataset import GPTDatasetConfig
 
+
 @dataclass(kw_only=True)
 class BaseGPTConfig(HookedTransformerConfig):
     """
@@ -30,6 +31,7 @@ class BaseGPTConfig(HookedTransformerConfig):
 
 
 # ==================================================
+
 
 @dataclass(kw_only=True)
 class TrainConfig:
@@ -56,14 +58,15 @@ class TrainConfig:
     print_loss_interval: int = 1000
     checkpoint_interval: int = 50000
 
-TrainConfig.serialize = dataclass_serializer_factory( # type: ignore[attr-defined]
+
+TrainConfig.serialize = dataclass_serializer_factory(  # type: ignore[attr-defined]
     TrainConfig,
     special_serializers=dict(
         optimizer=lambda self: self.optimizer.__name__,
     ),
 )
 
-TrainConfig.load = dataclass_loader_factory( # type: ignore[attr-defined]
+TrainConfig.load = dataclass_loader_factory(  # type: ignore[attr-defined]
     TrainConfig,
     special_loaders=dict(
         optimizer=lambda d: TORCH_OPTIMIZERS_MAP[d["optimizer"]],
@@ -76,12 +79,8 @@ TrainConfig.load = dataclass_loader_factory( # type: ignore[attr-defined]
 
 # TODO: modify existing configurations (base and training) below to work with the updated classes.
 # write tests:
-# - loading and serialization of
-#    - TrainConfig
-#    - BaseGPTConfig
-#    - TopLevelConfig
-# - make sure we can instantiate HookedTransformer using BaseGPTConfig
 # - get `train`, `eval_model`, `plot_attention`` to run`
+# - Implement and test Serialization and Loading for TopLevelConfig
 # - run train function for a single gradient update (sanity check) - make sure it doesn't crash
 
 
@@ -89,7 +88,7 @@ TrainConfig.load = dataclass_loader_factory( # type: ignore[attr-defined]
 _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
     BaseGPTConfig(
         name="tiny-v1",
-        act_fn="relu",
+        act_fn="gelu",
         d_model=32,
         d_head=16,
         n_ctx=90,
@@ -127,6 +126,7 @@ class TopLevelConfig:
     """
     Handles any logic that moves data between the configs below it.
     """
+
     train_config: TrainConfig | None
     dataset_config: GPTDatasetConfig | None
     model_config: BaseGPTConfig | None
