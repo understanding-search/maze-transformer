@@ -144,7 +144,7 @@ def setup_train(
     )
 
     # set up the training config
-    model_cfg: BaseGPTConfig = 
+    # model_cfg: BaseGPTConfig = 
     model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(
         **dict(
             **dict(data_cfg.gpt_config_kwargs),
