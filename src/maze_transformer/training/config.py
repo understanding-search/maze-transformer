@@ -127,9 +127,9 @@ class TopLevelConfig:
     Handles any logic that moves data between the configs below it.
     """
 
-    train_config: TrainConfig | None
-    dataset_config: GPTDatasetConfig | None
-    model_config: BaseGPTConfig | None
+    train_cfg: TrainConfig | None
+    dataset_cfg: GPTDatasetConfig | None
+    model_cfg: BaseGPTConfig | None
 
 
 TopLevelConfig.serialize = dataclass_serializer_factory(TopLevelConfig)

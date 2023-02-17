@@ -1,27 +1,27 @@
-from functools import cache
-import os
-from datetime import datetime
 import json
-from pathlib import Path
-from typing import Annotated, Callable, Any, NamedTuple
-from dataclasses import dataclass, field
+import os
 import tracemalloc
+from dataclasses import dataclass, field
+from datetime import datetime
+from functools import cache
+from pathlib import Path
+from typing import Annotated, Any, Callable, NamedTuple
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from muutils.json_serialize import (  # type: ignore[import]
+    dataclass_serializer_factory,
+    json_serialize,
+)
+from muutils.logger import Logger, LoggingStream, TimerContext  # type: ignore[import]
+from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
+from muutils.statcounter import StatCounter  # type: ignore[import]
+from muutils.tensor_utils import ATensor  # type: ignore[import]
+from torch.utils.data import DataLoader, Dataset
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 
-from muutils.logger import Logger, LoggingStream, TimerContext # type: ignore[import]
-from muutils.json_serialize import json_serialize, dataclass_serializer_factory # type: ignore[import]
-from muutils.misc import sanitize_fname, freeze # type: ignore[import]
-from muutils.tensor_utils import ATensor # type: ignore[import]
-from muutils.statcounter import StatCounter # type: ignore[import]
-
-from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.config import BaseGPTConfig, TopLevelConfig, TrainConfig
+from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.mazedataset import MazeDataset
-
-
 
 
 @freeze
@@ -71,9 +71,9 @@ def setup_logger(output_dir: Path, config: TopLevelConfig) -> Logger:
         dict(
             logger_cfg={
                 "output_dir": output_dir,
-                "data_cfg.name": config.data_cfg.name,
+                "data_cfg.name": config.dataset_cfg.name,
                 "train_cfg.name": config.train_cfg.name,
-                "model_cfg.device": config.model_cfg.device,
+                "model_cfg.device": config.model_cfg.name
             },
             lvl=0,
         )
@@ -187,8 +187,8 @@ def train(
     logger.log("creating dataloader", 10)
     dataloader: DataLoader = DataLoader(
         dataset,
-        batch_size=config.train.batch_size,
-        **config.train.dataloader_cfg,
+        batch_size=config.train_cfg.batch_size,
+        **config.train_cfg.dataloader_cfg,
     )
     logger.log_elapsed_last()
     logger.mem_usage()

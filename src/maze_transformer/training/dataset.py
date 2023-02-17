@@ -71,7 +71,7 @@ class GPTDatasetConfig:
     def gpt_config_kwargs(self) -> dict:
         """gpt model config with vocab size, context size, and padding token"""
         return dict(
-            vocab_size=len(self.token_arr),
+            d_vocab=len(self.token_arr),
             n_positions=self.seq_len_max,
             pad_token_id=self.padding_token_idx,  # The id of the _padding_ token.
             bos_token_id=self.padding_token_idx,  # The id of the _beginning-of-stream_ token.
