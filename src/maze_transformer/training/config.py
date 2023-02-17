@@ -9,25 +9,29 @@ from muutils.json_serialize import (  # type: ignore[import]
     dataclass_serializer_factory,
 )
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
-from transformer_lens import HookedTransformerConfig  # type: ignore[import]
+from transformer_lens import (
+    HookedTransformer,  # type: ignore[import]
+    HookedTransformerConfig,
+)
 
 from maze_transformer.training.dataset import GPTDatasetConfig
 
 
 @dataclass(kw_only=True)
-class BaseGPTConfig(HookedTransformerConfig):
+class BaseGPTConfig:
     """
     Add a name property and serialization to HookedTransformerConfig
     """
 
     name: str
+    act_fn: str
+    d_model: int
+    d_head: int
+    n_layers: int
 
-    def serialize(self) -> str:
-        return self.to_dict()
 
-    @classmethod
-    def load(cls, d: dict) -> BaseGPTConfig:
-        return cls.from_dict(d)
+BaseGPTConfig.serialize = dataclass_serializer_factory(BaseGPTConfig)
+BaseGPTConfig.load = dataclass_loader_factory(BaseGPTConfig)
 
 
 # ==================================================
@@ -91,7 +95,6 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         act_fn="gelu",
         d_model=32,
         d_head=16,
-        n_ctx=90,
         n_layers=4,
     ),
 ]
@@ -130,6 +133,20 @@ class TopLevelConfig:
     train_cfg: TrainConfig | None
     dataset_cfg: GPTDatasetConfig | None
     model_cfg: BaseGPTConfig | None
+
+    def create_model(self) -> HookedTransformer:
+        model_cfg = self.model_cfg
+
+        hooked_transformer_cfg = HookedTransformerConfig(
+            act_fn=self.model_cfg.act_fn,
+            d_model=self.model_cfg.d_model,
+            d_head=self.model_cfg.d_head,
+            n_layers=self.model_cfg.n_layers,
+            n_ctx=self.dataset_cfg.seq_len_max,
+            d_vocab=len(self.dataset_cfg.token_arr),
+        )
+
+        return HookedTransformer(hooked_transformer_cfg)
 
 
 TopLevelConfig.serialize = dataclass_serializer_factory(TopLevelConfig)

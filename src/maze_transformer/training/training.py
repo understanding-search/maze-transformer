@@ -1,11 +1,9 @@
 import json
 import os
 import tracemalloc
-from dataclasses import dataclass, field
 from datetime import datetime
-from functools import cache
 from pathlib import Path
-from typing import Annotated, Any, Callable, NamedTuple
+from typing import Any, Callable
 
 import torch
 from muutils.json_serialize import (  # type: ignore[import]
@@ -73,14 +71,13 @@ def setup_logger(output_dir: Path, config: TopLevelConfig) -> Logger:
                 "output_dir": output_dir,
                 "data_cfg.name": config.dataset_cfg.name,
                 "train_cfg.name": config.train_cfg.name,
-                "model_cfg.device": config.model_cfg.name
+                "model_cfg.device": config.model_cfg.name,
             },
             lvl=0,
         )
     )
 
     return logger
-
 
 
 def setup_train(
@@ -144,7 +141,7 @@ def setup_train(
     )
 
     # set up the training config
-    # model_cfg: BaseGPTConfig = 
+    # model_cfg: BaseGPTConfig =
     model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(
         **dict(
             **dict(data_cfg.gpt_config_kwargs),
@@ -156,7 +153,6 @@ def setup_train(
     with open(basepath_train / TRAIN_SAVE_FILES.train_cfg, "w") as f:
         json.dump(json_serialize(train_cfg), f, indent="\t")
 
-
     return TrainingSetup(
         data_cfg=data_cfg,
         train_cfg=train_cfg,
@@ -165,9 +161,10 @@ def setup_train(
         basepath_train=basepath_train,
     )
 
+
 def train(
     dataset: MazeDataset,
-    config: TopLevelConfig,
+    cfg: TopLevelConfig,
     logger: Logger,
     output_dir: Path,
     device: torch.device,
@@ -187,8 +184,8 @@ def train(
     logger.log("creating dataloader", 10)
     dataloader: DataLoader = DataLoader(
         dataset,
-        batch_size=config.train_cfg.batch_size,
-        **config.train_cfg.dataloader_cfg,
+        batch_size=cfg.train_cfg.batch_size,
+        **cfg.train_cfg.dataloader_cfg,
     )
     logger.log_elapsed_last()
     logger.mem_usage()
@@ -196,24 +193,23 @@ def train(
     logger.log("initialize the model and optimizer")
     # ==================================================
     logger.log("initializing model", 10)
-    model: HookedTransformer = HookedTransformer(config.model_cfg).to(device)
+    model: HookedTransformer = cfg.create_model()
     logger.log_elapsed_last()
     logger.mem_usage()
-    logger.log({"device": device, "model.device": model.device}, 20)
+    logger.log({"device": device, "model.device": model.cfg.device}, 20)
 
     logger.log("initializing optimizer", 10)
-    optimizer: torch.optim.Optimizer = config.train_cfg.optimizer(
+    optimizer: torch.optim.Optimizer = cfg.train_cfg.optimizer(
         model.parameters(),
-        **config.train_cfg.optimizer_kwargs,
+        **cfg.train_cfg.optimizer_kwargs,
     )
     logger.log_elapsed_last()
     logger.mem_usage()
-    model_n_params: int = model.num_parameters()
-    logger.log(dict(model_n_params=model_n_params), 20)
+    logger.log(dict(model_n_params=model.cfg.n_params), 20)
 
     # train the model
     # ==================================================
-    if config.train_cfg.epochs > 1:
+    if cfg.train_cfg.epochs > 1:
         raise NotImplementedError(
             "multiple epochs not implemented, get more data instead"
         )
@@ -225,30 +221,24 @@ def train(
 
     n_sequences: int
     print_loss_interval_iters: int = int(
-        config.train_cfg.print_loss_interval // config.train_cfg.batch_size
+        cfg.train_cfg.print_loss_interval // cfg.train_cfg.batch_size
     )
     checkpoint_interval_iters: int = int(
-        config.train_cfg.checkpoint_interval // config.train_cfg.batch_size
+        cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size
     )
     for iteration, batch in enumerate(dataloader):
         # compute loss
         with TimerContext() as timer_loss:
             batch_on_device: ATensor[("batch", "sequence")] = batch.type(
                 dtype=torch.LongTensor
-            ).to(model.device)
+            ).to(model.cfg.device)
             # logger.tensor_dims({
             # 	"batch_on_device.shape" : batch_on_device.shape,
             # 	"batch_on_device.dtype" : str(batch_on_device.dtype),
             # 	"batch_on_device.device" : str(batch_on_device.device),
             # }, lvl = 20)
 
-            output = model(
-                batch_on_device[:, :-1],
-                labels=batch_on_device[:, 1:],
-                # with_backward=True,
-                # keep_outputs=False,
-            )
-            loss = output.loss
+            loss = model(batch_on_device[:, :-1], return_type="loss")
             loss.backward()
 
         # optimize
@@ -257,7 +247,7 @@ def train(
             optimizer.zero_grad()
 
         # logging
-        n_sequences = iteration * config.train_cfg.batch_size
+        n_sequences = iteration * cfg.train_cfg.batch_size
         log_data: dict[str, Any] = json_serialize(
             {
                 "iter": iteration,
@@ -270,7 +260,6 @@ def train(
             }
         )
 
-        del output
         del loss
 
         logger.train(
