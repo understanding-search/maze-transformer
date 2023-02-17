@@ -56,11 +56,6 @@ def test_load_invalid_data():
         TrainConfig.load("not a dictionary")
 
 
-# TODO: I think the behaviour shoud be to throw
-# or at least warn if there are fields missing from the serialized
-# data. The config should be serialized with all its properties.
-# We could achieve this by adding a check for
-# cls.__dataclass_fields__.keys() == data.keys() to dataclass_loader_factory.
 def test_load_missing_fields():
     loaded = TrainConfig.load({"name": "test"})
     assert loaded == TrainConfig(name="test")

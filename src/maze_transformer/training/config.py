@@ -81,14 +81,6 @@ TrainConfig.load = dataclass_loader_factory(  # type: ignore[attr-defined]
 # actual configuration setups
 # ==================================================
 
-# TODO: modify existing configurations (base and training) below to work with the updated classes.
-# write tests:
-# - get `train`, `eval_model`, `plot_attention`` to run`
-# - Implement and test Serialization and Loading for TopLevelConfig
-# - run train function for a single gradient update (sanity check) - make sure it doesn't crash
-
-
-# TODO: michael check these values
 _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
     BaseGPTConfig(
         name="tiny-v1",
