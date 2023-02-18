@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Type
+from typing import Any, Dict, Type
 
 import torch
 from muutils.json_serialize import (  # type: ignore[import]
@@ -9,12 +9,11 @@ from muutils.json_serialize import (  # type: ignore[import]
     dataclass_serializer_factory,
 )
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
-from transformer_lens import (
-    HookedTransformer,  # type: ignore[import]
-    HookedTransformerConfig,
-)
+from transformer_lens import HookedTransformer  # type: ignore[import]
+from transformer_lens import HookedTransformerConfig
 
 from maze_transformer.training.dataset import GPTDatasetConfig
+from maze_transformer.training.mazedataset import MazeDatasetConfig
 
 
 @dataclass(kw_only=True)
@@ -122,13 +121,11 @@ class TopLevelConfig:
     Handles any logic that moves data between the configs below it.
     """
 
-    train_cfg: TrainConfig | None
-    dataset_cfg: GPTDatasetConfig | None
-    model_cfg: BaseGPTConfig | None
+    train_cfg: TrainConfig
+    dataset_cfg: GPTDatasetConfig
+    model_cfg: BaseGPTConfig
 
     def create_model(self) -> HookedTransformer:
-        model_cfg = self.model_cfg
-
         hooked_transformer_cfg = HookedTransformerConfig(
             act_fn=self.model_cfg.act_fn,
             d_model=self.model_cfg.d_model,
@@ -140,6 +137,17 @@ class TopLevelConfig:
 
         return HookedTransformer(hooked_transformer_cfg)
 
+    def serialize(self):
+        return dict(
+            train_cfg=self.train_cfg.serialize(),
+            dataset_cfg=self.dataset_cfg.serialize(),
+            model_cfg=self.model_cfg.serialize(),
+        )
 
-TopLevelConfig.serialize = dataclass_serializer_factory(TopLevelConfig)
-TopLevelConfig.load = dataclass_loader_factory(TopLevelConfig)
+    @classmethod
+    def load(cls, serialized: Dict[str, Dict[Any, Any]]):
+        return cls(
+            train_cfg=TrainConfig.load(serialized["train_cfg"]),
+            dataset_cfg=MazeDatasetConfig.load(serialized["dataset_cfg"]),
+            model_cfg=BaseGPTConfig.load(serialized["model_cfg"]),
+        )
