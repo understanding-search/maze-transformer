@@ -6,5 +6,11 @@ format:
 freeze:
 	pip freeze --exclude-editable > requirements.txt
 
+unit:
+	python -m pytest tests/unit
+
+integration:
+	python -m pytest tests/integration
+
 test:
-	python -m pytest .
+	python -m pytest tests

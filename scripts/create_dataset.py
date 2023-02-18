@@ -33,7 +33,7 @@ def generate_MazeTokenizer(
     )
 
 
-def create(
+def create_dataset(
     path_base: str,
     n_mazes: int,
     grid_n: int = 16,
@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
     fire.Fire(
         dict(
-            create=create,
+            create=create_dataset,
             load=load,
         )
     )

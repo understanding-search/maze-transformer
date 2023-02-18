@@ -36,9 +36,9 @@ class TRAIN_SAVE_FILES:
     model_final: str = "model.final.pt"
 
 
-def setup_logger(output_dir: Path, config: ConfigHolder) -> Logger:
+def setup_logger(output_path: Path, config: ConfigHolder) -> Logger:
     logger: Logger = Logger(
-        log_path=Path(output_dir / "log.jsonl").as_posix(),
+        log_path=Path(output_path / "log.jsonl").as_posix(),
         console_print_threshold=30,
         streams=(
             LoggingStream(
@@ -65,7 +65,7 @@ def setup_logger(output_dir: Path, config: ConfigHolder) -> Logger:
     logger.log_config(
         dict(
             logger_cfg={
-                "output_dir": output_dir,
+                "output_dir": output_path,
                 "data_cfg.name": config.dataset_cfg.name,
                 "train_cfg.name": config.train_cfg.name,
                 "model_cfg.device": config.model_cfg.name,

@@ -80,6 +80,10 @@ python scripts/train-model.py ./data/maze/g4-n10
 
 ## Testing & Static analysis
 
-- unit tests via `make test`
+- unit tests via `make unit`
+
+- integration tests via `make integration`
+
+- all tests via `make test`
 
 - formatter (black and isort) via `make format`

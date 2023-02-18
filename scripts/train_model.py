@@ -13,12 +13,8 @@ from maze_transformer.training.training import (
 )
 
 
-def main(basepath: str, cfg_name: str = "tiny-v1"):
+def train_model(basepath: str, cfg_name: str = "tiny-v1"):
     dataset = MazeDataset.disk_load(basepath, do_config=True, do_tokenized=True)
-
-    # TODO: make the path some combination of model/dataset names and maybe timestamp?
-    output_dir: Path = Path("models/asdf")
-    (output_dir / TRAIN_SAVE_FILES.checkpoints).mkdir(parents=True)
 
     # TODO: separate names for training and model config
     cfg: ConfigHolder = ConfigHolder(
@@ -27,8 +23,15 @@ def main(basepath: str, cfg_name: str = "tiny-v1"):
         train_cfg=TRAINING_CONFIGS[cfg_name],
     )
 
+    output_dir_name = TRAIN_SAVE_FILES.train_dir_format(
+        cfg.dataset_cfg, cfg.train_cfg
+    )
+    output_path: Path = Path(basepath) / output_dir_name
+    (output_path / TRAIN_SAVE_FILES.checkpoints).mkdir(parents=True)
+
+
     logger: Logger = setup_logger(
-        output_dir=output_dir,
+        output_path=output_path,
         config=cfg,
     )
 
@@ -36,10 +39,10 @@ def main(basepath: str, cfg_name: str = "tiny-v1"):
 
     dataloader = get_dataloader(dataset, cfg, logger)
 
-    train(dataloader, cfg, logger, output_dir, device)
+    train(dataloader, cfg, logger, output_path, device)
 
 
 if __name__ == "__main__":
     import fire
 
-    fire.Fire(main)
+    fire.Fire(train_model)
