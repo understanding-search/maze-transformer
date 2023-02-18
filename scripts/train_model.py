@@ -31,7 +31,7 @@ def main(basepath: str, cfg_name: str = "tiny-v1"):
         config=cfg,
     )
 
-    device = torch.device("cpu")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     train(dataset, cfg, logger, output_dir, device)
 
