@@ -6,18 +6,15 @@ from pathlib import Path
 from typing import Any, Callable
 
 import torch
-from muutils.json_serialize import (  # type: ignore[import]
-    dataclass_serializer_factory,
-    json_serialize,
-)
+from muutils.json_serialize import json_serialize  # type: ignore[import]
 from muutils.logger import Logger, LoggingStream, TimerContext  # type: ignore[import]
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from muutils.statcounter import StatCounter  # type: ignore[import]
 from muutils.tensor_utils import ATensor  # type: ignore[import]
-from torch.utils.data import DataLoader, Dataset
-from transformer_lens import HookedTransformer, HookedTransformerConfig
+from torch.utils.data import DataLoader
+from transformer_lens import HookedTransformer
 
-from maze_transformer.training.config import BaseGPTConfig, ConfigHolder, TrainConfig
+from maze_transformer.training.config import ConfigHolder, TrainConfig
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.mazedataset import MazeDataset
 
@@ -161,17 +158,9 @@ def setup_train(
     )
 
 
-def train(
-    dataset: MazeDataset,
-    cfg: ConfigHolder,
-    logger: Logger,
-    output_dir: Path,
-    device: torch.device,
-) -> None:
-    logger.log("load, process, and batch")
-    # ==================================================
-    tracemalloc.start()
-
+def get_dataloader(
+    dataset: MazeDataset, cfg: ConfigHolder, logger: Logger
+) -> DataLoader:
     logger.log_elapsed_last()
     logger.mem_usage()
 
@@ -186,6 +175,24 @@ def train(
         batch_size=cfg.train_cfg.batch_size,
         **cfg.train_cfg.dataloader_cfg,
     )
+
+    logger.log_elapsed_last()
+    logger.mem_usage()
+
+    return dataloader
+
+
+def train(
+    dataloader: DataLoader,
+    cfg: ConfigHolder,
+    logger: Logger,
+    output_dir: Path,
+    device: torch.device,
+) -> None:
+    logger.log("load, process, and batch")
+    # ==================================================
+    tracemalloc.start()
+
     logger.log_elapsed_last()
     logger.mem_usage()
 

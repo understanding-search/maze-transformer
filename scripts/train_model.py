@@ -5,7 +5,12 @@ from muutils.logger import Logger
 
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDataset
-from maze_transformer.training.training import TRAIN_SAVE_FILES, setup_logger, train
+from maze_transformer.training.training import (
+    TRAIN_SAVE_FILES,
+    get_dataloader,
+    setup_logger,
+    train,
+)
 
 
 def main(basepath: str, cfg_name: str = "tiny-v1"):
@@ -29,7 +34,9 @@ def main(basepath: str, cfg_name: str = "tiny-v1"):
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    train(dataset, cfg, logger, output_dir, device)
+    dataloader = get_dataloader(dataset, cfg, logger)
+
+    train(dataloader, cfg, logger, output_dir, device)
 
 
 if __name__ == "__main__":
