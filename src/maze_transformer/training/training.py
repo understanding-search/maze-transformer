@@ -17,7 +17,7 @@ from muutils.tensor_utils import ATensor  # type: ignore[import]
 from torch.utils.data import DataLoader, Dataset
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 
-from maze_transformer.training.config import BaseGPTConfig, TopLevelConfig, TrainConfig
+from maze_transformer.training.config import BaseGPTConfig, ConfigHolder, TrainConfig
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.mazedataset import MazeDataset
 
@@ -39,7 +39,7 @@ class TRAIN_SAVE_FILES:
     model_final: str = "model.final.pt"
 
 
-def setup_logger(output_dir: Path, config: TopLevelConfig) -> Logger:
+def setup_logger(output_dir: Path, config: ConfigHolder) -> Logger:
     logger: Logger = Logger(
         log_path=Path(output_dir / "log.jsonl").as_posix(),
         console_print_threshold=30,
@@ -163,7 +163,7 @@ def setup_train(
 
 def train(
     dataset: MazeDataset,
-    cfg: TopLevelConfig,
+    cfg: ConfigHolder,
     logger: Logger,
     output_dir: Path,
     device: torch.device,

@@ -1,10 +1,6 @@
 import torch
 
-from maze_transformer.training.config import (
-    GPT_CONFIGS,
-    TRAINING_CONFIGS,
-    TopLevelConfig,
-)
+from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 
 
@@ -36,18 +32,18 @@ def test_model_config_has_correct_values():
 def test_serialize_and_load():
     cfg = _create_top_level_config()
     serialized = cfg.serialize()
-    loaded = TopLevelConfig.load(serialized)
+    loaded = ConfigHolder.load(serialized)
 
     assert loaded == cfg
 
 
-def _create_top_level_config() -> TopLevelConfig:
+def _create_top_level_config() -> ConfigHolder:
     # It might be better to use custom values in the tests rather than
     # "tiny-v1". I'm not sure.
     train_cfg = TRAINING_CONFIGS["tiny-v1"]
     model_cfg = GPT_CONFIGS["tiny-v1"]
     dataset_cfg = MazeDatasetConfig(name="test", grid_n=4, n_mazes=10)
 
-    return TopLevelConfig(
+    return ConfigHolder(
         train_cfg=train_cfg, model_cfg=model_cfg, dataset_cfg=dataset_cfg
     )

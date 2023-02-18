@@ -3,11 +3,7 @@ from pathlib import Path
 import torch
 from muutils.logger import Logger
 
-from maze_transformer.training.config import (
-    GPT_CONFIGS,
-    TRAINING_CONFIGS,
-    TopLevelConfig,
-)
+from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDataset
 from maze_transformer.training.training import TRAIN_SAVE_FILES, setup_logger, train
 
@@ -20,7 +16,7 @@ def main(basepath: str, cfg_name: str = "tiny-v1"):
     (output_dir / TRAIN_SAVE_FILES.checkpoints).mkdir(parents=True)
 
     # TODO: separate names for training and model config
-    cfg: TopLevelConfig = TopLevelConfig(
+    cfg: ConfigHolder = ConfigHolder(
         dataset_cfg=dataset.cfg,
         model_cfg=GPT_CONFIGS[cfg_name],
         train_cfg=TRAINING_CONFIGS[cfg_name],

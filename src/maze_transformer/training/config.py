@@ -116,7 +116,7 @@ TRAINING_CONFIGS: dict[str, TrainConfig] = {
 
 
 @dataclass
-class TopLevelConfig:
+class ConfigHolder:
     """
     Handles any logic that moves data between the configs below it.
     """
