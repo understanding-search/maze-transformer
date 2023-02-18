@@ -1,3 +1,4 @@
+import pytest
 import torch
 
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
@@ -31,6 +32,16 @@ def test_model_config_has_correct_values():
 
 def test_serialize_and_load():
     cfg = _create_top_level_config()
+    serialized = cfg.serialize()
+    loaded = ConfigHolder.load(serialized)
+
+    assert loaded == cfg
+
+@pytest.mark.skip("This is not yet supported")
+def test_serialize_and_load_missing_values():
+    cfg = _create_top_level_config()
+    cfg.train_cfg = None
+
     serialized = cfg.serialize()
     loaded = ConfigHolder.load(serialized)
 
