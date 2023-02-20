@@ -11,6 +11,7 @@ from muutils.json_serialize import (  # type: ignore[import]
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
+from transformers import PreTrainedTokenizer
 
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.mazedataset import MazeDatasetConfig
@@ -124,6 +125,7 @@ class ConfigHolder:
     train_cfg: TrainConfig
     dataset_cfg: GPTDatasetConfig
     model_cfg: BaseGPTConfig
+    tokenizer: PreTrainedTokenizer | None
 
     def create_model(self) -> HookedTransformer:
         hooked_transformer_cfg = HookedTransformerConfig(
@@ -132,10 +134,13 @@ class ConfigHolder:
             d_head=self.model_cfg.d_head,
             n_layers=self.model_cfg.n_layers,
             n_ctx=self.dataset_cfg.seq_len_max,
-            d_vocab=len(self.dataset_cfg.token_arr),
+            d_vocab=len(self.dataset_cfg.token_arr)
         )
 
-        return HookedTransformer(hooked_transformer_cfg)
+        return HookedTransformer(
+            cfg=hooked_transformer_cfg,
+            tokenizer=self.tokenizer
+        )
 
     def serialize(self):
         return dict(
@@ -150,4 +155,5 @@ class ConfigHolder:
             train_cfg=TrainConfig.load(serialized["train_cfg"]),
             dataset_cfg=MazeDatasetConfig.load(serialized["dataset_cfg"]),
             model_cfg=BaseGPTConfig.load(serialized["model_cfg"]),
+            tokenizer=None
         )

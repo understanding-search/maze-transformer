@@ -25,6 +25,7 @@ class TRAIN_SAVE_FILES:
 
     data_cfg: str = "data_config.json"
     train_cfg: str = "train_config.json"
+    config_holder: str = "config.json"
     log: str = "log.jsonl"
     checkpoints: str = "checkpoints"
     train_dir_format: Callable[
@@ -75,87 +76,6 @@ def setup_logger(output_path: Path, config: ConfigHolder) -> Logger:
     )
 
     return logger
-
-
-def setup_train(
-    basepath: Path,
-    train_cfg: TrainConfig,
-    data_cfg_class: type = GPTDatasetConfig,
-    data_cfg_fname: str = "cfg.json",
-    **cfg_kwargs,
-) -> tuple[GPTDatasetConfig, Logger, Path]:
-    """setup for training (configs, logger, directories)
-
-    - loads the dataset configuration from the given `basepath`
-    - sets up named output directory
-    - creates a logger
-    - sets up training configuration
-    - logs some basic information
-    - returns `TrainingSetup` namedtuple
-
-    """
-
-    raise DeprecationWarning("this is no longer used")
-
-    basepath = Path(basepath)
-
-    # load the dataset config
-    data_cfg_path: Path = Path(basepath) / data_cfg_fname
-    with open(data_cfg_path, "r") as f:
-        data_cfg: data_cfg_class = data_cfg_class.load(json.load(f))
-    train_dir: str = TRAIN_SAVE_FILES.train_dir_format(data_cfg, train_cfg)
-
-    # set up paths
-    basepath_train: Path = basepath / train_dir
-    os.makedirs(basepath_train, exist_ok=True)
-    os.makedirs(basepath_train / TRAIN_SAVE_FILES.checkpoints, exist_ok=True)
-    # store data config
-    with open(basepath_train / TRAIN_SAVE_FILES.data_cfg, "w") as f:
-        json.dump(json_serialize(data_cfg), f, indent="\t")
-
-    # set up logger
-    logger: Logger = Logger(
-        log_path=Path(basepath_train / TRAIN_SAVE_FILES.log).as_posix(),
-        console_print_threshold=30,
-        streams=(
-            LoggingStream(
-                name="log_config", aliases=("cfg", "config"), default_level=40
-            ),
-            LoggingStream(name="train", aliases=("log_train",), default_level=50),
-            LoggingStream(
-                name="mem_usage",
-                aliases=("traced_memory", "mem"),
-                default_level=40,
-                default_contents={
-                    "traced_memory": (
-                        lambda: dict(
-                            zip(("current", "peak"), tracemalloc.get_traced_memory())
-                        )
-                    )
-                },
-            ),
-        ),
-    )
-
-    # set up the training config
-    model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config(
-        **dict(
-            **dict(data_cfg.gpt_config_kwargs),
-            device=train_cfg.device,
-        )
-    )
-
-    # store model config (after init so kwargs are correct)
-    with open(basepath_train / TRAIN_SAVE_FILES.train_cfg, "w") as f:
-        json.dump(json_serialize(train_cfg), f, indent="\t")
-
-    return TrainingSetup(
-        data_cfg=data_cfg,
-        train_cfg=train_cfg,
-        model_cfg=model_cfg,
-        logger=logger,
-        basepath_train=basepath_train,
-    )
 
 
 def get_dataloader(

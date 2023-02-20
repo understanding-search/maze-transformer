@@ -10,7 +10,7 @@ unit:
 	python -m pytest tests/unit
 
 integration:
-	python -m pytest tests/integration
+	python -m pytest -s tests/integration
 
 test:
 	python -m pytest tests

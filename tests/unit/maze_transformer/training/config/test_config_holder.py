@@ -56,5 +56,5 @@ def _create_top_level_config() -> ConfigHolder:
     dataset_cfg = MazeDatasetConfig(name="test", grid_n=4, n_mazes=10)
 
     return ConfigHolder(
-        train_cfg=train_cfg, model_cfg=model_cfg, dataset_cfg=dataset_cfg
+        train_cfg=train_cfg, model_cfg=model_cfg, dataset_cfg=dataset_cfg, tokenizer=None
     )
