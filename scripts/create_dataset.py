@@ -4,7 +4,7 @@ from functools import partial
 from pathlib import Path
 
 import numpy as np
-from muutils.misc import shorten_numerical_to_str
+from muutils.misc import shorten_numerical_to_str  # type: ignore[import]
 from tqdm import tqdm
 
 from maze_transformer.generation.generators import LatticeMazeGenerators
@@ -33,7 +33,7 @@ def generate_MazeTokenizer(
     )
 
 
-def create(
+def create_dataset(
     path_base: str,
     n_mazes: int,
     grid_n: int = 16,
@@ -51,7 +51,7 @@ def create(
     else:
         name = f"{name_base}-{name}"
 
-    data_path: str = Path(path_base) / name
+    data_path = Path(path_base) / name
     print(
         f"generating dataset: {data_path.as_posix() = } {n_mazes = } {grid_n = } {name = } {cfg_kwargs = }"
     )
@@ -98,7 +98,7 @@ def create(
         mazes_objs=mazes,
     )
 
-    dataset.disk_save(data_path)
+    dataset.disk_save(str(data_path))
 
 
 def load(path: str) -> None:
@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
     fire.Fire(
         dict(
-            create=create,
+            create=create_dataset,
             load=load,
         )
     )

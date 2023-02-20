@@ -57,6 +57,8 @@ python scripts/train-model.py ./data/maze/g4-n10
     mkdir -p /path/to/muutils/
     pushd /path/to/muutils/
     git clone git@github.com:mivanit/muutils .
+    # This commit is known to be working
+    git checkout 4a9dae2d
 
     popd
     pip install -e /path/to/muutils
@@ -78,6 +80,10 @@ python scripts/train-model.py ./data/maze/g4-n10
 
 ## Testing & Static analysis
 
-- unit tests via `make test`
+- unit tests via `make unit`
+
+- integration tests via `make integration`
+
+- all tests via `make test`
 
 - formatter (black and isort) via `make format`

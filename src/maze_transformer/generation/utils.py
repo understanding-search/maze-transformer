@@ -4,7 +4,9 @@ import numpy as np
 from muutils.tensor_utils import NDArray
 
 
-def bool_array_from_string(string: str, shape: list[int], true_symbol:str="T") -> NDArray:
+def bool_array_from_string(
+    string: str, shape: list[int], true_symbol: str = "T"
+) -> NDArray:
     """Transform a string into an ndarray of bools.
 
     Parameters

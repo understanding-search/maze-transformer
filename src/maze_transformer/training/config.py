@@ -1,75 +1,37 @@
-from functools import cache
-import os
-from datetime import datetime
-import json
-from pathlib import Path
-from typing import Annotated, Callable, Any, NamedTuple
-from dataclasses import dataclass, field
-import tracemalloc
+from __future__ import annotations
 
+from dataclasses import dataclass, field
+from typing import Any, Dict, Type
 
 import torch
-from torch.utils.data import Dataset, DataLoader
-from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
-from muutils.logger import Logger, TimerContext
-from muutils.json_serialize import (
-    json_serialize,
-    dataclass_serializer_factory,
+from muutils.json_serialize import (  # type: ignore[import]
     dataclass_loader_factory,
-    JSONitem,
+    dataclass_serializer_factory,
 )
-from muutils.misc import sanitize_fname
-from muutils.tensor_utils import ATensor, TORCH_OPTIMIZERS_MAP, DTYPE_MAP
-from muutils.statcounter import StatCounter
+from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
+from transformer_lens import HookedTransformer  # type: ignore[import]
+from transformer_lens import HookedTransformerConfig
+from transformers import PreTrainedTokenizer
+
+from maze_transformer.training.dataset import GPTDatasetConfig
+from maze_transformer.training.mazedataset import MazeDatasetConfig
 
 
-DEVICE_OVERRIDE: torch.device | None = (
-    torch.device("cuda:0") if torch.cuda.is_available() else None
-)
-
-TokenizerFunction = Callable[[list[str]], list[int]]
-
-
-# ==================================================
-
-
-@dataclass(frozen=True, kw_only=True)
+@dataclass(kw_only=True)
 class BaseGPTConfig:
-    """gpt model config without vocab size, context size, or padding token
-
-    TODO: honestly this complexity is pointless, refactor to a dict?
+    """
+    Add a name property and serialization to HookedTransformerConfig
     """
 
-    gpt_cfg_name: str
-    n_embed: int = 128
-    n_layer: int = 8
-    n_head: int = 4
-    _kwargs: dict = field(default_factory=dict)
+    name: str
+    act_fn: str
+    d_model: int
+    d_head: int
+    n_layers: int
 
-    def as_dict(self) -> dict:
-        return dict(
-            **{
-                k: getattr(self, k) for k in self.__dataclass_fields__ if k != "_kwargs"
-            },
-            **self._kwargs,
-        )
 
-    def serialize(self) -> str:
-        return self.as_dict()
-
-    def load(self, d: dict) -> "BaseGPTConfig":
-        """load from dict, putting unknown fields into _kwargs"""
-        ctor_kwargs: dict = {
-            k: v for k, v in d.items() if k in self.__dataclass_fields__
-        }
-        extra_kwargs: dict = {
-            k: v for k, v in d.items() if k not in self.__dataclass_fields__
-        }
-
-        return BaseGPTConfig(
-            **ctor_kwargs,
-            _kwargs=extra_kwargs,
-        )
+BaseGPTConfig.serialize = dataclass_serializer_factory(BaseGPTConfig)
+BaseGPTConfig.load = dataclass_loader_factory(BaseGPTConfig)
 
 
 # ==================================================
@@ -81,16 +43,8 @@ class TrainConfig:
 
     name: str
 
-    base_gpt_cfg: BaseGPTConfig
-    # wandb_proj: str|None = None
-    device: Annotated[torch.device, "device to use for training"] = torch.device(
-        # "cuda" if torch.cuda.is_available() else "cpu"
-        "cuda:0"
-    )
-
-    max_samples: int | None = None
     epochs: int = 1
-    optimizer: torch.optim.Optimizer = torch.optim.RMSprop
+    optimizer: Type[torch.optim.Optimizer] = torch.optim.RMSprop
     optimizer_kwargs: dict[str, Any] = field(default_factory=lambda: dict(lr=0.000001))
     batch_size: int = 128
 
@@ -108,83 +62,18 @@ class TrainConfig:
     print_loss_interval: int = 1000
     checkpoint_interval: int = 50000
 
-    seq_len_max: int | None = None
 
-    # n_ctx: int = property(lambda self: self.model_config.n_ctx)
-    _gpt_config_ctor_kwargs: dict | None = None
-
-    def get_gpt_config(
-        self,
-        **kwargs,
-    ) -> OpenAIGPTConfig:
-        """passes base_gpt_cfg, device, and _gpt_config_ctor_kwargs to OpenAIGPTConfig"""
-
-        if self._gpt_config_ctor_kwargs is not None:
-            if len(kwargs) > 0:
-                raise ValueError("gpt_config_ctor_kwargs already set!")
-            else:
-                pass
-                # the _gpt_config_ctor_kwargs is already set, so we just return it
-        else:
-            # generate the _gpt_config_ctor_kwargs
-            self._gpt_config_ctor_kwargs = {
-                **self.base_gpt_cfg.as_dict(),
-                **dict(device=self.device),
-                **kwargs,
-            }
-
-        return OpenAIGPTConfig(**self._gpt_config_ctor_kwargs)
-
-
-TrainConfig.serialize = dataclass_serializer_factory(
+TrainConfig.serialize = dataclass_serializer_factory(  # type: ignore[attr-defined]
     TrainConfig,
     special_serializers=dict(
-        # gpt_config = lambda self: json_serialize(self.get_gpt_config().to_dict()),
-        _optimizer_name=lambda self: self.optimizer.__name__,
-        base_gpt_cfg=lambda self: self.base_gpt_cfg.as_dict(),
-        device=lambda self: str(self.device),
+        optimizer=lambda self: self.optimizer.__name__,
     ),
-    fields_exclude=["optimizer"],
 )
 
-
-def load_device(d: dict | str) -> torch.device:
-    if DEVICE_OVERRIDE is not None:
-        return DEVICE_OVERRIDE
-    elif isinstance(d, str):
-        return torch.device(d)
-    elif isinstance(d, dict):
-        return torch.device(d["str"])
-    else:
-        raise TypeError(
-            f"invalid type for loading device from serialization: {type(d) = } {d = }"
-        )
-
-
-def process_config_kwargs(kwargs: dict | None) -> dict | None:
-    """process config kwargs, converting device and dtype"""
-
-    if kwargs is None:
-        return None
-
-    if "device" in kwargs:
-        kwargs["device"] = load_device(kwargs["device"])
-
-    if "dtype" in kwargs:
-        kwargs["dtype"] = DTYPE_MAP[kwargs["dtype"]]
-
-    return kwargs
-
-
-TrainConfig.load = dataclass_loader_factory(
+TrainConfig.load = dataclass_loader_factory(  # type: ignore[attr-defined]
     TrainConfig,
     special_loaders=dict(
-        optimizer=lambda d: TORCH_OPTIMIZERS_MAP[d["_optimizer_name"]],
-        base_gpt_cfg=lambda d: BaseGPTConfig(**d["base_gpt_cfg"]),
-        device=lambda d: load_device(d["device"]),
-        _gpt_config_ctor_kwargs=lambda d: process_config_kwargs(
-            d.get("_gpt_config_ctor_kwargs", None)
-        ),
+        optimizer=lambda d: TORCH_OPTIMIZERS_MAP[d["optimizer"]],
     ),
 )
 
@@ -194,27 +83,19 @@ TrainConfig.load = dataclass_loader_factory(
 
 _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
     BaseGPTConfig(
-        gpt_cfg_name="tiny-v1",
-        n_embed=32,
-        n_layer=4,
-        n_head=2,
-    ),
-    BaseGPTConfig(
-        gpt_cfg_name="medium-v1",
-        n_embed=128,
-        n_layer=8,
-        n_head=4,
+        name="tiny-v1",
+        act_fn="gelu",
+        d_model=32,
+        d_head=16,
+        n_layers=4,
     ),
 ]
 
-GPT_CONFIGS: dict[str, BaseGPTConfig] = {
-    cfg.gpt_cfg_name: cfg for cfg in _GPT_CONFIGS_LIST
-}
+GPT_CONFIGS: dict[str, BaseGPTConfig] = {cfg.name: cfg for cfg in _GPT_CONFIGS_LIST}
 
 _TRAINING_CONFIG_LIST: list[TrainConfig] = [
     TrainConfig(
         name="tiny-v1",
-        base_gpt_cfg=GPT_CONFIGS["tiny-v1"],
         optimizer=torch.optim.RMSprop,
         optimizer_kwargs=dict(lr=0.000001),
         batch_size=32,
@@ -226,7 +107,6 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
         ),
         print_loss_interval=1000,
         checkpoint_interval=5000,
-        seq_len_max=90,
     )
 ]
 
@@ -234,3 +114,46 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
 TRAINING_CONFIGS: dict[str, TrainConfig] = {
     cfg.name: cfg for cfg in _TRAINING_CONFIG_LIST
 }
+
+
+@dataclass
+class ConfigHolder:
+    """
+    Handles any logic that moves data between the configs below it.
+    """
+
+    train_cfg: TrainConfig
+    dataset_cfg: GPTDatasetConfig
+    model_cfg: BaseGPTConfig
+    tokenizer: PreTrainedTokenizer | None
+
+    def create_model(self) -> HookedTransformer:
+        hooked_transformer_cfg = HookedTransformerConfig(
+            act_fn=self.model_cfg.act_fn,
+            d_model=self.model_cfg.d_model,
+            d_head=self.model_cfg.d_head,
+            n_layers=self.model_cfg.n_layers,
+            n_ctx=self.dataset_cfg.seq_len_max,
+            d_vocab=len(self.dataset_cfg.token_arr)
+        )
+
+        return HookedTransformer(
+            cfg=hooked_transformer_cfg,
+            tokenizer=self.tokenizer
+        )
+
+    def serialize(self):
+        return dict(
+            train_cfg=self.train_cfg.serialize(),
+            dataset_cfg=self.dataset_cfg.serialize(),
+            model_cfg=self.model_cfg.serialize(),
+        )
+
+    @classmethod
+    def load(cls, serialized: Dict[str, Dict[Any, Any]]):
+        return cls(
+            train_cfg=TrainConfig.load(serialized["train_cfg"]),
+            dataset_cfg=MazeDatasetConfig.load(serialized["dataset_cfg"]),
+            model_cfg=BaseGPTConfig.load(serialized["model_cfg"]),
+            tokenizer=None
+        )

@@ -41,7 +41,7 @@ DIRECTIONS_MAP: NDArray[(("direction", 4), ("axes", 2)), int] = np.array(
 )
 
 
-NEIGHBORS_MASK: NDArray[(("direction", 4), ("axes", 2)), int] = np.array(
+NEIGHBORS_MASK: NDArray["4 2", int] = np.array(
     [
         [0, 1],  # down
         [0, -1],  # up
@@ -52,9 +52,9 @@ NEIGHBORS_MASK: NDArray[(("direction", 4), ("axes", 2)), int] = np.array(
 
 # print(NEIGHBORS_MASK, NEIGHBORS_MASK.dtype, NEIGHBORS_MASK.shape)
 
-Coord = NDArray[("coord", 2), np.int8]
+Coord = NDArray["2", np.int8]
 CoordTup = tuple[int, int]
-CoordArray = NDArray[(("points", Any), ("coord", 2)), np.int8]
+CoordArray = NDArray["points 2", np.int8]
 
 # def get_neighbors_2d(c: Coord, maze_shape: tuple[int, int]) -> list[tuple[int, int]]:
 # 	"""get the neighbors of a given coordinate"""
@@ -113,14 +113,14 @@ class LatticeMaze:
     Note: the bottom row connections going down, and the
     right-hand connections going right, will always be False.
     """
-    connection_list: NDArray[("lattice_dim", "x", "y"), bool]
+    connection_list: NDArray["lattice_dim x y", bool]
     generation_meta: dict | None = None
 
     grid_shape = property(lambda self: self.connection_list.shape[1:])
 
     n_connections = property(lambda self: self.connection_list.sum())
 
-    def as_img(self) -> NDArray[("x", "y"), bool]:
+    def as_img(self) -> NDArray["x y", bool]:
         """
         Plot an image to visualise the maze.
 
@@ -144,7 +144,7 @@ class LatticeMaze:
         """
         # set up the background
         print(self.grid_shape)
-        img: NDArray[("x", "y"), bool] = np.zeros(
+        img: NDArray["x y", bool] = np.zeros(
             (
                 self.grid_shape[0] * 2 + 1,
                 self.grid_shape[1] * 2 + 1,
@@ -313,7 +313,7 @@ class LatticeMaze:
         # TODO: this is only for square mazes
         grid_n: int = adjlist.max() + 1
 
-        connection_list: NDArray[("lattice_dim", "x", "y"), bool] = np.zeros(
+        connection_list: NDArray["lattice_dim x y", bool] = np.zeros(
             (2, grid_n, grid_n),
             dtype=bool,
         )
