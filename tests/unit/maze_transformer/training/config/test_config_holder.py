@@ -1,8 +1,7 @@
 import pytest
 import torch
 
-from maze_transformer.training.config import (GPT_CONFIGS, TRAINING_CONFIGS,
-                                              ConfigHolder)
+from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 
 
@@ -38,6 +37,7 @@ def test_serialize_and_load():
 
     assert loaded == cfg
 
+
 @pytest.mark.skip("This is not yet supported")
 def test_serialize_and_load_missing_values():
     cfg = _create_top_level_config()
@@ -57,5 +57,8 @@ def _create_top_level_config() -> ConfigHolder:
     dataset_cfg = MazeDatasetConfig(name="test", grid_n=4, n_mazes=10)
 
     return ConfigHolder(
-        train_cfg=train_cfg, model_cfg=model_cfg, dataset_cfg=dataset_cfg, tokenizer=None
+        train_cfg=train_cfg,
+        model_cfg=model_cfg,
+        dataset_cfg=dataset_cfg,
+        tokenizer=None,
     )

@@ -15,12 +15,9 @@ from muutils.statcounter import StatCounter
 from muutils.tensor_utils import DTYPE_MAP, ATensor, NDArray
 from tqdm import tqdm
 
-from maze_transformer.generation.generators import (GENERATORS_MAP,
-                                                    LatticeMazeGenerators)
-from maze_transformer.generation.latticemaze import (CoordArray, CoordTup,
-                                                     LatticeMaze)
-from maze_transformer.training.dataset import (GPTDataset, GPTDatasetConfig,
-                                               IndexedArray)
+from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
+from maze_transformer.generation.latticemaze import CoordArray, CoordTup, LatticeMaze
+from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, IndexedArray
 from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
 
 

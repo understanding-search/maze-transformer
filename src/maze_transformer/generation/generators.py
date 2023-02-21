@@ -3,8 +3,7 @@ from typing import Any, Callable
 
 import numpy as np
 
-from maze_transformer.generation.latticemaze import (NEIGHBORS_MASK, Coord,
-                                                     LatticeMaze)
+from maze_transformer.generation.latticemaze import NEIGHBORS_MASK, Coord, LatticeMaze
 
 
 class LatticeMazeGenerators:

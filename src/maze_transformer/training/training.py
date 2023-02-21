@@ -5,8 +5,7 @@ from typing import Any, Callable
 
 import torch
 from muutils.json_serialize import json_serialize  # type: ignore[import]
-from muutils.logger import (Logger, LoggingStream,  # type: ignore[import]
-                            TimerContext)
+from muutils.logger import Logger, LoggingStream, TimerContext  # type: ignore[import]
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from muutils.statcounter import StatCounter  # type: ignore[import]
 from muutils.tensor_utils import ATensor  # type: ignore[import]
