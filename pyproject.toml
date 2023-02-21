@@ -10,6 +10,9 @@ packages = [{include = "maze_transformer"}]
 python = "^3.10"
 torch = "^1.13.1"
 muutils = {git = "https://github.com/mivanit/muutils.git", rev = "4a9dae2d6fd51b9f30de47fdb1be0a87a8ad597b"}
+transformer-lens = "^1.1.1"
+numpy = "1.23.1"
+matplotlib = "^3.7.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.1"
@@ -20,7 +23,13 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 # Ignore numpy deprecation warnings triggered by muutils
-filterwarnings = "ignore:`np\\.\\w*` is a deprecated alias for:DeprecationWarning"
+filterwarnings = [
+    # Warning from muutils: https://github.com/mivanit/muutils/issues/1
+    "ignore:`np\\.\\w*` is a deprecated alias for:DeprecationWarning",
+
+    # Warning from matplotlib. Issue: https://github.com/matplotlib/matplotlib/issues/25244
+    "ignore:Deprecated call to `pkg_resources.declare_namespace:DeprecationWarning"
+]
 
 [[tool.mypy.overrides]]
 module = "fire"
