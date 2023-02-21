@@ -5,9 +5,7 @@ from typing import Any, Dict, Type
 
 import torch
 from muutils.json_serialize import (  # type: ignore[import]
-    dataclass_loader_factory,
-    dataclass_serializer_factory,
-)
+    dataclass_loader_factory, dataclass_serializer_factory)
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig

@@ -4,16 +4,14 @@ from pathlib import Path
 import torch
 from muutils.logger import Logger
 from transformers import PreTrainedTokenizer
-from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
 
-from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
+from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
+from maze_transformer.training.config import (GPT_CONFIGS, TRAINING_CONFIGS,
+                                              ConfigHolder)
 from maze_transformer.training.mazedataset import MazeDataset
-from maze_transformer.training.training import (
-    TRAIN_SAVE_FILES,
-    get_dataloader,
-    setup_logger,
-    train,
-)
+from maze_transformer.training.training import (TRAIN_SAVE_FILES,
+                                                get_dataloader, setup_logger,
+                                                train)
 
 
 def train_model(basepath: str, cfg_name: str = "tiny-v1"):

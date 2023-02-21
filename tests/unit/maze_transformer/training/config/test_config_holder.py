@@ -1,7 +1,8 @@
 import pytest
 import torch
 
-from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
+from maze_transformer.training.config import (GPT_CONFIGS, TRAINING_CONFIGS,
+                                              ConfigHolder)
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 
 

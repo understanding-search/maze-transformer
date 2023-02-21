@@ -1,13 +1,9 @@
-from itertools import chain
 from dataclasses import dataclass, field
+from itertools import chain
 
-
-from maze_transformer.generation.latticemaze import (
-    LatticeMaze,
-    CoordTup,
-    CoordArray,
-    SPECIAL_TOKENS,
-)
+from maze_transformer.generation.latticemaze import (SPECIAL_TOKENS,
+                                                     CoordArray, CoordTup,
+                                                     LatticeMaze)
 
 # pylint: disable=unused-import
 

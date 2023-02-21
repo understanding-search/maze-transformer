@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from muutils.tensor_utils import NDArray
 
 from maze_transformer.generation.latticemaze import LatticeMaze

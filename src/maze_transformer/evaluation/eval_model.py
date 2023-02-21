@@ -1,22 +1,22 @@
 import json
-from pathlib import Path
 import typing
+from pathlib import Path
 from typing import Any, NamedTuple
 
 import numpy as np
 import torch
-from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
 from muutils.json_serialize import json_serialize
-from muutils.tensor_utils import ATensor, NDArray
 from muutils.misc import shorten_numerical_to_str
+from muutils.tensor_utils import ATensor, NDArray
+from transformers import OpenAIGPTConfig, OpenAIGPTLMHeadModel
 
-from maze_transformer.generation.latticemaze import LatticeMaze, CoordTup
+from maze_transformer.evaluation.plot_maze import PathFormat, plot_multi_paths
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.training.tokenizer import MazeTokenizer, SPECIAL_TOKENS
-from maze_transformer.training.mazedataset import MazeDatasetConfig
-from maze_transformer.evaluation.plot_maze import plot_multi_paths, PathFormat
-from maze_transformer.training.dataset import GPTDatasetConfig
+from maze_transformer.generation.latticemaze import CoordTup, LatticeMaze
 from maze_transformer.training.config import TrainConfig
+from maze_transformer.training.dataset import GPTDatasetConfig
+from maze_transformer.training.mazedataset import MazeDatasetConfig
+from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access

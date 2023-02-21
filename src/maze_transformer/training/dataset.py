@@ -1,11 +1,10 @@
-from functools import cached_property
 from dataclasses import dataclass, field
+from functools import cached_property
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset
 from muutils.tensor_utils import ATensor
-
+from torch.utils.data import Dataset
 
 
 @dataclass(kw_only=True)

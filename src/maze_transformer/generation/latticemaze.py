@@ -1,9 +1,9 @@
-from typing import Any
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
-from muutils.tensor_utils import NDArray
 from muutils.misc import list_split
+from muutils.tensor_utils import NDArray
 
 # @dataclass(frozen=True, kw_only=True)
 # class Maze:
