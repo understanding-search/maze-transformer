@@ -1,6 +1,6 @@
-import numpy as np
 import IPython
 import matplotlib
+import numpy as np
 
 
 def colorize(
