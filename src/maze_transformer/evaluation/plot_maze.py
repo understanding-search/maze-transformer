@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Literal, NamedTuple, Sequence, TypeVar, Union
 
 import numpy as np
 import matplotlib.pyplot as plt
-from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP
+from muutils.tensor_utils import NDArray
 
 from maze_transformer.generation.latticemaze import LatticeMaze
 

@@ -1,38 +1,11 @@
-import json
-import os
-from pathlib import Path
-import sys
-import inspect
-from functools import cached_property, partial
-from itertools import chain, product
-from typing import Any, Callable, Generic, Literal, NamedTuple, Sequence, TypeVar, Union
+from functools import cached_property
 from dataclasses import dataclass, field
-import multiprocessing
 
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
-from transformers import OpenAIGPTConfig
-from tqdm import tqdm
-from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP, lpad_array
-from muutils.json_serialize import (
-    json_serialize,
-    dataclass_serializer_factory,
-    dataclass_loader_factory,
-    try_catch,
-    JSONitem,
-)
-from muutils.misc import freeze
-from muutils.statcounter import StatCounter
+from torch.utils.data import Dataset
+from muutils.tensor_utils import ATensor
 
-from maze_transformer.generation.latticemaze import (
-    LatticeMaze,
-    Coord,
-    CoordTup,
-    CoordArray,
-)
-from maze_transformer.generation.generators import LatticeMazeGenerators, GENERATORS_MAP
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
 
 
 @dataclass(kw_only=True)

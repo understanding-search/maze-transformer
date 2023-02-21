@@ -1,19 +1,13 @@
-from functools import cache
-import os
-from datetime import datetime
 import json
 from pathlib import Path
 import typing
-from typing import Annotated, Callable, Any, NamedTuple
-from dataclasses import dataclass, field
+from typing import Any, NamedTuple
 
 import numpy as np
 import torch
 from transformers import OpenAIGPTLMHeadModel, OpenAIGPTConfig
-from muutils.logger import Logger, TimerContext
-from muutils.json_serialize import json_serialize, dataclass_serializer_factory
+from muutils.json_serialize import json_serialize
 from muutils.tensor_utils import ATensor, NDArray
-from muutils.statcounter import StatCounter
 from muutils.misc import shorten_numerical_to_str
 
 from maze_transformer.generation.latticemaze import LatticeMaze, CoordTup
