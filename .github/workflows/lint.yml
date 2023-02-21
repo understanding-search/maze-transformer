@@ -13,7 +13,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Run black
+      - name: pycln
+        run: |
+          pip install pycln
+          pycln --check --all .
+
+      - name: isort
+        run: |
+          pip install isort
+          isort --check-only .
+
+      - name: black
         run: |
           pip install black
-          make check-format
+          python -m black --check .

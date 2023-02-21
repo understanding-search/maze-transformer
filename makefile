@@ -3,9 +3,6 @@ format:
 	python -m isort format .
 	python -m black .
 
-check-format:
-	python -m black --check .
-
 freeze:
 	pip freeze --exclude-editable > requirements.txt
 
