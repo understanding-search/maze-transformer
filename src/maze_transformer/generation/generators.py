@@ -1,9 +1,24 @@
+import sys
 import random
 from typing import Any, Callable
 
 import numpy as np
+from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP
+from muutils.json_serialize import (
+    json_serialize,
+    dataclass_serializer_factory,
+    dataclass_loader_factory,
+    try_catch,
+    JSONitem,
+)
 
-from maze_transformer.generation.latticemaze import NEIGHBORS_MASK, Coord, LatticeMaze
+from maze_transformer.generation.latticemaze import (
+    LatticeMaze,
+    Coord,
+    CoordArray,
+    CoordTup,
+    NEIGHBORS_MASK,
+)
 
 
 class LatticeMazeGenerators:

@@ -2,8 +2,11 @@ from typing import Iterable, Tuple
 
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
-from muutils.logger.log_util import gather_stream  # type: ignore[import]
-from muutils.logger.log_util import gather_val, get_any_from_stream
+from muutils.logger.log_util import (  # type: ignore[import]
+    gather_stream,
+    gather_val,
+    get_any_from_stream,
+)
 
 
 def plot_loss(

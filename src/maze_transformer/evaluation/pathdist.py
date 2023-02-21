@@ -2,8 +2,8 @@ from typing import Callable, Iterable
 
 import numpy as np
 
-from maze_transformer.evaluation.eval_model import ArrMazePath, MazePath
-from maze_transformer.generation.latticemaze import Coord, CoordTup, LatticeMaze
+from maze_transformer.generation.latticemaze import LatticeMaze, CoordTup, Coord
+from maze_transformer.evaluation.eval_model import MazePath, ArrMazePath
 
 # pylint: disable=unused-argument
 

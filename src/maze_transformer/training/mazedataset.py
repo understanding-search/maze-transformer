@@ -1,24 +1,39 @@
-import inspect
 import json
-import multiprocessing
 import os
+from pathlib import Path
 import sys
-from dataclasses import dataclass
+import inspect
 from functools import cached_property, partial
-from typing import Callable
+from itertools import chain, product
+from typing import Any, Callable, Generic, Literal, NamedTuple, Sequence, TypeVar, Union
+from dataclasses import dataclass, field
+import multiprocessing
 
 import numpy as np
 import torch
-from muutils.json_serialize import JSONitem, json_serialize
+from torch.utils.data import Dataset, DataLoader
+from transformers import OpenAIGPTConfig
+from tqdm import tqdm
+from muutils.tensor_utils import ATensor, NDArray, DTYPE_MAP, lpad_array
+from muutils.json_serialize import (
+    json_serialize,
+    dataclass_serializer_factory,
+    dataclass_loader_factory,
+    try_catch,
+    JSONitem,
+)
 from muutils.misc import freeze
 from muutils.statcounter import StatCounter
-from muutils.tensor_utils import DTYPE_MAP, ATensor, NDArray
-from tqdm import tqdm
 
-from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
-from maze_transformer.generation.latticemaze import CoordArray, CoordTup, LatticeMaze
-from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, IndexedArray
+from maze_transformer.generation.latticemaze import (
+    LatticeMaze,
+    Coord,
+    CoordTup,
+    CoordArray,
+)
+from maze_transformer.generation.generators import LatticeMazeGenerators, GENERATORS_MAP
 from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
+from maze_transformer.training.dataset import GPTDatasetConfig, IndexedArray, GPTDataset
 
 
 @dataclass(kw_only=True)
