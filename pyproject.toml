@@ -13,3 +13,6 @@ filterwarnings = "ignore:`np\\.\\w*` is a deprecated alias for:DeprecationWarnin
 [[tool.mypy.overrides]]
 module = "fire"
 ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"

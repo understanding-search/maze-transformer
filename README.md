@@ -86,4 +86,6 @@ python scripts/train-model.py ./data/maze/g4-n10
 
 - all tests via `make test`
 
-- formatter (black and isort) via `make format`
+- formatter (black, pycln, and isort) via `make format`
+
+- formatter in check-only mode via `make check-format`

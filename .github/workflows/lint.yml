@@ -1,0 +1,29 @@
+name: Lint
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: pycln
+        run: |
+          pip install pycln
+          pycln --check --all .
+
+      - name: isort
+        run: |
+          pip install isort
+          isort --check-only .
+
+      - name: black
+        run: |
+          pip install black
+          python -m black --check .

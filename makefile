@@ -1,7 +1,12 @@
 format:
-	python -m pycln .
+	python -m pycln --all .
 	python -m isort format .
 	python -m black .
+
+check-format:
+	python -m pycln --check --all .
+	python -m isort --check-only .
+	python -m black --check .
 
 freeze:
 	pip freeze --exclude-editable > requirements.txt

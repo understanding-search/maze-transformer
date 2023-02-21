@@ -1,6 +1,4 @@
 import pytest
-import torch
-from transformer_lens import HookedTransformer  # type: ignore[import]
 
 from maze_transformer.training.config import GPT_CONFIGS, BaseGPTConfig
 
