@@ -16,4 +16,4 @@ jobs:
       - name: Run black
         run: |
           pip install black
-          black --check .
+          make check-format
