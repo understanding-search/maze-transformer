@@ -1,5 +1,5 @@
 format:
-	python -m pycln .
+	python -m pycln --all .
 	python -m isort format .
 	python -m black .
 
