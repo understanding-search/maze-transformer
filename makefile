@@ -1,21 +1,18 @@
 format:
-	python -m pycln --all .
-	python -m isort format .
-	python -m black .
+	poetry run python -m pycln --all .
+	poetry run python -m isort format .
+	poetry run python -m black .
 
 check-format:
-	python -m pycln --check --all .
-	python -m isort --check-only .
-	python -m black --check .
-
-freeze:
-	pip freeze --exclude-editable > requirements.txt
+	poetry run python -m pycln --check --all .
+	poetry run python -m isort --check-only .
+	poetry run python -m black --check .
 
 unit:
-	python -m pytest tests/unit
+	poetry run python -m pytest tests/unit
 
 integration:
-	python -m pytest -s tests/integration
+	poetry run python -m pytest -s tests/integration
 
 test:
-	python -m pytest tests
+	poetry run python -m pytest tests

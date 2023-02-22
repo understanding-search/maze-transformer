@@ -11,7 +11,7 @@ from scripts.train_model import train_model
 def temp_dir() -> Path:
     data_dir = tempfile.TemporaryDirectory()
     yield Path(data_dir.name)
-    # data_dir.cleanup()
+    data_dir.cleanup()
 
 
 def test_train(temp_dir):
