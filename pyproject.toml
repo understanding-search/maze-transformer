@@ -9,7 +9,7 @@ packages = [{include = "maze_transformer"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 torch = "^1.13.1"
-muutils = {git = "https://github.com/mivanit/muutils.git", rev = "4a9dae2d6fd51b9f30de47fdb1be0a87a8ad597b"}
+muutils = "^0.2.0"
 transformer-lens = "^1.1.1"
 numpy = "1.23.1"
 matplotlib = "^3.7.0"
