@@ -10,7 +10,6 @@ from muutils.tensor_utils import NDArray
 # 	"""generalized maze class"""
 # 	n_nodes: int
 
-
 SPECIAL_TOKENS: dict[str, str] = dict(
     adjlist_start="<ADJLIST_START>",
     adjlist_end="<ADJLIST_END>",
@@ -23,7 +22,7 @@ SPECIAL_TOKENS: dict[str, str] = dict(
     padding="<PADDING>",
 )
 
-DIRECTIONS_MAP: NDArray[(("direction", 4), ("axes", 2)), int] = np.array(
+DIRECTIONS_MAP: NDArray["direction axes", int] = np.array(
     [
         [0, 1],  # down
         [0, -1],  # up
@@ -33,7 +32,7 @@ DIRECTIONS_MAP: NDArray[(("direction", 4), ("axes", 2)), int] = np.array(
 )
 
 
-NEIGHBORS_MASK: NDArray["4 2", int] = np.array(
+NEIGHBORS_MASK: NDArray["coord point", int] = np.array(
     [
         [0, 1],  # down
         [0, -1],  # up
@@ -44,9 +43,9 @@ NEIGHBORS_MASK: NDArray["4 2", int] = np.array(
 
 # print(NEIGHBORS_MASK, NEIGHBORS_MASK.dtype, NEIGHBORS_MASK.shape)
 
-Coord = NDArray["2", np.int8]
+Coord = NDArray["x y", np.int8]
 CoordTup = tuple[int, int]
-CoordArray = NDArray["points 2", np.int8]
+CoordArray = NDArray["coords", np.int8]
 
 # def get_neighbors_2d(c: Coord, maze_shape: tuple[int, int]) -> list[tuple[int, int]]:
 # 	"""get the neighbors of a given coordinate"""
@@ -156,16 +155,15 @@ class LatticeMaze:
 
     def as_adjlist(
         self, shuffle_d0: bool = True, shuffle_d1: bool = True
-    ) -> NDArray[(("conn", Any), ("start_end", 2), ("coord", 2)), np.int8]:
-        adjlist: NDArray[
-            (("conn", Any), ("start_end", 2), ("coord", 2)), np.int8
-        ] = np.full(
+    ) -> NDArray["conn start_end coord", np.int8]:
+
+        adjlist: NDArray["conn start_end coord", np.int8] = np.full(
             (self.n_connections, 2, 2),
             -1,
         )
 
         if shuffle_d1:
-            flip_d1: NDArray[("conn", 1), np.float16] = np.random.rand(
+            flip_d1: NDArray["conn", np.float16] = np.random.rand(
                 self.n_connections
             )
 
@@ -298,7 +296,7 @@ class LatticeMaze:
     @classmethod
     def from_adjlist(
         cls,
-        adjlist: NDArray[(("conn", Any), ("start_end", 2), ("coord", 2)), np.int8],
+        adjlist: NDArray["conn start_end coord", np.int8],
     ) -> "LatticeMaze":
         """create a LatticeMaze from a list of connections"""
 
@@ -358,9 +356,7 @@ class LatticeMaze:
             len(c) == 2 for c in coordinates
         ), f"invalid coordinates: {coordinates = }"
 
-        adjlist: NDArray[
-            (("conn", Any), ("start_end", 2), ("coord", 2)), np.int8
-        ] = np.full(
+        adjlist: NDArray["conn start_end coord", np.int8] = np.full(
             (len(coordinates), 2, 2),
             -1,
         )
