@@ -1,7 +1,7 @@
 import json
 import typing
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import numpy as np
 import torch

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 from muutils.misc import list_split
@@ -156,16 +155,13 @@ class LatticeMaze:
     def as_adjlist(
         self, shuffle_d0: bool = True, shuffle_d1: bool = True
     ) -> NDArray["conn start_end coord", np.int8]:
-
         adjlist: NDArray["conn start_end coord", np.int8] = np.full(
             (self.n_connections, 2, 2),
             -1,
         )
 
         if shuffle_d1:
-            flip_d1: NDArray["conn", np.float16] = np.random.rand(
-                self.n_connections
-            )
+            flip_d1: NDArray["conn", np.float16] = np.random.rand(self.n_connections)
 
         # loop over all nonzero elements of the connection list
         idx: int = 0
