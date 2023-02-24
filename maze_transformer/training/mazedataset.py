@@ -139,7 +139,6 @@ class MazeDataset(GPTDataset):
         cfg: MazeDatasetConfig,
         mazes_objs: list[MazeTokenizer] | None = None,
         mazes_tokens: list[list[str]] | None = None,
-        # mazes_tokenized: list[NDArray[("sequence", "tokens")]]|None = None,
         mazes_array: IndexedArray | None = None,
         paths: dict[str, str] = None,
     ) -> None:
@@ -159,7 +158,6 @@ class MazeDataset(GPTDataset):
         # transfer
         self.mazes_objs: list[MazeTokenizer] | None = mazes_objs
         self.mazes_tokens: list[list[str]] | None = mazes_tokens
-        # self.mazes_tokenized: list[NDArray[("sequence", "tokens")]]|None = mazes_tokenized
         self.mazes_array: IndexedArray | None = mazes_array
 
         # process into tokens

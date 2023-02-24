@@ -1,7 +1,7 @@
 import json
 import typing
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import numpy as np
 import torch
@@ -22,7 +22,7 @@ from maze_transformer.training.training import TRAIN_SAVE_FILES
 # pylint: disable=protected-access
 
 MazePath = list[CoordTup]
-ArrMazePath = NDArray[((Any, "node"), (2, "xypos")), int]
+ArrMazePath = NDArray["node xypos", int]
 
 
 def check_configs_present(folder: Path) -> bool:
