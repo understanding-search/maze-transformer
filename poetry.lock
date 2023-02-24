@@ -1169,23 +1169,21 @@ dill = ">=0.3.6"
 
 [[package]]
 name = "muutils"
-version = "0.2.0"
-description = "a collection of miscellaneous python utilities"
+version = "0.2.1"
+description = "A collection of miscellaneous python utilities"
 category = "main"
 optional = false
-python-versions = "^3.8"
-files = []
-develop = true
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "muutils-0.2.1-py3-none-any.whl", hash = "sha256:c2e52cfad16af154ec03ba17f322d98306fdd287693c55511f0d0654c7a256ef"},
+    {file = "muutils-0.2.1.tar.gz", hash = "sha256:0c9bd7b7630a5d4935c672a7a8640d7665e5ee598db633729e821d29f79643a2"},
+]
 
 [package.dependencies]
-jaxtyping = "^0.2.12"
-numpy = "^1.24.2"
-pandas = "^1.5.3"
-torch = "^1.13.1"
-
-[package.source]
-type = "directory"
-url = "../muutils"
+jaxtyping = ">=0.2.12,<0.3.0"
+numpy = ">=1.24.2,<2.0.0"
+pandas = ">=1.5.3,<2.0.0"
+torch = ">=1.13.1,<2.0.0"
 
 [[package]]
 name = "mypy-extensions"
@@ -2667,4 +2665,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "11a6c501615c7e079943154d8412fed3aa16bccc26121d1dfdbabca0ae19a31b"
+content-hash = "12024d7ab306f8482a033340e90bc2f47de765abd4a7712e99c900b77b0b7a71"
