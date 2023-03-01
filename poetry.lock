@@ -458,14 +458,14 @@ files = [
 
 [[package]]
 name = "datasets"
-version = "2.10.0"
+version = "2.10.1"
 description = "HuggingFace community-driven open-source library of datasets"
 category = "main"
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "datasets-2.10.0-py3-none-any.whl", hash = "sha256:42968d0cc88608ebc4a92a2fc26b4cd65e38f3ce3f5bb90a468cae6a6f0de989"},
-    {file = "datasets-2.10.0.tar.gz", hash = "sha256:c2ddab0899e17590fe39bc5783828ac9a7331c74508ab7a345ea0dca3112ead0"},
+    {file = "datasets-2.10.1-py3-none-any.whl", hash = "sha256:bfde7253b31abfd075f9ad55961b13c135a5a9295cea04ae86c47b9c0e0466fd"},
+    {file = "datasets-2.10.1.tar.gz", hash = "sha256:e2764c90aa3af96450a9747a934b8893b121f79f58d89e123cb1a7046bb8e81e"},
 ]
 
 [package.dependencies]
@@ -873,14 +873,14 @@ requirements-deprecated-finder = ["pip-api", "pipreqs"]
 
 [[package]]
 name = "jaxtyping"
-version = "0.2.12"
+version = "0.2.13"
 description = "Type annotations and runtime checking for shape and dtype of JAX arrays, and PyTrees."
 category = "main"
 optional = false
-python-versions = "~=3.7"
+python-versions = "~=3.8"
 files = [
-    {file = "jaxtyping-0.2.12-py3-none-any.whl", hash = "sha256:ae17bb386d3f0b7af8306d910bec85be793bdad427e28b4ea7a23d409488fb70"},
-    {file = "jaxtyping-0.2.12.tar.gz", hash = "sha256:7d3bca2bdbcb2f74d2f54d18d1957a2836a11dff09e44c2c023da254ddaf20e8"},
+    {file = "jaxtyping-0.2.13-py3-none-any.whl", hash = "sha256:4d7ee005eebd366e6e3ea5133d4b10fd6f9ee779bc2312c1eff84cca59061570"},
+    {file = "jaxtyping-0.2.13.tar.gz", hash = "sha256:1e8a9ae5bd29c0e796a0f856362c81acadca0df863b471306b282b6403d09896"},
 ]
 
 [package.dependencies]
@@ -1190,19 +1190,19 @@ dill = ">=0.3.6"
 
 [[package]]
 name = "muutils"
-version = "0.2.1"
+version = "0.2.2"
 description = "A collection of miscellaneous python utilities"
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "muutils-0.2.1-py3-none-any.whl", hash = "sha256:c2e52cfad16af154ec03ba17f322d98306fdd287693c55511f0d0654c7a256ef"},
-    {file = "muutils-0.2.1.tar.gz", hash = "sha256:0c9bd7b7630a5d4935c672a7a8640d7665e5ee598db633729e821d29f79643a2"},
+    {file = "muutils-0.2.2-py3-none-any.whl", hash = "sha256:87c61c7e3e4e1fb620afc463c3d627b4c9b858a2344523abe2816730aa0ecb98"},
+    {file = "muutils-0.2.2.tar.gz", hash = "sha256:da35739d52f6d53774a26092a3cefa88e1dc9bef76906f5afcaeadf9b6ac8ddc"},
 ]
 
 [package.dependencies]
 jaxtyping = ">=0.2.12,<0.3.0"
-numpy = ">=1.24.2,<2.0.0"
+numpy = ">=1.22.4,<2.0.0"
 pandas = ">=1.5.3,<2.0.0"
 torch = ">=1.13.1,<2.0.0"
 
@@ -1927,14 +1927,14 @@ jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
 
 [[package]]
 name = "sentry-sdk"
-version = "1.15.0"
+version = "1.16.0"
 description = "Python client for Sentry (https://sentry.io)"
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "sentry-sdk-1.15.0.tar.gz", hash = "sha256:69ecbb2e1ff4db02a06c4f20f6f69cb5dfe3ebfbc06d023e40d77cf78e9c37e7"},
-    {file = "sentry_sdk-1.15.0-py2.py3-none-any.whl", hash = "sha256:7ad4d37dd093f4a7cb5ad804c6efe9e8fab8873f7ffc06042dc3f3fd700a93ec"},
+    {file = "sentry-sdk-1.16.0.tar.gz", hash = "sha256:a900845bd78c263d49695d48ce78a4bce1030bbd917e0b6cc021fc000c901113"},
+    {file = "sentry_sdk-1.16.0-py2.py3-none-any.whl", hash = "sha256:633edefead34d976ff22e7edc367cdf57768e24bc714615ccae746d9d91795ae"},
 ]
 
 [package.dependencies]
@@ -1943,6 +1943,7 @@ urllib3 = {version = ">=1.26.11", markers = "python_version >= \"3.6\""}
 
 [package.extras]
 aiohttp = ["aiohttp (>=3.5)"]
+arq = ["arq (>=0.23)"]
 beam = ["apache-beam (>=2.12)"]
 bottle = ["bottle (>=0.12.13)"]
 celery = ["celery (>=3)"]
@@ -2695,21 +2696,21 @@ multidict = ">=4.0"
 
 [[package]]
 name = "zipp"
-version = "3.14.0"
+version = "3.15.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "zipp-3.14.0-py3-none-any.whl", hash = "sha256:188834565033387710d046e3fe96acfc9b5e86cbca7f39ff69cf21a4128198b7"},
-    {file = "zipp-3.14.0.tar.gz", hash = "sha256:9e5421e176ef5ab4c0ad896624e87a7b2f07aca746c9b2aa305952800cb8eecb"},
+    {file = "zipp-3.15.0-py3-none-any.whl", hash = "sha256:48904fc76a60e542af151aded95726c1a5c34ed43ab4134b597665c86d7ad556"},
+    {file = "zipp-3.15.0.tar.gz", hash = "sha256:112929ad649da941c23de50f356a2b5570c954b65150642bccdd66bf194d224b"},
 ]
 
 [package.extras]
 docs = ["furo", "jaraco.packaging (>=9)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
-testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-flake8", "pytest-mypy (>=0.9.1)"]
+testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-flake8", "pytest-mypy (>=0.9.1)"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "1d48cd021cec7c78917c9b860ce53abae55643437f2b427b9a8b1b0674fa0613"
+content-hash = "e274660263732d31e56e6184a4662eb872f828948bf60b879fa96ce23943bb2b"
