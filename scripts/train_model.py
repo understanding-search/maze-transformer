@@ -16,7 +16,7 @@ from maze_transformer.training.training import (
 )
 
 
-def train_model(basepath: str, cfg_name: str = "tiny-v1"):
+def train_model(basepath: str, training_cfg: str = "tiny-v1", model_cfg: str = "tiny-v1"):
     dataset = MazeDataset.disk_load(basepath, do_config=True, do_tokenized=True)
 
     tokenizer = PreTrainedTokenizer(
@@ -28,8 +28,8 @@ def train_model(basepath: str, cfg_name: str = "tiny-v1"):
     # TODO: separate names for training and model config
     cfg: ConfigHolder = ConfigHolder(
         dataset_cfg=dataset.cfg,
-        model_cfg=GPT_CONFIGS[cfg_name],
-        train_cfg=TRAINING_CONFIGS[cfg_name],
+        model_cfg=GPT_CONFIGS[model_cfg],
+        train_cfg=TRAINING_CONFIGS[training_cfg],
         tokenizer=tokenizer,
     )
 

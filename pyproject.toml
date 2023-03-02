@@ -7,12 +7,12 @@ readme = "README.md"
 packages = [{include = "maze_transformer"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 torch = "^1.13.1"
 transformer-lens = "^1.1.1"
 matplotlib = "^3.7.0"
 fire = "^0.5.0"
-muutils = "0.2.1"
+muutils = "^0.2.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.1"
