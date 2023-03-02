@@ -1,23 +1,31 @@
 import json
 import typing
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Union, Tuple
 
 import numpy as np
 import torch
-from muutils.json_serialize import json_serialize
+
+from transformers import PreTrainedTokenizer
+from transformer_lens import HookedTransformer
+from transformer_lens.loading_from_pretrained import convert_gpt2_weights
+
+# bin these
+from transformers import GPT2Config, GPT2LMHeadModel, OpenAIGPTConfig, OpenAIGPTLMHeadModel
+
 from muutils.misc import shorten_numerical_to_str
 from muutils.tensor_utils import ATensor, NDArray
-from transformers import OpenAIGPTConfig, OpenAIGPTLMHeadModel
 
+from maze_transformer.training.config import BaseGPTConfig, TrainConfig
 from maze_transformer.evaluation.plot_maze import PathFormat, plot_multi_paths
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import CoordTup, LatticeMaze
-from maze_transformer.training.config import TrainConfig
+from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
 from maze_transformer.training.training import TRAIN_SAVE_FILES
+from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
 
 # pylint: disable=protected-access
 
@@ -25,79 +33,95 @@ MazePath = list[CoordTup]
 ArrMazePath = NDArray["node xypos", int]
 
 
-def check_configs_present(folder: Path) -> bool:
-    return (folder / TRAIN_SAVE_FILES.data_cfg).exists() and (
-        folder / TRAIN_SAVE_FILES.train_cfg
-    ).exists()
-
-
-LoadedModelConfigs = NamedTuple(
-    "LoadedModelConfigs",
-    [
-        ("data_cfg", GPTDatasetConfig),
-        ("train_cfg", TrainConfig),
-        ("model_cfg", OpenAIGPTConfig),
-        ("model", OpenAIGPTLMHeadModel),
-    ],
-)
+def find_configs(folder: Path) -> Union[Path, Tuple[Path, Path], None]:
+    for folder in [folder, folder.parent]:
+        # For reverse compatibility, allow separate config files OR a single config holder
+        holder_path = folder / TRAIN_SAVE_FILES.config_holder
+        if holder_path.exists():
+            return holder_path
+        
+        data_cfg_path = folder / TRAIN_SAVE_FILES.data_cfg
+        train_cfg = folder / TRAIN_SAVE_FILES.train_cfg
+        if data_cfg_path.exists() and train_cfg.exists():
+            return (data_cfg_path, train_cfg)
 
 
 def load_model_with_configs(
-    model_path: str, data_cfg_class: type, verbose: bool = False
-) -> LoadedModelConfigs:
+    model_path: Union[Path,str], verbose: bool = False, gpt_type_model: bool = True
+) -> Tuple[HookedTransformer, ConfigHolder]:
     """
     Load a model and associated config files from a path.
     """
-
-    # TODO: make this less fragile
     # load the configs
     # get path to the folder containing the model
     config_folder: Path = Path(model_path).parent
+
     # check for the filenames, go up a dir if they don't exist
-    if not check_configs_present(config_folder):
-        config_folder = config_folder.parent
-        assert check_configs_present(
-            config_folder
-        ), f"Couldn't find configs in directory of or parent directory of {model_path}"
+    config_paths = find_configs(config_folder)
 
+    assert (
+        config_paths is not None
+    ), f"Couldn't find configs in directory of or parent directory of {model_path}"
+
+    # TODO Make this part of the ConfigHolder? 
+    # initialize tokenizer
+    tokenizer = PreTrainedTokenizer(
+        bos_token=SPECIAL_TOKENS["padding"],
+        eos_token=SPECIAL_TOKENS["padding"],
+        pad_token=SPECIAL_TOKENS["padding"],
+    )
+    
     # load the configs
-    with open(config_folder / TRAIN_SAVE_FILES.train_cfg, "r") as f:
-        train_cfg_raw: dict = json.load(f)
+    if isinstance(config_paths, tuple): # Separate train and data configs
+        data_cfg_path, train_cfg_path = config_paths
 
-    train_cfg: TrainConfig = TrainConfig.load(train_cfg_raw)
+        with open(train_cfg_path, "r") as f:
+            train_cfg_raw: dict = json.load(f)
+
+        with open(data_cfg_path, "r") as f:
+            data_cfg_raw = json.load(f)
+        
+        #! TODO Test this
+        config_holder = ConfigHolder(
+            train_cfg = TrainConfig.load(train_cfg_raw),
+            dataset_cfg = GPTDatasetConfig.load(data_cfg_raw),
+            model_cfg = BaseGPTConfig.load(train_cfg_raw),
+            tokenizer = tokenizer 
+        )
+    else:
+        with open(config_paths, "r") as f:
+            combined_json = json.load(f)
+            config_holder = ConfigHolder.load(combined_json)
+            config_holder.tokenizer = tokenizer 
+    
     if verbose:
-        print(f"{train_cfg = }")
-        print("-" * 40)
-
-    model_cfg: OpenAIGPTConfig = train_cfg.get_gpt_config()
-    if verbose:
-        print("model_cfg = ", json_serialize(model_cfg.to_dict(), error_mode="warn"))
-        print("-" * 40)
-
-    with open(config_folder / TRAIN_SAVE_FILES.data_cfg, "r") as f:
-        data_cfg: GPTDatasetConfig = data_cfg_class.load(json.load(f))
-
-    model: OpenAIGPTLMHeadModel = OpenAIGPTLMHeadModel(model_cfg)
-    state_dict: dict = torch.load(model_path)
-    # print(state_dict.keys())
-    model.load_state_dict(state_dict)
+        print(f"Loaded config\n{config_holder}\n"+("-"*40))
+        
+    model: HookedTransformer = config_holder.create_model()
+    state_dict = torch.load(model_path)
+    model.load_and_process_state_dict(
+        state_dict,
+        fold_ln=False,
+        center_writing_weights=True,
+        center_unembed=True,
+        refactor_factored_attn_matrices=True,
+    )
+    # We're folding layernorm, but not using HookedTransformer.from_pretrained
+    # This means when torch.load_state_dict is invoked by transformer_lens, it 
+    # will complain about the fact that we deleted layernorm from the state_dict
+    # Neel has a function to address this which Inserts layernorms that implement
+    # only the normalization - to not trigger warning from torch.load - disgusting so:
+    # TODO Probably just get Neel to allow the "strict" flag to be disabled inside of model.load_and_process_state_dict
+    model.process_weights_(fold_ln=True) 
     model.eval()
 
-    print(
-        f"loaded model with {shorten_numerical_to_str(model.num_parameters())} parameters"
-    )
-
-    return LoadedModelConfigs(
-        data_cfg=data_cfg,
-        train_cfg=train_cfg,
-        model_cfg=model_cfg,
-        model=model,
-    )
+    return model, config_holder
 
 
+#! Soon to be defunct
 def predict_tokens(
-    model: OpenAIGPTLMHeadModel,
-    inputs: ATensor,
+    model: HookedTransformer,
+    inputs: torch.Tensor,
     n_tokens: int = 32,
     **generate_kwargs,
 ):
@@ -116,13 +140,17 @@ def predict_tokens(
 
     return sequence
 
-
-def pad_sequence(seq: ATensor, model_cfg: OpenAIGPTConfig) -> ATensor:
+#! Soon to be defunct
+def pad_sequence(seq: ATensor, cfg: ConfigHolder, padding_val: str = None) -> torch.Tensor:
     """pads the token according to the context length and padding token in the config"""
+    # assert (padding_val is not None) or (cfg.tokenizer.pad_token is not None), \
+    #        "No padding token defined in tokenizer, please provide a padding value"
+    # This is super ugly 
+    pad_token = cfg.dataset_cfg.tokenizer_map['<PADDING>']
     return torch.nn.functional.pad(
         seq,
-        (model_cfg.n_positions - seq.shape[0], 0),
-        value=model_cfg.pad_token_id,
+        (cfg.dataset_cfg.seq_len_max - seq.shape[0], 0),
+        value = pad_token
     )
 
 
