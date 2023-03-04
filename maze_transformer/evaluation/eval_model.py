@@ -98,7 +98,7 @@ def load_model_with_configs(
         print(f"Loaded config\n{config_holder}\n"+("-"*40))
         
     model: HookedTransformer = config_holder.create_model()
-    state_dict = torch.load(model_path)
+    state_dict = torch.load(model_path, map_location=model.cfg.device)
     model.load_and_process_state_dict(
         state_dict,
         fold_ln=False,
@@ -179,11 +179,10 @@ def decode_maze_tokens_to_coords(
 def predict_maze_path(
     tokens: list[str],
     data_cfg: MazeDatasetConfig,
-    model: OpenAIGPTLMHeadModel,
-    n_tokens_pred: int,
+    model: HookedTransformer,
     include_start_coord: bool = True,
+    n_tokens_pred:int = 8,
     verbose: bool = False,
-    **generate_kwargs,
 ) -> tuple[LatticeMaze, MazePath, MazePath]:
     """given tokens from a dataset, predict the next tokens with the model, decode both true and predicted to paths
 
@@ -215,19 +214,18 @@ def predict_maze_path(
         maze_tokens.append(path_true_tokens[0])
 
     # encode + pad the maze tokens
+    #! TODO update once tokenizer changes
     maze_arr_nopad: ATensor = torch.tensor(
         [data_cfg.tokenizer_map[t] for t in maze_tokens],
-        dtype=torch.int32,
-        device="cpu",
+        dtype=torch.long,
     )
-    # maze_arr: ATensor = pad_sequence(maze_arr_nopad, model.config)
+    eos_token_id = data_cfg.tokenizer_map[SPECIAL_TOKENS['end_path']]
 
     # have the model predict some tokens
-    predictions: ATensor = predict_tokens(
-        model=model,
-        inputs=maze_arr_nopad.unsqueeze(0),
-        n_tokens=n_tokens_pred,
-    )
+    maze_arr_nopad = maze_arr_nopad.unsqueeze(0)
+    print('Generating Model Completions')
+    predictions = model.generate(maze_arr_nopad, eos_token_id=eos_token_id,
+                                stop_at_eos=True, max_new_tokens=n_tokens_pred)
 
     # decode the tokens
     predicted_and_context_tokens: list[str] = [

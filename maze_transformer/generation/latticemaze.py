@@ -133,7 +133,6 @@ class LatticeMaze:
             F   F   F                         x x x x x x x
         """
         # set up the background
-        print(self.grid_shape)
         img: NDArray["x y", bool] = np.zeros(
             (
                 self.grid_shape[0] * 2 + 1,

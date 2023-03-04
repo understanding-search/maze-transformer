@@ -161,6 +161,9 @@ class ConfigHolder:
             model_cfg=self.model_cfg.serialize(),
         )
 
+    def __repr__(self) -> str:
+        return str(self.serialize())
+    
     @classmethod
     def load(cls, serialized: Dict[str, Dict[Any, Any]]):
         return cls(
