@@ -122,7 +122,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
         print_loss_interval=1000,
         checkpoint_interval=5000,
         epochs=20,
-    )
+    ),
 ]
 
 
@@ -163,7 +163,7 @@ class ConfigHolder:
 
     def __repr__(self) -> str:
         return str(self.serialize())
-    
+
     @classmethod
     def load(cls, serialized: Dict[str, Dict[Any, Any]]):
         return cls(

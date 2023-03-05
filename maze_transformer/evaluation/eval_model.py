@@ -1,31 +1,28 @@
 import json
 import typing
 from pathlib import Path
-from typing import NamedTuple, Union, Tuple
+from typing import Tuple, Union
 
 import numpy as np
 import torch
-
-from transformers import PreTrainedTokenizer
+from muutils.tensor_utils import ATensor, NDArray
 from transformer_lens import HookedTransformer
-from transformer_lens.loading_from_pretrained import convert_gpt2_weights
 
 # bin these
-from transformers import GPT2Config, GPT2LMHeadModel, OpenAIGPTConfig, OpenAIGPTLMHeadModel
+from transformers import OpenAIGPTConfig, OpenAIGPTLMHeadModel, PreTrainedTokenizer
 
-from muutils.misc import shorten_numerical_to_str
-from muutils.tensor_utils import ATensor, NDArray
-
-from maze_transformer.training.config import BaseGPTConfig, TrainConfig
 from maze_transformer.evaluation.plot_maze import PathFormat, plot_multi_paths
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.generation.latticemaze import CoordTup, LatticeMaze
-from maze_transformer.training.config import ConfigHolder
+from maze_transformer.generation.latticemaze import (
+    SPECIAL_TOKENS,
+    CoordTup,
+    LatticeMaze,
+)
+from maze_transformer.training.config import BaseGPTConfig, ConfigHolder, TrainConfig
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
 from maze_transformer.training.training import TRAIN_SAVE_FILES
-from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
 
 # pylint: disable=protected-access
 
@@ -34,20 +31,20 @@ ArrMazePath = NDArray["node xypos", int]
 
 
 def find_configs(folder: Path) -> Union[Path, Tuple[Path, Path], None]:
-    """ Assumed directory structure:
-        run_folder/
-            -- model.final.pt
-            -- config.json (or data_config.json and train_config.json)
-            -- checkpoints/
-                -- model.checkpoint_num.pt
-                
-        Should be able to return config from anywhere in this structure 
-        (regardless if path provided is file or folder name)
+    """Assumed directory structure:
+    run_folder/
+        -- model.final.pt
+        -- config.json (or data_config.json and train_config.json)
+        -- checkpoints/
+            -- model.checkpoint_num.pt
+
+    Should be able to return config from anywhere in this structure
+    (regardless if path provided is file or folder name)
     """
     containing_folder = folder if folder.is_dir() else folder.parent
     if containing_folder.name == "checkpoints":
-        to_check = [containing_folder.parent.parent] # get run folder from checkpoints
-    else: # Generic - probably got path to run folder or model.final.pt
+        to_check = [containing_folder.parent.parent]  # get run folder from checkpoints
+    else:  # Generic - probably got path to run folder or model.final.pt
         to_check = [containing_folder, containing_folder.parent]
 
     for folder in to_check:
@@ -55,7 +52,7 @@ def find_configs(folder: Path) -> Union[Path, Tuple[Path, Path], None]:
         holder_path = folder / TRAIN_SAVE_FILES.config_holder
         if holder_path.exists():
             return holder_path
-        
+
         data_cfg_path = folder / TRAIN_SAVE_FILES.data_cfg
         train_cfg = folder / TRAIN_SAVE_FILES.train_cfg
         if data_cfg_path.exists() and train_cfg.exists():
@@ -63,7 +60,7 @@ def find_configs(folder: Path) -> Union[Path, Tuple[Path, Path], None]:
 
 
 def load_model_with_configs(
-    model_path: Union[Path,str], verbose: bool = False, gpt_type_model: bool = True
+    model_path: Union[Path, str], verbose: bool = False, gpt_type_model: bool = True
 ) -> Tuple[HookedTransformer, ConfigHolder]:
     """
     Load a model and associated config files from a path.
@@ -79,16 +76,16 @@ def load_model_with_configs(
         config_paths is not None
     ), f"Couldn't find configs in run containing {model_path}"
 
-    # TODO Make this part of the ConfigHolder? 
+    # TODO Make this part of the ConfigHolder?
     # initialize tokenizer
     tokenizer = PreTrainedTokenizer(
         bos_token=SPECIAL_TOKENS["padding"],
         eos_token=SPECIAL_TOKENS["padding"],
         pad_token=SPECIAL_TOKENS["padding"],
     )
-    
+
     # load the configs
-    if isinstance(config_paths, tuple): # Separate train and data configs
+    if isinstance(config_paths, tuple):  # Separate train and data configs
         data_cfg_path, train_cfg_path = config_paths
 
         with open(train_cfg_path, "r") as f:
@@ -96,23 +93,23 @@ def load_model_with_configs(
 
         with open(data_cfg_path, "r") as f:
             data_cfg_raw = json.load(f)
-        
+
         #! TODO Test this
         config_holder = ConfigHolder(
-            train_cfg = TrainConfig.load(train_cfg_raw),
-            dataset_cfg = GPTDatasetConfig.load(data_cfg_raw),
-            model_cfg = BaseGPTConfig.load(train_cfg_raw),
-            tokenizer = tokenizer 
+            train_cfg=TrainConfig.load(train_cfg_raw),
+            dataset_cfg=GPTDatasetConfig.load(data_cfg_raw),
+            model_cfg=BaseGPTConfig.load(train_cfg_raw),
+            tokenizer=tokenizer,
         )
     else:
         with open(config_paths, "r") as f:
             combined_json = json.load(f)
             config_holder = ConfigHolder.load(combined_json)
-            config_holder.tokenizer = tokenizer 
-    
+            config_holder.tokenizer = tokenizer
+
     if verbose:
-        print(f"Loaded config\n{config_holder}\n"+("-"*40))
-        
+        print(f"Loaded config\n{config_holder}\n" + ("-" * 40))
+
     model: HookedTransformer = config_holder.create_model()
     state_dict = torch.load(model_path, map_location=model.cfg.device)
     model.load_and_process_state_dict(
@@ -123,12 +120,12 @@ def load_model_with_configs(
         refactor_factored_attn_matrices=True,
     )
     # We're folding layernorm, but not using HookedTransformer.from_pretrained
-    # This means when torch.load_state_dict is invoked by transformer_lens, it 
+    # This means when torch.load_state_dict is invoked by transformer_lens, it
     # will complain about the fact that we deleted layernorm from the state_dict
     # Neel has a function to address this which Inserts layernorms that implement
     # only the normalization - to not trigger warning from torch.load - disgusting so:
     # TODO Probably just get Neel to allow the "strict" flag to be disabled inside of model.load_and_process_state_dict
-    model.process_weights_(fold_ln=True) 
+    model.process_weights_(fold_ln=True)
     model.eval()
 
     return model, config_holder
@@ -156,17 +153,18 @@ def predict_tokens(
 
     return sequence
 
+
 #! Soon to be defunct
-def pad_sequence(seq: ATensor, cfg: ConfigHolder, padding_val: str = None) -> torch.Tensor:
+def pad_sequence(
+    seq: ATensor, cfg: ConfigHolder, padding_val: str = None
+) -> torch.Tensor:
     """pads the token according to the context length and padding token in the config"""
     # assert (padding_val is not None) or (cfg.tokenizer.pad_token is not None), \
     #        "No padding token defined in tokenizer, please provide a padding value"
-    # This is super ugly 
-    pad_token = cfg.dataset_cfg.tokenizer_map['<PADDING>']
+    # This is super ugly
+    pad_token = cfg.dataset_cfg.tokenizer_map["<PADDING>"]
     return torch.nn.functional.pad(
-        seq,
-        (cfg.dataset_cfg.seq_len_max - seq.shape[0], 0),
-        value = pad_token
+        seq, (cfg.dataset_cfg.seq_len_max - seq.shape[0], 0), value=pad_token
     )
 
 
@@ -197,7 +195,7 @@ def predict_maze_path(
     data_cfg: MazeDatasetConfig,
     model: HookedTransformer,
     include_start_coord: bool = True,
-    n_tokens_pred:int = 8,
+    n_tokens_pred: int = 8,
     verbose: bool = False,
 ) -> tuple[LatticeMaze, MazePath, MazePath]:
     """given tokens from a dataset, predict the next tokens with the model, decode both true and predicted to paths
@@ -235,15 +233,20 @@ def predict_maze_path(
         [data_cfg.tokenizer_map[t] for t in maze_tokens],
         dtype=torch.long,
     )
-    eos_token_id = data_cfg.tokenizer_map[SPECIAL_TOKENS['end_path']]
+    eos_token_id = data_cfg.tokenizer_map[SPECIAL_TOKENS["end_path"]]
 
     # have the model predict some tokens
     maze_arr_nopad = maze_arr_nopad.unsqueeze(0)
     if verbose:
-        print('Generating Model Completions')
+        print("Generating Model Completions")
     #! NOTE verbose flag here will require latest release (DATE?)
-    predictions = model.generate(maze_arr_nopad, eos_token_id=eos_token_id,
-                                stop_at_eos=True, max_new_tokens=n_tokens_pred, verbose=verbose)
+    predictions = model.generate(
+        maze_arr_nopad,
+        eos_token_id=eos_token_id,
+        stop_at_eos=True,
+        max_new_tokens=n_tokens_pred,
+        verbose=verbose,
+    )
 
     # decode the tokens
     predicted_and_context_tokens: list[str] = [

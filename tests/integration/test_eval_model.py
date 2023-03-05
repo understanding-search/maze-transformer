@@ -10,6 +10,8 @@ from scripts.train_model import train_model
 Tests for loading and evaluation of model
 
 """
+
+
 @pytest.fixture()
 def temp_dir() -> Path:
     data_dir = tempfile.TemporaryDirectory()
