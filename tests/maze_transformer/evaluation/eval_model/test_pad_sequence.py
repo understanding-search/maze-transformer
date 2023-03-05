@@ -1,7 +1,8 @@
 import torch
-from transformers import OpenAIGPTConfig
-from maze_transformer.evaluation.eval_model import pad_sequence
 from pytest import mark, param
+from transformers import OpenAIGPTConfig
+
+from maze_transformer.evaluation.eval_model import pad_sequence
 
 test_data = [
     param([1, 2, 3], [0, 0, 1, 2, 3], id="short"),
