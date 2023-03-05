@@ -38,7 +38,7 @@ python scripts/train-model.py ./data/maze/g4-n10
 # Development
 
 ## Prerequisites
-
+**We are using Python 3.10 (or newer) and Poetry.**
 * Install [Poetry](https://python-poetry.org/docs/#installation)
 
 ## Setup
