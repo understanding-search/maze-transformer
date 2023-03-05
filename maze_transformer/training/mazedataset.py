@@ -61,12 +61,9 @@ class MazeDatasetConfig(GPTDatasetConfig):
     def serialize(self) -> JSONitem:
         maze_ctor: dict = {"__name__": self.maze_ctor.__name__}
         try:
-            print("serliaizing")
-            print(inspect.getsource(self.maze_ctor))
             maze_ctor["code_hash"] = hash(inspect.getsource(self.maze_ctor))
             maze_ctor["sourcefile"] = inspect.getsourcefile(self.maze_ctor)
         except (TypeError, OSError) as e:
-            print(e, file=sys.stderr)
             maze_ctor["code_hash"] = None
             maze_ctor["sourcefile"] = None
             maze_ctor["__exception__"] = str(e)

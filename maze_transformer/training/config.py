@@ -138,7 +138,7 @@ class ConfigHolder:
     """
 
     train_cfg: TrainConfig
-    dataset_cfg: GPTDatasetConfig
+    dataset_cfg: GPTDatasetConfig | MazeDatasetConfig
     model_cfg: BaseGPTConfig
     tokenizer: PreTrainedTokenizer | None
 

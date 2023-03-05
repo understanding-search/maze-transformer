@@ -1,7 +1,6 @@
 import json
 import typing
 from pathlib import Path
-from typing import Tuple, Union
 
 import numpy as np
 import torch
@@ -9,7 +8,7 @@ from muutils.tensor_utils import ATensor, NDArray
 from transformer_lens import HookedTransformer
 
 # bin these
-from transformers import OpenAIGPTConfig, OpenAIGPTLMHeadModel, PreTrainedTokenizer
+from transformers import PreTrainedTokenizer
 
 from maze_transformer.evaluation.plot_maze import PathFormat, plot_multi_paths
 from maze_transformer.generation.generators import LatticeMazeGenerators
@@ -18,8 +17,7 @@ from maze_transformer.generation.latticemaze import (
     CoordTup,
     LatticeMaze,
 )
-from maze_transformer.training.config import BaseGPTConfig, ConfigHolder, TrainConfig
-from maze_transformer.training.dataset import GPTDatasetConfig
+from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
 from maze_transformer.training.training import TRAIN_SAVE_FILES
@@ -30,7 +28,7 @@ MazePath = list[CoordTup]
 ArrMazePath = NDArray["node xypos", int]
 
 
-def find_configs(folder: Path) -> Union[Path, Tuple[Path, Path], None]:
+def find_config(folder: Path) -> Path | tuple[Path, Path] | None:
     """Assumed directory structure:
     run_folder/
         -- model.final.pt
@@ -53,27 +51,21 @@ def find_configs(folder: Path) -> Union[Path, Tuple[Path, Path], None]:
         if holder_path.exists():
             return holder_path
 
-        data_cfg_path = folder / TRAIN_SAVE_FILES.data_cfg
-        train_cfg = folder / TRAIN_SAVE_FILES.train_cfg
-        if data_cfg_path.exists() and train_cfg.exists():
-            return (data_cfg_path, train_cfg)
-
 
 def load_model_with_configs(
-    model_path: Union[Path, str], verbose: bool = False, gpt_type_model: bool = True
-) -> Tuple[HookedTransformer, ConfigHolder]:
+    model_path: Path,
+    verbose: bool = False,
+) -> tuple[HookedTransformer, ConfigHolder]:
     """
     Load a model and associated config files from a path.
     """
     # load the configs
-    # get path to the folder containing the model
-    config_folder: Path = Path(model_path).parent
-
     # check for the filenames, go up a dir if they don't exist
-    config_paths = find_configs(config_folder)
+    assert model_path.suffix == ".pt", "Model path must be a .pt file"
+    config_path = find_config(model_path)
 
     assert (
-        config_paths is not None
+        config_path is not None
     ), f"Couldn't find configs in run containing {model_path}"
 
     # TODO Make this part of the ConfigHolder?
@@ -85,27 +77,10 @@ def load_model_with_configs(
     )
 
     # load the configs
-    if isinstance(config_paths, tuple):  # Separate train and data configs
-        data_cfg_path, train_cfg_path = config_paths
-
-        with open(train_cfg_path, "r") as f:
-            train_cfg_raw: dict = json.load(f)
-
-        with open(data_cfg_path, "r") as f:
-            data_cfg_raw = json.load(f)
-
-        #! TODO Test this
-        config_holder = ConfigHolder(
-            train_cfg=TrainConfig.load(train_cfg_raw),
-            dataset_cfg=GPTDatasetConfig.load(data_cfg_raw),
-            model_cfg=BaseGPTConfig.load(train_cfg_raw),
-            tokenizer=tokenizer,
-        )
-    else:
-        with open(config_paths, "r") as f:
-            combined_json = json.load(f)
-            config_holder = ConfigHolder.load(combined_json)
-            config_holder.tokenizer = tokenizer
+    with open(config_path, "r") as f:
+        combined_json = json.load(f)
+        config_holder = ConfigHolder.load(combined_json)
+        config_holder.tokenizer = tokenizer
 
     if verbose:
         print(f"Loaded config\n{config_holder}\n" + ("-" * 40))
@@ -156,7 +131,8 @@ def predict_tokens(
 
 #! Soon to be defunct
 def pad_sequence(
-    seq: ATensor, cfg: ConfigHolder, padding_val: str = None
+    seq: ATensor,
+    cfg: ConfigHolder,
 ) -> torch.Tensor:
     """pads the token according to the context length and padding token in the config"""
     # assert (padding_val is not None) or (cfg.tokenizer.pad_token is not None), \
@@ -205,7 +181,7 @@ def predict_maze_path(
        raw tokens from dataset, containing both maze and true path
      - `data_cfg : MazeDatasetConfig`
        config for the dataset
-     - `model : OpenAIGPTLMHeadModel`
+     - `model : HookedTransformer`
        model to use for prediction
      - `n_tokens_pred : int`
        number of tokens to predict
@@ -239,7 +215,7 @@ def predict_maze_path(
     maze_arr_nopad = maze_arr_nopad.unsqueeze(0)
     if verbose:
         print("Generating Model Completions")
-    #! NOTE verbose flag here will require latest release (DATE?)
+    #! NOTE verbose flag here will require latest clone of TrasformerLens from github
     predictions = model.generate(
         maze_arr_nopad,
         eos_token_id=eos_token_id,
@@ -287,20 +263,13 @@ def predict_maze_path(
 
 
 def generate_plot_predicted_path(
-    model_path: str,
+    model_path: Path,
     n_tokens_pred: int = 5,
 ):
-    data_cfg: MazeDatasetConfig
-    train_cfg: TrainConfig
-    model_cfg: OpenAIGPTConfig
-    model: OpenAIGPTLMHeadModel
-    loaded_model_and_configs: LoadedModelConfigs = load_model_with_configs(
-        model_path, MazeDatasetConfig
-    )
-    data_cfg, train_cfg, model_cfg, model = loaded_model_and_configs
+    model, cfg = load_model_with_configs(model_path)
 
     # generate a maze
-    grid_n: int = data_cfg.grid_n
+    grid_n: int = cfg.dataset_cfg.grid_n
     maze: LatticeMaze = LatticeMazeGenerators.gen_dfs((grid_n, grid_n))
     c_start = (0, 0)
     c_end = (grid_n - 1, grid_n - 1)
@@ -325,18 +294,18 @@ def generate_plot_predicted_path(
 
     # tokenize the maze
     maze_only_tokens: list[str] = solved_maze.as_tokens(
-        data_cfg.node_token_map, solution=False
+        cfg.dataset_cfg.node_token_map, solution=False
     ) + [SPECIAL_TOKENS["start_path"]]
 
     print("maze tokens:", maze_only_tokens)
 
     array_nopad = torch.tensor(
-        [data_cfg.tokenizer_map[t] for t in maze_only_tokens],
+        [cfg.dataset_cfg.tokenizer_map[t] for t in maze_only_tokens],
         dtype=torch.int32,
         device="cpu",
     )
 
-    array: ATensor = pad_sequence(array_nopad, model_cfg)
+    array: ATensor = pad_sequence(array_nopad, cfg)
 
     # have the model predict some tokens
     predictions = predict_tokens(model, array.unsqueeze(0), n_tokens_pred)
@@ -344,13 +313,13 @@ def generate_plot_predicted_path(
     print(predictions)
 
     # decode the tokens
-    predicted_tokens = [data_cfg.token_arr[t] for t in predictions[0]]
+    predicted_tokens = [cfg.dataset_cfg.token_arr[t] for t in predictions[0]]
 
     print(predicted_tokens)
 
     path_predicted: list[tuple[int, int]] = decode_maze_tokens_to_coords(
         predicted_tokens[len(maze_only_tokens) :],
-        mazedata_cfg=data_cfg,
+        mazedata_cfg=cfg.dataset_cfg,
         when_noncoord="skip",
     )
 
