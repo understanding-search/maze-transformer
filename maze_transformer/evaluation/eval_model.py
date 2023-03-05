@@ -34,7 +34,23 @@ ArrMazePath = NDArray["node xypos", int]
 
 
 def find_configs(folder: Path) -> Union[Path, Tuple[Path, Path], None]:
-    for folder in [folder, folder.parent]:
+    """ Assumed directory structure:
+        run_folder/
+            -- model.final.pt
+            -- config.json (or data_config.json and train_config.json)
+            -- checkpoints/
+                -- model.checkpoint_num.pt
+                
+        Should be able to return config from anywhere in this structure 
+        (regardless if path provided is file or folder name)
+    """
+    containing_folder = folder if folder.is_dir() else folder.parent
+    if containing_folder.name == "checkpoints":
+        to_check = [containing_folder.parent.parent] # get run folder from checkpoints
+    else: # Generic - probably got path to run folder or model.final.pt
+        to_check = [containing_folder, containing_folder.parent]
+
+    for folder in to_check:
         # For reverse compatibility, allow separate config files OR a single config holder
         holder_path = folder / TRAIN_SAVE_FILES.config_holder
         if holder_path.exists():
@@ -61,7 +77,7 @@ def load_model_with_configs(
 
     assert (
         config_paths is not None
-    ), f"Couldn't find configs in directory of or parent directory of {model_path}"
+    ), f"Couldn't find configs in run containing {model_path}"
 
     # TODO Make this part of the ConfigHolder? 
     # initialize tokenizer
@@ -223,9 +239,11 @@ def predict_maze_path(
 
     # have the model predict some tokens
     maze_arr_nopad = maze_arr_nopad.unsqueeze(0)
-    print('Generating Model Completions')
+    if verbose:
+        print('Generating Model Completions')
+    #! NOTE verbose flag here will require latest release (DATE?)
     predictions = model.generate(maze_arr_nopad, eos_token_id=eos_token_id,
-                                stop_at_eos=True, max_new_tokens=n_tokens_pred)
+                                stop_at_eos=True, max_new_tokens=n_tokens_pred, verbose=verbose)
 
     # decode the tokens
     predicted_and_context_tokens: list[str] = [

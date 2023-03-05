@@ -61,6 +61,8 @@ class MazeDatasetConfig(GPTDatasetConfig):
     def serialize(self) -> JSONitem:
         maze_ctor: dict = {"__name__": self.maze_ctor.__name__}
         try:
+            print('serliaizing')
+            print(inspect.getsource(self.maze_ctor))
             maze_ctor["code_hash"] = hash(inspect.getsource(self.maze_ctor))
             maze_ctor["sourcefile"] = inspect.getsourcefile(self.maze_ctor)
         except (TypeError, OSError) as e:
@@ -108,7 +110,6 @@ class MazeDatasetConfig(GPTDatasetConfig):
         assert output.maze_ctor.__name__ == data["maze_ctor"]["__name__"]
 
         assert output.n_tokens == data["n_tokens"]
-
         if hash(inspect.getsource(output.maze_ctor)) != data["maze_ctor"]["code_hash"]:
             print(
                 f"WARNING: code hash mismatch for maze_ctor {output.maze_ctor.__name__}",
