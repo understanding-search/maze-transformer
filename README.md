@@ -31,7 +31,7 @@ Notes:
 
 ### Example
 ```
-python scripts/train-model.py ./data/maze/g4-n10
+python scripts/train_model.py ./data/maze/g4-n10
 ```
 
 
@@ -40,6 +40,7 @@ python scripts/train-model.py ./data/maze/g4-n10
 ## Prerequisites
 **We are using Python 3.10 (or newer) and Poetry.**
 * Install [Poetry](https://python-poetry.org/docs/#installation)
+* Install Python 3.10
 
 ## Setup
 
