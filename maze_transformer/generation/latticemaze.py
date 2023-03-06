@@ -151,6 +151,33 @@ class LatticeMaze:
 
         return img
 
+    def as_ascii(self, start=None, end=None):
+        """
+        Returns an ASCII visualization of the maze.
+        Courtesy of ChatGPT
+        """
+        wall_char = '#'
+        path_char = ' '
+        
+        # Determine the size of the maze
+        maze = self.as_img()
+        n_rows, n_cols = maze.shape
+        maze_str = ''
+        
+        # Iterate through each element of the maze and print the appropriate symbol
+        for i in range(n_rows):
+            for j in range(n_cols):
+                if start is not None and start[0] == i-1 and start[1] == j-1:
+                    maze_str += 'S'
+                elif end is not None and end[0] == i-1 and end[1] == j-1:
+                    maze_str += 'E'
+                elif maze[i, j]:
+                    maze_str += path_char
+                else:
+                    maze_str += wall_char
+            maze_str += '\n' # Start a new line after each row
+        return maze_str
+
     def as_adjlist(
         self, shuffle_d0: bool = True, shuffle_d1: bool = True
     ) -> NDArray["conn start_end coord", np.int8]:
