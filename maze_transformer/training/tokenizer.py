@@ -72,11 +72,12 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     bos_token: str = SPECIAL_TOKENS["padding"]
     eos_token: str = SPECIAL_TOKENS["padding"] 
-    unk_token: str = '<WOOPS>'
+    unk_token: str = '<WHOOPS>'
     #! pad_token is set to tokenizer.eos_token by TransformerLens
     # TODO check if this is a problem for us
     pad_token: str = eos_token
-    additional_special_tokens: list[str] = [x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS['padding']]]
+    vocab_size: int = 0   
+    # additional_special_tokens: list[str] = [x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS['padding']]]
     
     # IDs specified during construction
     # bos_token_id: int
@@ -91,15 +92,22 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     
     def __init__(self, cfg: ConfigHolder, **kwargs):
         super().__init__(max_len=cfg.dataset_cfg.seq_len_max, **kwargs)
-        self._add_tokens()
-        vocab = {k: v for v, k in enumerate(cfg.dataset_cfg.token_arr)}
-        self.added_tokens_encoder = vocab
-        self.added_tokens_decoder = {v: k for k, v in vocab.items()}
-        self.vocab = vocab #! Feels like this should be automatic through the super().__init__ call
+        # d_vocab = len(cfg.dataset_cfg.token_arr)
+        # We are having to do evil things here
+        vocab = {k: 0 for v, k in enumerate(cfg.dataset_cfg.token_arr)}
+        vocab[self.unk_token] = 0
+
+        self.added_tokens_encoder = vocab 
+        # self.added_tokens_decoder = {v: k for k, v in vocab.items()}
+
+        self._add_tokens(list(SPECIAL_TOKENS.values()), special_tokens=True)
+        self._add_tokens(cfg.dataset_cfg.token_arr[len(SPECIAL_TOKENS.values()):], special_tokens=False)
+
+        # self.vocab = vocab #! Feels like this should be automatic through the super().__init__ call
         
-        self.bos_token_id = self.vocab[self.bos_token]
-        self.eos_token_id = self.vocab[self.eos_token]
-        self.pad_token_id = self.vocab[self.pad_token]
+        self.bos_token_id = self.added_tokens_encoder[self.bos_token]
+        self.eos_token_id = self.added_tokens_encoder[self.eos_token]
+        self.pad_token_id = self.added_tokens_encoder[self.pad_token]
 
     # def __call__(self, str_tokens: list[str], **kwargs) -> ATensor:
     #     tokens = [self.vocab[token] for token in maze.as_tokens(cfg.node_token_map)]
