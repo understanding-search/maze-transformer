@@ -1,6 +1,14 @@
 # Maze Transformer
 
 Solving mazes with transformer models.
+
+# Installation
+```
+pip install git+ssh://git@github.com/aisc-understanding-search/maze-transformer.git
+```
+
+Note: if you want to install the library in colab, follow the steps in this [Colab notebook](https://colab.research.google.com/drive/1b8E1rkqcKRdC4bs9133aBPEvqEaH5dqD#scrollTo=8VbjoPRgXlqs).
+
 # Development
 
 ## Prerequisites
