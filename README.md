@@ -4,6 +4,10 @@ Solving mazes with transformer models.
 
 # Scripts
 
+**Notes:**
+- Before running scripts, please follow the installation steps in [Development](#development).
+- You may need to prefix python commands with `poetry run`. See [Poetry docs](https://python-poetry.org/docs) for more information.
+
 ## `test_generation`
 Generate a maze and solve it algorithmically.
 
