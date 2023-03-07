@@ -1,6 +1,33 @@
 # Maze Transformer
 
 Solving mazes with transformer models.
+# Development
+
+## Prerequisites
+
+* Install [Poetry](https://python-poetry.org/docs/#installation)
+* Install Python 3.10
+    * It's a good idea to use [pyenv](https://github.com/pyenv/pyenv) to manage python versions
+    * If using pyenv, you'll need to update your Poetry config for it to use the pyenv Python version: `poetry config virtualenvs.prefer-active-python true`
+
+
+## Setup
+
+* Install dependencies
+    ```
+    poetry install --with dev
+    ```
+
+
+* Run unit and integration tests
+    ```
+    make test
+    ```
+
+* (Optional) If you want to work with the jupyter notebooks in VSCode
+  * create a jupyter kernel with `poetry run ipython kernel install --user --name=maze-transformer`
+  * Restart VSCode
+  * In VSCode, select the python interpreter located in `maze-transformer/.venv/bin` as your juptyer kernel
 
 # Scripts
 
@@ -9,7 +36,7 @@ Generate a maze and solve it algorithmically.
 
 ### Example
 ```
-python scripts/test_generation.py
+poetry run python scripts/test_generation.py
 ```
 
 ## `create_dataset`
@@ -18,7 +45,7 @@ Create or load a dataset of mazes.
 ### Example
 create 10 4x4 mazes in the directory ./data/maze:
 ```
-python scripts/create_dataset.py create ./data/maze 10 --grid_n=4
+poetry run python scripts/create_dataset.py create ./data/maze 10 --grid_n=4
 ```
 
 ## `train_model`
@@ -31,29 +58,9 @@ Notes:
 
 ### Example
 ```
-python scripts/train_model.py ./data/maze/g4-n10
+poetry run python scripts/train_model.py ./data/maze/g4-n10
 ```
 
-
-# Development
-
-## Prerequisites
-
-* Install [Poetry](https://python-poetry.org/docs/#installation)
-* Install Python 3.10
-
-## Setup
-
-* Install dependencies
-    ```
-    poetry install
-    ```
-
-
-* (Optional) Run unit and integration tests
-    ```
-    make test
-    ```
 
 
 ## Testing & Static analysis
