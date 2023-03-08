@@ -61,11 +61,14 @@ class MazeTokenizer:
 
         return tokens
 
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizerFast, PreTrainedTokenizer
 from muutils.tensor_utils import ATensor, NDArray
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
-# from maze_transformer.training.mazedataset import MazeDatasetConfig
+from maze_transformer.training.mazedataset import MazeDatasetConfig
+import torch
+
+
 
 class HuggingMazeTokenizer(PreTrainedTokenizer):
     vocab: dict[str, int]# map of token_ids to strings
@@ -77,7 +80,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     # TODO check if this is a problem for us
     pad_token: str = eos_token
     vocab_size: int = 0   
-    # additional_special_tokens: list[str] = [x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS['padding']]]
+    additional_special_tokens: list[str] = [x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS['padding']]]
     
     # IDs specified during construction
     # bos_token_id: int
@@ -92,41 +95,31 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     
     def __init__(self, cfg: ConfigHolder, **kwargs):
         super().__init__(max_len=cfg.dataset_cfg.seq_len_max, **kwargs)
-        # d_vocab = len(cfg.dataset_cfg.token_arr)
         # We are having to do evil things here
-        vocab = {k: 0 for v, k in enumerate(cfg.dataset_cfg.token_arr)}
-        vocab[self.unk_token] = 0
+        vocab = {k: v for v, k in enumerate(cfg.dataset_cfg.token_arr)}
+        vocab[self.unk_token] = len(vocab)
 
         self.added_tokens_encoder = vocab 
-        # self.added_tokens_decoder = {v: k for k, v in vocab.items()}
+        self.added_tokens_decoder = {v: k for k, v in vocab.items()}
 
-        self._add_tokens(list(SPECIAL_TOKENS.values()), special_tokens=True)
-        self._add_tokens(cfg.dataset_cfg.token_arr[len(SPECIAL_TOKENS.values()):], special_tokens=False)
-
-        # self.vocab = vocab #! Feels like this should be automatic through the super().__init__ call
+        self.unique_no_split_tokens = cfg.dataset_cfg.token_arr
+        self._create_trie(self.unique_no_split_tokens)
         
         self.bos_token_id = self.added_tokens_encoder[self.bos_token]
-        self.eos_token_id = self.added_tokens_encoder[self.eos_token]
+        self.eos_token_id = self.added_tokens_encoder[self.eos_token] # Because the slow tokenizer behaves differently to fast ones...
         self.pad_token_id = self.added_tokens_encoder[self.pad_token]
 
-    # def __call__(self, str_tokens: list[str], **kwargs) -> ATensor:
-    #     tokens = [self.vocab[token] for token in maze.as_tokens(cfg.node_token_map)]
-    #     maze_tokens = self.encode(tokens, **kwargs)
-    #     return maze_tokens
-
-    # def batch_decode(self, sequences: list[int] | list[list[int]] | ATensor, skip_special_tokens: bool = False, **kwargs) -> list[str]:
-    #     return super().batch_decode(sequences, skip_special_tokens, clean_up_tokenization_spaces=False, **kwargs)
-
-    # def decode(self, sequence: list[int] | ATensor, skip_special_tokens: bool = False, **kwargs) -> str:
-    #     return super().decode(sequence, skip_special_tokens, clean_up_tokenization_spaces=False, **kwargs)
+    def batch_decode(self, sequences: list[int] | list[list[int]] | ATensor, skip_special_tokens: bool = False, **kwargs) -> list[str]:
+        if isinstance(sequences, torch.Tensor) and sequences.ndim == 1:
+            sequences = sequences.unsqueeze(-1) # Because the slow tokenizer behaves differently to fast ones...
+        return super().batch_decode(sequences, skip_special_tokens, **kwargs)
     
-    def to_image(self, sequence: list[int] | ATensor | list[str], **kwargs) -> NDArray:
-
+    def to_image(self, sequence: list[int | str] | ATensor, **kwargs) -> NDArray:
+        # Sequence should be a single maze (not batch)
         if isinstance(sequence, list) and isinstance(sequence[0], str):
             str_sequence = sequence # already decoded
         else:
-            str_sequence = self.decode(sequence)
+            str_sequence = self.batch_decode(sequence)
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence) 
         return lattice_maze.as_img(**kwargs)
-   

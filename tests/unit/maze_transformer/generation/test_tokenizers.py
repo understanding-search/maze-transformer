@@ -30,25 +30,12 @@ def test_tokenization_encoding():
     cfg_holder = ConfigHolder(train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None)
     tokenizer = HuggingMazeTokenizer(cfg_holder)
     
-    # tokenizer_out = tokenizer(maze_str_tokens, padding='')['input_ids']
-    print(maze_str_tokens)
-    tokenizer_out = tokenizer([maze_str_tokens, [0]])['input_ids']
-    print(tokenizer_out) 
-    # torch.all(tokenizer_out.flatten() == torch.tensor(maze_tokens))
-
+    tokenizer_out = tokenizer(maze_str_tokens)['input_ids']
+    assert torch.all(torch.tensor(tokenizer_out).flatten() == torch.tensor(maze_tokens)), "Tokenization mismatch"
 
 def test_ascii_encoding():
     # Check that the ascii encoding works for multiple different inputs
     pass
-
-def test_tokenization_decoding():
-    # Check that wrapped tokenizer decode returns the same as iterating through token map
-    pass
-
-def test_padding():
-    # Check that wrapped tokenizer pad returns the same as original padding function 
-    pass
-
 
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 def test_inside_hooked_transformer():
@@ -60,7 +47,7 @@ def test_inside_hooked_transformer():
     node_token_map = cfg.node_token_map
     
     # Adjacency List Tokenization  
-    maze_str_tokens = maze.as_tokens(node_token_map) 
+    maze_str_tokens = ['<ADJLIST_START>', '(1,1)', '<-->', '(2,1)', ';', '(2,0)', '<-->', '(1,0)', ';', '(0,1)', '<-->', '(0,0)', ';', '(2,2)', '<-->', '(2,1)', ';', '(2,0)', '<-->', '(2,1)', ';', '(0,2)', '<-->', '(1,2)', ';', '(0,0)', '<-->', '(1,0)', ';', '(0,2)', '<-->', '(0,1)', ';', '<ADJLIST_END>', '<TARGET_START>', '(2,1)', '<TARGET_END>', '<START_PATH>', '(0,0)', '(1,0)', '(2,0)', '(2,1)', '<END_PATH>']
 
     cfg_holder = ConfigHolder(train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None)
     tokenizer = HuggingMazeTokenizer(cfg_holder)
@@ -74,13 +61,33 @@ def test_inside_hooked_transformer():
             d_vocab=tokenizer.vocab_size
     )
     hktransformer = HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=tokenizer)
+    token_ids = hktransformer.to_tokens(''.join(maze_str_tokens), prepend_bos=False)
 
-    print(maze_str_tokens)
-    token_ids = hktransformer.to_tokens(''.join(maze_str_tokens))
-    print(token_ids)
+    # -- Test Simple Tokenization --
+    # Manual Tokenization
+    vocab_map = {k: v for v, k in enumerate(cfg.token_arr)}
+    maze_tokens = [vocab_map[token] for token in maze_str_tokens]
+
+    assert torch.all(token_ids.flatten().cpu() == torch.tensor(maze_tokens)), "Simple tokenization encoding inside HookedTransformer failed"
+    
+    # Test casting back to string tokens
     str_tokens = hktransformer.to_str_tokens(token_ids)
-    print(str_tokens)
+    assert str_tokens == maze_str_tokens, "Simple tokenization decoding inside HookedTransformer failed"
+
+    # -- Test Batched Tokenization --
+    maze_str_tokens_2 = ['<ADJLIST_START>', '(1,1)', '<-->', '(2,1)', ';', '(2,0)', '<-->', '(1,0)', ';', '(0,1)', '<-->', '(0,0)', ';', '(0,2)', '<-->', '(0,1)', ';', '<ADJLIST_END>', '<TARGET_START>', '(1,0)', '<TARGET_END>', '<START_PATH>', '(0,0)', '(1,0)', '<END_PATH>']
+    batched_tokens = [" ".join(maze_str_tokens), " ".join(maze_str_tokens_2)]
+
+    # Manual Tokenization
+    padded_str_2 = ['<PADDING>']*(len(maze_str_tokens)-len(maze_str_tokens_2)) + maze_str_tokens_2
+    maze_tokens_2 = [vocab_map[token] for token in padded_str_2]
+    batched_tokens_manual = [maze_tokens, maze_tokens_2]
+
+    # WrappedTokenizer use
+    token_ids_2 = hktransformer.to_tokens(batched_tokens, prepend_bos=False)
+
+    assert torch.all(token_ids_2.cpu() == torch.tensor(batched_tokens_manual)), "Batched tokenization encoding inside HookedTransformer failed"
     
 
-# test_tokenization_encoding()
-test_inside_hooked_transformer()
+test_tokenization_encoding()
+# test_inside_hooked_transformer()
