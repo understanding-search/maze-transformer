@@ -4,6 +4,7 @@ as the original tokenizer (i.e. just using the token map in cfg)
 
 We may want a separate set of tests for different tokenization schemes
 """
+from transformer_lens import HookedTransformer, HookedTransformerConfig
 from maze_transformer.training.tokenizer import MazeTokenizer, HuggingMazeTokenizer
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 from maze_transformer.training.config import ConfigHolder
@@ -33,11 +34,25 @@ def test_tokenization_encoding():
     tokenizer_out = tokenizer(maze_str_tokens)['input_ids']
     assert torch.all(torch.tensor(tokenizer_out).flatten() == torch.tensor(maze_tokens)), "Tokenization mismatch"
 
+
 def test_ascii_encoding():
     # Check that the ascii encoding works for multiple different inputs
-    pass
+    maze_str_tokens = ['<ADJLIST_START>', '(1,1)', '<-->', '(2,1)', ';', '(2,0)', '<-->', '(1,0)', ';', '(0,1)', '<-->', '(0,0)', ';', '(2,2)', '<-->', '(2,1)', ';', '(2,0)', '<-->', '(2,1)', ';', '(0,2)', '<-->', '(1,2)', ';', '(0,0)', '<-->', '(1,0)', ';', '(0,2)', '<-->', '(0,1)', ';', '<ADJLIST_END>', '<TARGET_START>', '(2,1)', '<TARGET_END>', '<START_PATH>', '(0,0)', '(1,0)', '(2,0)', '(2,1)', '<END_PATH>']
+    target = ["#######","#     #","# ### #", "# # # #", "# # ###", "#     #", "#######"]
 
-from transformer_lens import HookedTransformer, HookedTransformerConfig
+    # Need to generate a config to extract the token map >.<
+    cfg = MazeDatasetConfig(name='testing_maze', grid_n = 5, n_mazes=1)
+    cfg_holder = ConfigHolder(train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None)
+    tokenizer = HuggingMazeTokenizer(cfg_holder)
+
+    # Try with string tokens
+    assert tokenizer.to_ascii(maze_str_tokens).splitlines() == target, "ASCII encoding from string tokens failed"
+
+    # And with token ids
+    token_ids = tokenizer.encode(maze_str_tokens)
+    assert tokenizer.to_ascii(token_ids).splitlines() == target, "ASCII encoding from token ids failed"
+
+
 def test_inside_hooked_transformer():
     # Check that the wrapped tokenizer facilitates all HookedTransformer tokenizer-dependent functionality
     maze = generate_MazeTokenizer(None, 3, (0, 0), (2, 1))
@@ -87,7 +102,3 @@ def test_inside_hooked_transformer():
     token_ids_2 = hktransformer.to_tokens(batched_tokens, prepend_bos=False)
 
     assert torch.all(token_ids_2.cpu() == torch.tensor(batched_tokens_manual)), "Batched tokenization encoding inside HookedTransformer failed"
-    
-
-test_tokenization_encoding()
-# test_inside_hooked_transformer()

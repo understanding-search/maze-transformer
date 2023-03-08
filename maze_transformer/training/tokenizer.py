@@ -114,12 +114,15 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             sequences = sequences.unsqueeze(-1) # Because the slow tokenizer behaves differently to fast ones...
         return super().batch_decode(sequences, skip_special_tokens, **kwargs)
     
-    def to_image(self, sequence: list[int | str] | ATensor, **kwargs) -> NDArray:
+    def to_ascii(self, sequence: list[int | str] | ATensor, start=None, end=None) -> NDArray:
         # Sequence should be a single maze (not batch)
         if isinstance(sequence, list) and isinstance(sequence[0], str):
             str_sequence = sequence # already decoded
         else:
-            str_sequence = self.batch_decode(sequence)
-
+            str_sequence = self.batch_decode(torch.tensor(sequence).unsqueeze(-1))
+        
+        # Filter out the adjacency list
+        str_sequence = str_sequence[1:str_sequence.index(SPECIAL_TOKENS['adjlist_end'])]
+        
         lattice_maze = LatticeMaze.from_tokens(str_sequence) 
-        return lattice_maze.as_img(**kwargs)
+        return lattice_maze.as_ascii(start=start, end=end)
