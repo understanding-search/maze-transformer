@@ -70,6 +70,26 @@ poetry run python scripts/train_model.py ./data/maze/g4-n10
 ```
 
 
+# Development
+
+## Prerequisites
+**We are using Python 3.10 (or newer) and Poetry.**
+* Install [Poetry](https://python-poetry.org/docs/#installation)
+* Install Python 3.10
+
+## Setup
+
+* Install dependencies
+    ```
+    poetry install
+    ```
+
+
+* (Optional) Run unit and integration tests
+    ```
+    make test
+    ```
+
 
 ## Testing & Static analysis
 

@@ -107,7 +107,22 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
         ),
         print_loss_interval=1000,
         checkpoint_interval=5000,
-    )
+    ),
+    TrainConfig(
+        name="tiny-v1-long",
+        optimizer=torch.optim.RMSprop,
+        optimizer_kwargs=dict(lr=0.000001),
+        batch_size=64,
+        dataloader_cfg=dict(
+            shuffle=True,
+            num_workers=16,
+            persistent_workers=True,
+            drop_last=True,
+        ),
+        print_loss_interval=1000,
+        checkpoint_interval=5000,
+        epochs=20,
+    ),
 ]
 
 
@@ -123,7 +138,7 @@ class ConfigHolder:
     """
 
     train_cfg: TrainConfig
-    dataset_cfg: GPTDatasetConfig
+    dataset_cfg: GPTDatasetConfig | MazeDatasetConfig
     model_cfg: BaseGPTConfig
     tokenizer: PreTrainedTokenizer | None
 
@@ -145,6 +160,9 @@ class ConfigHolder:
             dataset_cfg=self.dataset_cfg.serialize(),
             model_cfg=self.model_cfg.serialize(),
         )
+
+    def __repr__(self) -> str:
+        return str(self.serialize())
 
     @classmethod
     def load(cls, serialized: Dict[str, Dict[Any, Any]]):
