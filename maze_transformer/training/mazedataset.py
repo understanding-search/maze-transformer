@@ -84,7 +84,6 @@ class MazeDatasetConfig(GPTDatasetConfig):
 
     @classmethod
     def load(cls, data: JSONitem) -> "MazeDatasetConfig":
-        # TODO: figure out why these args are unexpected (when linting)
         output = cls(  # pylint: disable=unexpected-keyword-arg
             name=data["name"],
             grid_n=data["grid_n"],
@@ -207,7 +206,8 @@ class MazeDataset(GPTDataset):
 
     def __getitem__(self, idx: int) -> ATensor[("tokens")]:
         """index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
-        # TODO: handling of minimum sequence length
+
+        # A nice-to-have refactor would be to have some notion of a minimum sequence length here, such that this method never returns a sequence below that length. The motivation here is that for a particular dataset we might know that the first N tokens are always part of the maze, so this method can safetly skip that many before it finds the start of the correct sequence. The min value could be part of the dataset config.
 
         # last element in mazes_array.idxs whose value is smaller than `idx`
         sequence_idx: int = torch.searchsorted(self.mazes_array.idxs, idx) - 1
@@ -244,7 +244,7 @@ class MazeDataset(GPTDataset):
         as a fraction of max of the maze's dimensions
         """
 
-        # TODO: minimum separation
+        # Currently we don't enforce a minimum distance between the start and end of the path. If we need to do this in future, there's a beginning of an implementation here:
         # n_min_tgt_dist: int = int(max(maze.grid_shape) * p_min_tgt_dist)
 
         """if np.abs(start_node - end_node).sum() < n_min_tgt_dist:

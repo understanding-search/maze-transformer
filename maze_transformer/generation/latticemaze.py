@@ -295,7 +295,7 @@ class LatticeMaze:
     ) -> "LatticeMaze":
         """create a LatticeMaze from a list of connections"""
 
-        # TODO: this is only for square mazes
+        # Note: This has only been tested for square mazes. Might need to change some things if rectangular mazes are needed.
         grid_n: int = adjlist.max() + 1
 
         connection_list: NDArray["lattice_dim x y", bool] = np.zeros(
