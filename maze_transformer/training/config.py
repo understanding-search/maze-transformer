@@ -134,7 +134,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
         name="gpt2-small",
         optimizer=torch.optim.AdamW,
         optimizer_kwargs=dict(lr=0.00001, weight_decay=0.01),
-        batch_size=64,
+        batch_size=16,
         dataloader_cfg=dict(
             shuffle=True,
             num_workers=16,

@@ -1,6 +1,15 @@
 from dataclasses import dataclass, field
 from itertools import chain
 
+from muutils.tensor_utils import ATensor, NDArray
+# Avoid circular import from training/config.py
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from maze_transformer.training.config import ConfigHolder
+
+from transformers import PreTrainedTokenizer
+import torch
+
 from maze_transformer.generation.latticemaze import (
     SPECIAL_TOKENS,
     CoordArray,
@@ -61,15 +70,6 @@ class MazeTokenizer:
 
         return tokens
 
-from transformers import PreTrainedTokenizerFast, PreTrainedTokenizer
-from muutils.tensor_utils import ATensor, NDArray
-from maze_transformer.training.config import ConfigHolder
-from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
-from maze_transformer.training.mazedataset import MazeDatasetConfig
-import torch
-
-
-
 class HuggingMazeTokenizer(PreTrainedTokenizer):
     vocab: dict[str, int]# map of token_ids to strings
 
@@ -82,18 +82,13 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     vocab_size: int = 0   
     additional_special_tokens: list[str] = [x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS['padding']]]
     
-    # IDs specified during construction
-    # bos_token_id: int
-    # eos_token_id: int
-    # pad_token_id: int
-
     # Overwrite class attributes
     padding_side = "left"
     truncation_side = "left" #! strange choice, but it's what we did in pad_sequence
     
     name_or_path = "maze_tokenizer"
     
-    def __init__(self, cfg: ConfigHolder, **kwargs):
+    def __init__(self, cfg: "ConfigHolder", **kwargs):
         super().__init__(max_len=cfg.dataset_cfg.seq_len_max, **kwargs)
         # We are having to do evil things here
         vocab = {k: v for v, k in enumerate(cfg.dataset_cfg.token_arr)}
@@ -105,6 +100,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         self.unique_no_split_tokens = cfg.dataset_cfg.token_arr
         self._create_trie(self.unique_no_split_tokens)
         
+        # IDs specified during construction
         self.bos_token_id = self.added_tokens_encoder[self.bos_token]
         self.eos_token_id = self.added_tokens_encoder[self.eos_token] # Because the slow tokenizer behaves differently to fast ones...
         self.pad_token_id = self.added_tokens_encoder[self.pad_token]
