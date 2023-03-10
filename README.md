@@ -23,6 +23,7 @@ Note: if you want to install the library in colab, follow the steps in this [Col
 
 * Install dependencies
     ```
+    poetry config virtualenvs.in-project true
     poetry install --with dev
     ```
 
