@@ -19,6 +19,8 @@ from maze_transformer.training.training import (
 def train_model(
     basepath: str, training_cfg: str = "tiny-v1", model_cfg: str = "tiny-v1"
 ):
+    # TODO: handle paths using pathlib, not strings
+    # TODO: load configs from json files -- have a `configs` folder
     dataset = MazeDataset.disk_load(basepath, do_config=True, do_tokenized=True)
 
     tokenizer = PreTrainedTokenizer(

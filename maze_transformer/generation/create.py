@@ -39,7 +39,7 @@ def create_dataset(
     grid_n: int = 16,
     name: str | None = None,
     **cfg_kwargs,
-):
+) -> str:
     if n_mazes < 0:
         raise ValueError("m_mazes must be >= 0")
 
@@ -98,4 +98,6 @@ def create_dataset(
     )
 
     dataset.disk_save(str(data_path))
+
+    return data_path
 

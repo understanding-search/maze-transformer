@@ -12,7 +12,7 @@ import pytest
 import torch
 
 from maze_transformer.evaluation.eval_model import load_model_with_configs
-from scripts.create_dataset import create_dataset
+from maze_transformer.generation.create import create_dataset
 from scripts.train_model import train_model
 
 
