@@ -111,6 +111,7 @@ def load_model_with_configs(
 
 #! Soon to be defunct
 def predict_tokens(
+    cfg: ConfigHolder,
     model: HookedTransformer,
     inputs: torch.Tensor,
     n_tokens: int = 32,
@@ -120,7 +121,7 @@ def predict_tokens(
     Predict the next tokens
     """
     # print(f"{inputs.shape = } {n_tokens = } {model.config.n_positions = }")
-    sequence = pad_sequence(inputs, model.config)
+    sequence = pad_sequence(inputs, cfg)
     with torch.no_grad():
         for _ in range(n_tokens):
             sequence = model.generate(
@@ -311,7 +312,7 @@ def generate_plot_predicted_path(
     array: ATensor = pad_sequence(array_nopad, cfg)
 
     # have the model predict some tokens
-    predictions = predict_tokens(model, array.unsqueeze(0), n_tokens_pred)
+    predictions = predict_tokens(cfg, model, array.unsqueeze(0), n_tokens_pred)
 
     print(predictions)
 
