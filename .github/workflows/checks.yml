@@ -43,8 +43,5 @@ jobs:
           poetry lock --check
           poetry install
 
-      - name: Unit tests
-        run: make unit
-
-      - name: Integration tests
-        run: make integration
+      - name: Unit and integration tests
+        run: poetry run make test
