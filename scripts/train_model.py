@@ -46,7 +46,12 @@ def train_model(
         config=cfg,
     )
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
 
     dataloader = get_dataloader(dataset, cfg, logger)
 

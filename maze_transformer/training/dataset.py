@@ -14,7 +14,11 @@ class GPTDatasetConfig:
     name: str
     device: torch.device = field(
         default_factory=lambda: torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps"
+            if torch.backends.mps.is_available()
+            else "cpu"
         )
     )
     dtype: torch.dtype | np.dtype = field(default_factory=lambda: torch.int16)
