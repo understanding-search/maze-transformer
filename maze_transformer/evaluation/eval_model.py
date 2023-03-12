@@ -198,7 +198,7 @@ def predict_maze_path(
     """
 
     # split the tokens into maze (prompt) and path
-    path_start_token: str = SPECIAL_TOKENS["start_path"]
+    path_start_token: str = SPECIAL_TOKENS["path_start"]
     path_start_idx: int = tokens.index(path_start_token) + 1
     maze_tokens: list[str] = tokens[:path_start_idx]
     path_true_tokens: list[str] = tokens[path_start_idx:]
@@ -213,7 +213,7 @@ def predict_maze_path(
         [data_cfg.tokenizer_map[t] for t in maze_tokens],
         dtype=torch.long,
     )
-    eos_token_id = data_cfg.tokenizer_map[SPECIAL_TOKENS["end_path"]]
+    eos_token_id = data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]]
 
     # have the model predict some tokens
     maze_arr_nopad = maze_arr_nopad.unsqueeze(0)
@@ -299,7 +299,7 @@ def generate_plot_predicted_path(
     # tokenize the maze
     maze_only_tokens: list[str] = solved_maze.as_tokens(
         cfg.dataset_cfg.node_token_map, solution=False
-    ) + [SPECIAL_TOKENS["start_path"]]
+    ) + [SPECIAL_TOKENS["path_start"]]
 
     print("maze tokens:", maze_only_tokens)
 
