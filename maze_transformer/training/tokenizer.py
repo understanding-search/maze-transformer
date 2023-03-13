@@ -39,7 +39,7 @@ class MazeTokenizer:
                         node_token_map[tuple(c_e.tolist())],
                         SPECIAL_TOKENS["adjacency_endline"],
                     ]
-                    for c_s, c_e in self.maze.as_adjlist()
+                    for c_s, c_e in self.maze.as_adj_list()
                 ]
             ),
             SPECIAL_TOKENS["adjlist_end"],
