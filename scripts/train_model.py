@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-import torch
 from muutils.logger import Logger
 from transformers import PreTrainedTokenizer
 
@@ -14,6 +13,7 @@ from maze_transformer.training.training import (
     setup_logger,
     train,
 )
+from maze_transformer.utils.utils import get_device
 
 
 def train_model(
@@ -46,14 +46,8 @@ def train_model(
         config=cfg,
     )
 
-    if torch.cuda.is_available():
-        device = "cuda"
-    elif torch.backends.mps.is_available():
-        device = "mps"
-    else:
-        device = "cpu"
-
     dataloader = get_dataloader(dataset, cfg, logger)
+    device = get_device()
 
     train(dataloader, cfg, logger, output_path, device)
 
