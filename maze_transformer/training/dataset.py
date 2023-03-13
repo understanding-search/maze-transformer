@@ -6,17 +6,15 @@ import torch
 from muutils.tensor_utils import ATensor
 from torch.utils.data import Dataset
 
+from maze_transformer.utils.utils import get_device
+
 
 @dataclass(kw_only=True)
 class GPTDatasetConfig:
     """base config class"""
 
     name: str
-    device: torch.device = field(
-        default_factory=lambda: torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
-    )
+    device: torch.device = field(default_factory=lambda: torch.device(get_device()))
     dtype: torch.dtype | np.dtype = field(default_factory=lambda: torch.int16)
     seq_len_min: int = 1
     seq_len_max: int = 512
