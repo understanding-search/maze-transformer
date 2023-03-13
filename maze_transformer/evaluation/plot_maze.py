@@ -13,13 +13,13 @@ def plot_path(maze: LatticeMaze, path: NDArray, show: bool = True) -> None:
     img = maze.as_img()
     path_transformed = maze.points_transform_to_img(path)
 
-    # plot path
-    plt.plot(*zip(*path_transformed), "-", color="red")
+    # dimension swap -  we are translating from array notation to cartesian coordinates
+    plt.plot(path_transformed[:, 1], path_transformed[:, 0], "-", color="red")
     # mark endpoints
-    plt.plot([path_transformed[0][0]], [path_transformed[0][1]], "o", color="red")
-    plt.plot([path_transformed[-1][0]], [path_transformed[-1][1]], "x", color="red")
+    plt.plot([path_transformed[0][1]], [path_transformed[0][0]], "o", color="red")
+    plt.plot([path_transformed[-1][1]], [path_transformed[-1][0]], "x", color="red")
     # show actual maze
-    plt.imshow(img.T, cmap="gray", vmin=-1, vmax=1)
+    plt.imshow(img, cmap="gray", vmin=-1, vmax=1)
 
     if show:
         plt.show()
@@ -66,8 +66,8 @@ def plot_multi_paths(
             # Pyplot uses Cartesian coordinates (x horixontal and y vertical)
             # But our mazes and paths use array notation (row, col)
             # So we swap the dimensions here
-            y: NDArray = p_transformed[:, 0]
             x: NDArray = p_transformed[:, 1]
+            y: NDArray = p_transformed[:, 0]
             plt.quiver(
                 x[:-1],
                 y[:-1],
