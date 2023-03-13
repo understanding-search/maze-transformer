@@ -34,6 +34,7 @@ def test_serialize_and_load():
     cfg = _create_top_level_config()
     serialized = cfg.serialize()
     loaded = ConfigHolder.load(serialized)
+    loaded.tokenizer = None  # We don't serialize the tokenizer
 
     assert loaded == cfg
 

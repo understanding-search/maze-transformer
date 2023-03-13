@@ -15,6 +15,7 @@ from transformers import PreTrainedTokenizer
 
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.mazedataset import MazeDatasetConfig
+from maze_transformer.training.tokenizer import HuggingMazeTokenizer
 
 
 @dataclass(kw_only=True)
@@ -92,10 +93,10 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
     BaseGPTConfig(
         name="gpt2-small",
         act_fn="gelu",
-        d_model=768,
-        d_head=12,
-        n_layers=12,
-    )
+        d_model=(12 // 2) ** 3,  # 768//4,
+        d_head=12 // 2,
+        n_layers=12 // 2,
+    ),
 ]
 
 GPT_CONFIGS: dict[str, BaseGPTConfig] = {cfg.name: cfg for cfg in _GPT_CONFIGS_LIST}
@@ -134,7 +135,9 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
         name="gpt2-small",
         optimizer=torch.optim.AdamW,
         optimizer_kwargs=dict(lr=0.00001, weight_decay=0.01),
-        batch_size=16,
+        # optimizer=torch.optim.RMSprop,
+        # optimizer_kwargs=dict(lr=0.00001),
+        batch_size=64,
         dataloader_cfg=dict(
             shuffle=True,
             num_workers=16,
@@ -142,9 +145,9 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             drop_last=True,
         ),
         print_loss_interval=5000,
-        checkpoint_interval=50000,
+        checkpoint_interval=20000,
         # epochs=1,
-    )
+    ),
 ]
 
 
@@ -162,7 +165,7 @@ class ConfigHolder:
     train_cfg: TrainConfig
     dataset_cfg: GPTDatasetConfig | MazeDatasetConfig
     model_cfg: BaseGPTConfig
-    tokenizer: PreTrainedTokenizer | None
+    tokenizer: HuggingMazeTokenizer | PreTrainedTokenizer | None
 
     def create_model(self) -> HookedTransformer:
         hooked_transformer_cfg = HookedTransformerConfig(
@@ -173,7 +176,9 @@ class ConfigHolder:
             n_ctx=self.dataset_cfg.seq_len_max,
             d_vocab=len(self.dataset_cfg.token_arr),
         )
-
+        # TODO This will affect the training code
+        if self.tokenizer is None and isinstance(self.dataset_cfg, MazeDatasetConfig):
+            self.tokenizer = HuggingMazeTokenizer(self.dataset_cfg)
         return HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=self.tokenizer)
 
     def serialize(self):
@@ -188,9 +193,10 @@ class ConfigHolder:
 
     @classmethod
     def load(cls, serialized: Dict[str, Dict[Any, Any]]):
+        dataset_cfg = MazeDatasetConfig.load(serialized["dataset_cfg"])
         return cls(
             train_cfg=TrainConfig.load(serialized["train_cfg"]),
-            dataset_cfg=MazeDatasetConfig.load(serialized["dataset_cfg"]),
+            dataset_cfg=dataset_cfg,
             model_cfg=BaseGPTConfig.load(serialized["model_cfg"]),
-            tokenizer=None,
+            tokenizer=HuggingMazeTokenizer(dataset_cfg),
         )

@@ -156,26 +156,26 @@ class LatticeMaze:
         Returns an ASCII visualization of the maze.
         Courtesy of ChatGPT
         """
-        wall_char = '#'
-        path_char = ' '
-        
+        wall_char = "#"
+        path_char = " "
+
         # Determine the size of the maze
-        maze = self.as_img()
+        maze = self.as_img().T
         n_rows, n_cols = maze.shape
-        maze_str = ''
-        
+        maze_str = ""
+
         # Iterate through each element of the maze and print the appropriate symbol
         for i in range(n_rows):
             for j in range(n_cols):
-                if start is not None and start[0] == i-1 and start[1] == j-1:
-                    maze_str += 'S'
-                elif end is not None and end[0] == i-1 and end[1] == j-1:
-                    maze_str += 'E'
+                if start is not None and start[0] == i - 1 and start[1] == j - 1:
+                    maze_str += "S"
+                elif end is not None and end[0] == i - 1 and end[1] == j - 1:
+                    maze_str += "E"
                 elif maze[i, j]:
                     maze_str += path_char
                 else:
                     maze_str += wall_char
-            maze_str += '\n' # Start a new line after each row
+            maze_str += "\n"  # Start a new line after each row
         return maze_str
 
     def as_adjlist(

@@ -2,16 +2,10 @@ import json
 import typing
 from pathlib import Path
 
-import numpy as np
 import torch
-from muutils.tensor_utils import ATensor, NDArray
+from muutils.tensor_utils import NDArray
 from transformer_lens import HookedTransformer
 
-# bin these
-from transformers import PreTrainedTokenizer
-
-from maze_transformer.evaluation.plot_maze import PathFormat, plot_multi_paths
-from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import (
     SPECIAL_TOKENS,
     CoordTup,
@@ -19,7 +13,7 @@ from maze_transformer.generation.latticemaze import (
 )
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
+from maze_transformer.training.tokenizer import SPECIAL_TOKENS
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access
@@ -69,18 +63,11 @@ def load_model_with_configs(
     ), f"Couldn't find configs in run containing {model_path}"
 
     # TODO Make this part of the ConfigHolder - https://github.com/AISC-understanding-search/maze-transformer/issues/31
-    # initialize tokenizer
-    tokenizer = PreTrainedTokenizer(
-        bos_token=SPECIAL_TOKENS["padding"],
-        eos_token=SPECIAL_TOKENS["padding"],
-        pad_token=SPECIAL_TOKENS["padding"],
-    )
 
     # load the configs
     with open(config_path, "r") as f:
         combined_json = json.load(f)
         config_holder = ConfigHolder.load(combined_json)
-        config_holder.tokenizer = tokenizer
 
     if verbose:
         print(f"Loaded config\n{config_holder}\n" + ("-" * 40))
@@ -106,51 +93,13 @@ def load_model_with_configs(
     return model, config_holder
 
 
-#! Soon to be defunct
-def predict_tokens(
-    model: HookedTransformer,
-    inputs: torch.Tensor,
-    n_tokens: int = 32,
-    **generate_kwargs,
-):
-    """
-    Predict the next tokens
-    """
-    # print(f"{inputs.shape = } {n_tokens = } {model.config.n_positions = }")
-    sequence = pad_sequence(inputs, model.config)
-    with torch.no_grad():
-        for _ in range(n_tokens):
-            sequence = model.generate(
-                sequence[:, -model.config.n_positions :],
-                do_sample=True,
-                **generate_kwargs,
-            )
-
-    return sequence
-
-
-#! Soon to be defunct
-def pad_sequence(
-    seq: ATensor,
-    cfg: ConfigHolder,
-) -> torch.Tensor:
-    """pads the token according to the context length and padding token in the config"""
-    # assert (padding_val is not None) or (cfg.tokenizer.pad_token is not None), \
-    #        "No padding token defined in tokenizer, please provide a padding value"
-    # This is super ugly
-    pad_token = cfg.dataset_cfg.tokenizer_map["<PADDING>"]
-    return torch.nn.functional.pad(
-        seq, (cfg.dataset_cfg.seq_len_max - seq.shape[0], 0), value=pad_token
-    )
-
-
 def decode_maze_tokens_to_coords(
     tokens: list[str],
     mazedata_cfg: MazeDatasetConfig,
     when_noncoord: typing.Literal["except", "skip", "include"] = "skip",
-) -> list[str | tuple[int, int]]:
+) -> list[str] | list[tuple[int, int]]:
     """given a list of tokens, decode the coordinate-tokens to a list of coordinates, leaving other tokens as-is"""
-    output: list[str | tuple[int, int]] = list()
+    output: list[str] | list[tuple[int, int]] = list()
     for idx, tk in enumerate(tokens):
         if tk in mazedata_cfg.token_node_map:
             output.append(mazedata_cfg.token_node_map[tk])
@@ -204,30 +153,22 @@ def predict_maze_path(
         maze_tokens.append(path_true_tokens[0])
 
     # encode + pad the maze tokens
-    #! TODO update once tokenizer changes
-    maze_arr_nopad: ATensor = torch.tensor(
-        [data_cfg.tokenizer_map[t] for t in maze_tokens],
-        dtype=torch.long,
-    )
-    eos_token_id = data_cfg.tokenizer_map[SPECIAL_TOKENS["end_path"]]
+    maze_arr_nopad = model.to_tokens(" ".join(maze_tokens), prepend_bos=False)
 
-    # have the model predict some tokens
-    maze_arr_nopad = maze_arr_nopad.unsqueeze(0)
     if verbose:
         print("Generating Model Completions")
     #! NOTE verbose flag here will require latest clone of TrasformerLens from github
+    # have the model predict some tokens
     predictions = model.generate(
         maze_arr_nopad,
-        eos_token_id=eos_token_id,
+        eos_token_id=model.tokenizer.eos_token_id,
         stop_at_eos=True,
         max_new_tokens=n_tokens_pred,
         verbose=verbose,
     )
 
     # decode the tokens
-    predicted_and_context_tokens: list[str] = [
-        data_cfg.token_arr[t] for t in predictions[0]
-    ]
+    predicted_and_context_tokens = model.to_str_tokens(predictions)
     pac_path_start_idx: int = predicted_and_context_tokens.index(path_start_token) + 1
     predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_idx:]
 
@@ -237,13 +178,13 @@ def predict_maze_path(
         )
 
     # convert tokens to coordinates
-    path_true: list[tuple[int, int]] = decode_maze_tokens_to_coords(
+    path_true = decode_maze_tokens_to_coords(
         path_true_tokens,
         mazedata_cfg=data_cfg,
         when_noncoord="skip",
     )
 
-    path_predicted: list[tuple[int, int]] = decode_maze_tokens_to_coords(
+    path_predicted = decode_maze_tokens_to_coords(
         predicted_tokens,
         mazedata_cfg=data_cfg,
         when_noncoord="skip",
@@ -259,76 +200,4 @@ def predict_maze_path(
         LatticeMaze.from_tokens(maze_tokens),
         path_true,
         path_predicted,
-    )
-
-
-def generate_plot_predicted_path(
-    model_path: Path,
-    n_tokens_pred: int = 5,
-):
-    model, cfg = load_model_with_configs(model_path)
-
-    # generate a maze
-    grid_n: int = cfg.dataset_cfg.grid_n
-    maze: LatticeMaze = LatticeMazeGenerators.gen_dfs((grid_n, grid_n))
-    c_start = (0, 0)
-    c_end = (grid_n - 1, grid_n - 1)
-
-    # solve the maze explicitly
-    path_true = np.array(
-        maze.find_shortest_path(
-            c_start=c_start,
-            c_end=c_end,
-        )
-    )
-
-    solved_maze: MazeTokenizer = MazeTokenizer(
-        maze=maze,
-        solution=np.array(
-            maze.find_shortest_path(
-                c_start=c_start,
-                c_end=c_end,
-            )
-        ),
-    )
-
-    # tokenize the maze
-    maze_only_tokens: list[str] = solved_maze.as_tokens(
-        cfg.dataset_cfg.node_token_map, solution=False
-    ) + [SPECIAL_TOKENS["start_path"]]
-
-    print("maze tokens:", maze_only_tokens)
-
-    array_nopad = torch.tensor(
-        [cfg.dataset_cfg.tokenizer_map[t] for t in maze_only_tokens],
-        dtype=torch.int32,
-        device="cpu",
-    )
-
-    array: ATensor = pad_sequence(array_nopad, cfg)
-
-    # have the model predict some tokens
-    predictions = predict_tokens(model, array.unsqueeze(0), n_tokens_pred)
-
-    print(predictions)
-
-    # decode the tokens
-    predicted_tokens = [cfg.dataset_cfg.token_arr[t] for t in predictions[0]]
-
-    print(predicted_tokens)
-
-    path_predicted: list[tuple[int, int]] = decode_maze_tokens_to_coords(
-        predicted_tokens[len(maze_only_tokens) :],
-        mazedata_cfg=cfg.dataset_cfg,
-        when_noncoord="skip",
-    )
-
-    # plot the maze and both solutions
-    # for label, fmt, color, path in paths
-    plot_multi_paths(
-        maze=maze,
-        paths=[
-            PathFormat(path_true, "true", "-", "red", {"width": 0.015}),
-            PathFormat(np.array(path_predicted), "predicted", ":", "blue", {}),
-        ],
     )
