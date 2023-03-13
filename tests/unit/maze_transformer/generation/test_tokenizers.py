@@ -5,6 +5,7 @@ as the original tokenizer (i.e. just using the token map in cfg)
 We may want a separate set of tests for different tokenization schemes
 """
 import torch
+from pytest import mark, param
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 
 from maze_transformer.training.config import ConfigHolder
@@ -12,7 +13,6 @@ from maze_transformer.training.mazedataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import HuggingMazeTokenizer
 from scripts.create_dataset import generate_MazeTokenizer
 
-from pytest import mark, param
 
 def test_tokenization_encoding():
     # Check that wrapped tokenizer __call__ returns the same as original tokenizer
