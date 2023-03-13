@@ -207,7 +207,10 @@ class MazeDataset(GPTDataset):
     def __getitem__(self, idx: int) -> ATensor[("tokens")]:
         """index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
 
-        # A nice-to-have refactor would be to have some notion of a minimum sequence length here, such that this method never returns a sequence below that length. The motivation here is that for a particular dataset we might know that the first N tokens are always part of the maze, so this method can safetly skip that many before it finds the start of the correct sequence. The min value could be part of the dataset config.
+        # A nice-to-have refactor would be to have some notion of a minimum sequence length here, such that this method
+        # never returns a sequence below that length. The motivation here is that for a particular dataset we might know
+        # that the first N tokens are always part of the maze, so this method can safetly skip that many before it finds
+        # the start of the correct sequence. The min value could be part of the dataset config.
 
         # last element in mazes_array.idxs whose value is smaller than `idx`
         sequence_idx: int = torch.searchsorted(self.mazes_array.idxs, idx) - 1
@@ -286,7 +289,8 @@ class MazeDataset(GPTDataset):
         """namespace for filenames"""
 
         cfg: str = "cfg.json"
-        obj: str = "maze_obj.jsonl"
+        # Not implemented
+        # obj: str = "maze_obj.jsonl"
         tokens: str = "maze_tokens.jsonl"
         tokenized: str = "maze_tokenized.npz"
 
