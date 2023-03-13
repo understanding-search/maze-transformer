@@ -60,7 +60,6 @@ def create_dataset(
         raise FileExistsError(f"path {data_path} already exists!")
 
     # create config
-    # TODO: figure out unexpected keyword argument linter error here?
     config: MazeDatasetConfig = MazeDatasetConfig(
         name=name,
         grid_n=grid_n,

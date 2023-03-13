@@ -27,7 +27,6 @@ def train_model(
         pad_token=SPECIAL_TOKENS["padding"],
     )
 
-    # TODO: separate names for training and model config
     cfg: ConfigHolder = ConfigHolder(
         dataset_cfg=dataset.cfg,
         model_cfg=GPT_CONFIGS[model_cfg],

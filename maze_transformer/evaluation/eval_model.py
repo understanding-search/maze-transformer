@@ -40,7 +40,6 @@ def find_config(folder: Path) -> Path | tuple[Path, Path] | None:
         to_check = [containing_folder, containing_folder.parent]
 
     for folder in to_check:
-        # For reverse compatibility, allow separate config files OR a single config holder
         holder_path = folder / TRAIN_SAVE_FILES.config_holder
         if holder_path.exists():
             return holder_path
