@@ -151,7 +151,7 @@ class LatticeMaze:
 
         return img
 
-    def as_adjlist(
+    def as_adj_list(
         self, shuffle_d0: bool = True, shuffle_d1: bool = True
     ) -> NDArray["conn start_end coord", np.int8]:
         adjlist: NDArray["conn start_end coord", np.int8] = np.full(
