@@ -17,12 +17,12 @@ def temp_dir() -> Path:
 
 
 def test_plot_loss(temp_dir):
-    n_mazes = 25
-    grid_n = 3
-    name = "test"
+    n_mazes: int = 25
+    grid_n: int = 3
+    name: str = "test"
 
     create_dataset(path_base=str(temp_dir), n_mazes=n_mazes, grid_n=grid_n, name=name)
-    dataset_directory_name = f"g{grid_n}-n{n_mazes}-{name}"
+    dataset_directory_name: str = f"g{grid_n}-n{n_mazes}-{name}"
 
     train_model(
         basepath=str(temp_dir / dataset_directory_name),
@@ -31,9 +31,11 @@ def test_plot_loss(temp_dir):
     )
 
     # hard mode: get log file name
-    list_subfolders_with_paths = [
+    list_subfolders_with_paths: list[Path] = [
         f.path for f in os.scandir(temp_dir / dataset_directory_name) if f.is_dir()
     ]
-    log_file_path = temp_dir / list_subfolders_with_paths[0] / "log.jsonl"
+    log_file_path: Path = temp_dir / list_subfolders_with_paths[0] / "log.jsonl"
 
     plot_loss(str(log_file_path))
+
+    plot_loss(str(log_file_path), raw_loss="r.")

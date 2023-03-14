@@ -24,6 +24,27 @@ def parse_argument_list(
         raise ValueError(f"cant parse into list: {typecast = } {arg = }")
 
 
+def rolling_average(x: Tuple[float], window: int):
+    if window > len(x):
+        raise ValueError(
+            f"Window for rolling average {window} is greater than the number of datapoints {len(x)}"
+        )
+
+    return list(np.convolve(x, np.ones(window) / window, mode="valid"))
+
+
+def get_tile_from_config_stream(stream: list[dict]) -> str:
+    return ";  ".join(
+        [
+            f"dataset={get_any_from_stream(stream, 'dataset_cfg')['name']}",
+            f"train_config={get_any_from_stream(stream, 'train_cfg')['name']}",
+            f"lr={get_any_from_stream(stream, 'train_cfg')['optimizer_kwargs']['lr']}",
+            # vocab size is not in the model config -- this is just printing anyway
+            # f"vocab_size={get_any_from_stream(data_config, 'model_cfg')['vocab_size']}",
+        ]
+    )
+
+
 def plot_loss(
     log_path: str,
     window_sizes: int | Sequence[int] | str = (10, 50, 100),
@@ -62,12 +83,9 @@ def plot_loss(
 
     print(f"{len(data_raw) = }")
 
-    print(data_raw[:20])
-
     total_sequences, loss = zip(*data_raw)
 
     # compute a rolling average
-    # this messy part here is just for handling command line arguments
     window_sizes = parse_argument_list(window_sizes, typecast=int)
 
     loss_rolling_arr: list[np.ndarray] = [
@@ -90,24 +108,6 @@ def plot_loss(
     plt.ylabel("Loss")
     plt.xlabel("Total sequences")
     plt.yscale("log")
-    title: str = ";  ".join(
-        [
-            f"dataset={get_any_from_stream(data_config, 'dataset_cfg')['name']}",
-            f"train_config={get_any_from_stream(data_config, 'train_cfg')['name']}",
-            f"lr={get_any_from_stream(data_config, 'train_cfg')['optimizer_kwargs']['lr']}",
-            # vocab size is not in the model config -- this is just printing anyway
-            # f"vocab_size={get_any_from_stream(data_config, 'model_cfg')['vocab_size']}",
-        ]
-    )
-    plt.title(title)
+    plt.title(get_tile_from_config_stream(data_config))
     plt.legend()
     plt.show()
-
-
-def rolling_average(x: Tuple[float], window: int):
-    if window > len(x):
-        raise ValueError(
-            f"Window for rolling average {window} is greater than the number of datapoints {len(x)}"
-        )
-
-    return list(np.convolve(x, np.ones(window) / window, mode="valid"))
