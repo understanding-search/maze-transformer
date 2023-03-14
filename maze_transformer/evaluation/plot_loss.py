@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple, Sequence, Callable
+from typing import Sequence, Tuple
 
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
@@ -8,20 +8,18 @@ from muutils.logger.log_util import (  # type: ignore[import]
     get_any_from_stream,
 )
 
+
 def parse_argument_list(
-        arg: int | Sequence[int] | str,
-        delimiter: str|None = ",",
-        typecast: type = int,
-    ) -> list[int]:
+    arg: int | Sequence[int] | str,
+    delimiter: str | None = ",",
+    typecast: type = int,
+) -> list[int]:
     if isinstance(arg, typecast):
         return [arg]
     elif isinstance(arg, (list, tuple)):
         return list(arg)
     elif isinstance(arg, str):
-        return [
-            typecast(x.strip()) 
-            for x in arg.split(delimiter)
-        ]
+        return [typecast(x.strip()) for x in arg.split(delimiter)]
     else:
         raise ValueError(f"cant parse into list: {typecast = } {arg = }")
 
