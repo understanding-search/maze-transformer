@@ -17,7 +17,7 @@ def temp_dir() -> Path:
 
 
 def test_plot_loss(temp_dir):
-    n_mazes = 100
+    n_mazes = 25
     grid_n = 3
     name = "test"
 
@@ -26,8 +26,8 @@ def test_plot_loss(temp_dir):
 
     train_model(
         basepath=str(temp_dir / dataset_directory_name),
-        training_cfg="tiny-v1",
-        model_cfg="tiny-v1",
+        training_cfg="integration-v1",
+        model_cfg="nano-v1",
     )
 
     # hard mode: get log file name

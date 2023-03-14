@@ -30,8 +30,8 @@ def test_model_loading(temp_dir):
         create_dataset(path_base=str(temp_dir), n_mazes=5, grid_n=3, name="test")
         train_model(
             basepath=str(temp_dir / "g3-n5-test"),
-            training_cfg="tiny-v1",
-            model_cfg="tiny-v1",
+            training_cfg="integration-v1",
+            model_cfg="nano-v1",
         )
 
     # Now load the model and compare the outputs

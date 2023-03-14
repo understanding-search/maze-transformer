@@ -52,6 +52,7 @@ def plot_loss(
     total_sequences, loss = zip(*data_raw)
 
     # compute a rolling average
+    # this messy part here is just for handling command line arguments
     if isinstance(window_sizes, int):
         window_sizes = [window_sizes]
     elif isinstance(window_sizes, (list, tuple)):
@@ -63,6 +64,7 @@ def plot_loss(
 
     loss_rolling_arr: list[np.ndarray] = [
         rolling_average(loss, window) for window in window_sizes
+        if window < len(loss) # just skip windows that are too large
     ]
 
     if raw_loss:
