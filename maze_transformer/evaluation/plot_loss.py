@@ -63,8 +63,9 @@ def plot_loss(
         raise ValueError(f"{window_sizes = }")
 
     loss_rolling_arr: list[np.ndarray] = [
-        rolling_average(loss, window) for window in window_sizes
-        if window < len(loss) # just skip windows that are too large
+        rolling_average(loss, window)
+        for window in window_sizes
+        if window < len(loss)  # just skip windows that are too large
     ]
 
     if raw_loss:
