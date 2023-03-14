@@ -110,11 +110,14 @@ class LatticeMaze:
 
     n_connections = property(lambda self: self.connection_list.sum())
 
-    def as_img(self) -> NDArray["x y", bool]:
+    def as_img(self, node_length=10, show_connections=False) -> NDArray["x y", bool]:
         """
         Plot an image to visualise the maze.
+        - Nodes are displayed as white squares of area: node_length * node_length
+        - Walls are displayed as black recktangles of area: 1 * node_length
+        - Connections are displayed as light grey / white recktangles of area: 1 * node_length; color is depending on show_connections argument
 
-        Returns a matrix of side length 2n + 1 where n is the number of nodes.
+        Returns a matrix of side length (node_length+1) * n + 1 where n is the number of nodes.
 
         Example:
           Connection List:
@@ -131,23 +134,43 @@ class LatticeMaze:
             T   F   T         |       |       x   x x x   x
             N T N F N F       N - N   N       x       x   x
             F   F   F                         x x x x x x x
+
+            The size of N is determined by node_length.
         """
-        # set up the background
-        img: NDArray["x y", bool] = np.zeros(
+
+        # Set color of connections (using plt.imshow(cmap='grey))
+        white_color = 100
+        if show_connections:
+            connection_color = white_color * 0.8
+        else:
+            connection_color = white_color
+        
+        # Set up the background (walls everywhere)
+        img: NDArray["x y", int] = np.zeros(
             (
-                self.grid_shape[0] * 2 + 1,
-                self.grid_shape[1] * 2 + 1,
+                self.grid_shape[0] * node_length + 1,
+                self.grid_shape[1] * node_length + 1,
             ),
-            dtype=bool,
+            dtype=int,
         )
 
-        # fill in nodes
-        img[1::2, 1::2] = True
+        # Draw nodes and connections by iterating through lattice
+        for x in range(self.grid_shape[0]):
+            for y in range(self.grid_shape[1]):
 
-        # fill in connections
-        # print(f"{img[2:-2:2, 1::2].shape = } {self.connection_list[0, :, :-1].shape = }")
-        img[2:-2:2, 1::2] = self.connection_list[0, :-1, :]
-        img[1::2, 2:-2:2] = self.connection_list[1, :, :-1]
+                # Draw node
+                img[x * node_length +1 : (x+1) * node_length, 
+                    y * node_length +1 : (y+1) * node_length] = white_color
+                
+                # Down connection
+                if self.connection_list[0, y, x]:
+                    img[x * node_length +1: (x+1) * node_length,
+                        (y+1) * node_length] = connection_color
+                    
+                # Right connection
+                if self.connection_list[1, y, x]:
+                    img[(x+1) * node_length,
+                        y * node_length +1 : (y+1) * node_length] = connection_color
 
         return img
 
