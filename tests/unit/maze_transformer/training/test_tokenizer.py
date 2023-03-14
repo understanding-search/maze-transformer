@@ -1,8 +1,11 @@
+import re
+
 import numpy as np
 
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
+from tests.helpers import utils
 
 
 def test_coordinate_system():
@@ -13,43 +16,37 @@ def test_coordinate_system():
     """
     maze_size = 3
     maze = LatticeMazeGenerators.gen_dfs((maze_size, maze_size))
-    maze_adjlist = maze.as_adjlist()
+    maze_adjlist = maze.as_adj_list()
 
     # convert to the same format as the tokenizer adjlist
     maze_adjlist_connections = [
         [f"({c[0]},{c[1]})" for c in conn] for conn in maze_adjlist
     ]
 
+    # See https://github.com/AISC-understanding-search/maze-transformer/issues/77
     node_token_map = MazeDatasetConfig(
         grid_n=maze_size, name="test", n_mazes=1
     ).node_token_map
 
     tokenized_maze = MazeTokenizer(
         maze=maze,
-        solution=np.array(
-            maze.find_shortest_path(
-                c_start=(0, 0),
-                c_end=(maze_size - 1, maze_size - 1),
-            )
-        ),
+        solution=np.array([[0, 0]]),
     ).as_tokens(node_token_map)
 
     tokenizer_adjlist = tokenized_maze[
-        1 : tokenized_maze.index(SPECIAL_TOKENS["adjlist_end"])
+        tokenized_maze.index(SPECIAL_TOKENS["adjlist_start"])
+        + 1 : tokenized_maze.index(SPECIAL_TOKENS["adjlist_end"])
     ]
 
-    # There are 4 tokens per connection, only the first and third are coords
+    # remove special tokens
+    tokenizer_adjlist_coordinates = [
+        token for token in tokenizer_adjlist if re.search(r"\(\d+,\d+\)", token)
+    ]
+    # Group pairs of coordinates
     tokenizer_adjlist_connections = [
-        [tokenizer_adjlist[i], tokenizer_adjlist[i + 2]]
-        for i in range(0, len(tokenizer_adjlist), 4)
+        *zip(tokenizer_adjlist_coordinates[::2], tokenizer_adjlist_coordinates[1::2])
     ]
 
-    # sort both adjlists
-    maze_adjlist_connections = sorted(
-        [sorted(conn) for conn in maze_adjlist_connections]
-    )
-    tokenizer_adjlist_connections = sorted(
-        [sorted(conn) for conn in tokenizer_adjlist_connections]
-    )
-
-    assert tokenizer_adjlist_connections == maze_adjlist_connections
+    assert utils.adjlist_to_nested_set(
+        tokenizer_adjlist_connections
+    ) == utils.adjlist_to_nested_set(maze_adjlist_connections)

@@ -36,6 +36,7 @@ filterwarnings = [
     # Warning from matplotlib. Issue: https://github.com/matplotlib/matplotlib/issues/25244
     "ignore:Deprecated call to `pkg_resources.declare_namespace:DeprecationWarning"
 ]
+norecursedirs="tests/helpers"
 
 [[tool.mypy.overrides]]
 module = "fire"
