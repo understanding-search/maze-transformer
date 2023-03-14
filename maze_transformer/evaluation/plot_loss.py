@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Sequence, Callable
 
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
@@ -8,10 +8,27 @@ from muutils.logger.log_util import (  # type: ignore[import]
     get_any_from_stream,
 )
 
+def parse_argument_list(
+        arg: int | Sequence[int] | str,
+        delimiter: str|None = ",",
+        typecast: type = int,
+    ) -> list[int]:
+    if isinstance(arg, typecast):
+        return [arg]
+    elif isinstance(arg, (list, tuple)):
+        return list(arg)
+    elif isinstance(arg, str):
+        return [
+            typecast(x.strip()) 
+            for x in arg.split(delimiter)
+        ]
+    else:
+        raise ValueError(f"cant parse into list: {typecast = } {arg = }")
+
 
 def plot_loss(
     log_path: str,
-    window_sizes: int | Iterable[int] | str = (10, 50, 100),
+    window_sizes: int | Sequence[int] | str = (10, 50, 100),
     raw_loss: bool | str = False,
 ):
     """
@@ -53,14 +70,7 @@ def plot_loss(
 
     # compute a rolling average
     # this messy part here is just for handling command line arguments
-    if isinstance(window_sizes, int):
-        window_sizes = [window_sizes]
-    elif isinstance(window_sizes, (list, tuple)):
-        pass
-    elif isinstance(window_sizes, str):
-        window_sizes = [int(x) for x in window_sizes.split(",")]
-    else:
-        raise ValueError(f"{window_sizes = }")
+    window_sizes = parse_argument_list(window_sizes, typecast=int)
 
     loss_rolling_arr: list[np.ndarray] = [
         rolling_average(loss, window)
