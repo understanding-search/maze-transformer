@@ -13,13 +13,13 @@ def plot_path(maze: LatticeMaze, path: NDArray, show: bool = True) -> None:
     img = maze.as_img()
     path_transformed = maze.points_transform_to_img(path)
 
-    # plot path
-    plt.plot(*zip(*path_transformed), "-", color="red")
+    # dimension swap -  we are translating from array notation to cartesian coordinates
+    plt.plot(path_transformed[:, 1], path_transformed[:, 0], "-", color="red")
     # mark endpoints
-    plt.plot([path_transformed[0][0]], [path_transformed[0][1]], "o", color="red")
-    plt.plot([path_transformed[-1][0]], [path_transformed[-1][1]], "x", color="red")
+    plt.plot([path_transformed[0][1]], [path_transformed[0][0]], "o", color="red")
+    plt.plot([path_transformed[-1][1]], [path_transformed[-1][0]], "x", color="red")
     # show actual maze
-    plt.imshow(img.T, cmap="gray", vmin=-1, vmax=1)
+    plt.imshow(img, cmap="gray", vmin=-1, vmax=1)
 
     if show:
         plt.show()
@@ -44,15 +44,14 @@ def plot_multi_paths(
     show: bool = True,
 ) -> None:
     # show the maze
-    img = maze.as_img()
     plt.imshow(
-        np.rot90(img, 1),
+        maze.as_img(),
         cmap="gray",
         extent=[
             -0.75,
             maze.grid_shape[0] - 1 + 0.75,
-            -0.75,
             maze.grid_shape[1] - 1 + 0.75,
+            -0.75,
         ],
     )
 
@@ -63,10 +62,12 @@ def plot_multi_paths(
 
         # p_transformed: NDArray = maze.points_transform_to_img(pf.path)
         p_transformed: NDArray = np.array(pf.path)
-
         if pf.quiver_kwargs is not None:
-            x: NDArray = p_transformed[:, 0]
-            y: NDArray = p_transformed[:, 1]
+            # Pyplot uses Cartesian coordinates (x horixontal and y vertical)
+            # But our mazes and paths use array notation (row, col)
+            # So we swap the dimensions here
+            x: NDArray = p_transformed[:, 1]
+            y: NDArray = p_transformed[:, 0]
             plt.quiver(
                 x[:-1],
                 y[:-1],
@@ -81,8 +82,8 @@ def plot_multi_paths(
         else:
             plt.plot(*zip(*p_transformed), pf.fmt, color=pf.color, label=pf.label)
         # mark endpoints
-        plt.plot([p_transformed[0][0]], [p_transformed[0][1]], "o", color=pf.color)
-        plt.plot([p_transformed[-1][0]], [p_transformed[-1][1]], "x", color=pf.color)
+        plt.plot([p_transformed[0][1]], [p_transformed[0][0]], "o", color=pf.color)
+        plt.plot([p_transformed[-1][1]], [p_transformed[-1][0]], "x", color=pf.color)
 
     if show:
         plt.show()
