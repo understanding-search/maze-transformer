@@ -1,5 +1,3 @@
-import re
-
 import numpy as np
 
 from maze_transformer.generation.generators import LatticeMazeGenerators
@@ -40,8 +38,9 @@ def test_coordinate_system():
 
     # remove special tokens
     tokenizer_adjlist_coordinates = [
-        token for token in tokenizer_adjlist if re.search(r"\(\d+,\d+\)", token)
+        token for token in tokenizer_adjlist if token not in SPECIAL_TOKENS.values()
     ]
+
     # Group pairs of coordinates
     tokenizer_adjlist_connections = [
         *zip(tokenizer_adjlist_coordinates[::2], tokenizer_adjlist_coordinates[1::2])
