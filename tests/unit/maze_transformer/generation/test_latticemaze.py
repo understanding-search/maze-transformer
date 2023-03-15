@@ -2,6 +2,7 @@ from numpy.testing import assert_array_equal
 
 from maze_transformer.generation.latticemaze import LatticeMaze
 from maze_transformer.generation.utils import bool_array_from_string
+from tests.helpers import utils
 
 
 def test_as_img():
@@ -55,13 +56,4 @@ def test_as_adj_list():
 
     expected = [[[0, 1], [1, 1]], [[0, 0], [0, 1]], [[1, 0], [1, 1]]]
 
-    assert _to_nested_set(expected) == _to_nested_set(adjlist)
-
-
-# We don't care about order of coordinate pairs within
-# the adjlist or coordinates within each coordinate pair.
-def _to_nested_set(nested_list):
-    return {
-        frozenset([tuple(start_coord), tuple(end_coord)])
-        for start_coord, end_coord in nested_list
-    }
+    assert utils.adjlist_to_nested_set(expected) == utils.adjlist_to_nested_set(adjlist)
