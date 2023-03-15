@@ -1,3 +1,4 @@
+import random
 from dataclasses import dataclass
 
 import numpy as np
@@ -289,6 +290,24 @@ class LatticeMaze:
                 source[neighbor] = c_current
                 g_score[neighbor] = g_temp
                 f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, c_end)
+
+    def get_nodes(self) -> list[Coord]:
+        """return a list of all nodes in the maze"""
+
+        return [
+            (row, col)
+            for row in range(self.grid_shape[0])
+            for col in range(self.grid_shape[1])
+        ]
+
+    def generate_random_path(self) -> list[Coord]:
+        """ "return a path between randomly chosen start and end nodes"""
+
+        # we can't create a "path" in a single-node maze
+        assert self.grid_shape[0] > 1 and self.grid_shape[1] > 1
+
+        start, end = random.sample(self.get_nodes(), 2)
+        return self.find_shortest_path(start, end)
 
     @classmethod
     def from_adjlist(
