@@ -47,7 +47,7 @@ def train_model(
         config=cfg,
     )
 
-    with wandb.init(project="rusheb-testing", config=cfg.serialize()):
+    with wandb.init(project="rusheb-testing", job_type="train-model", config=cfg.serialize()):
         # cfg = wandb.config
 
         dataloader = get_dataloader(dataset, cfg, logger)
