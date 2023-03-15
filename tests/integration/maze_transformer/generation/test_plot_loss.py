@@ -1,5 +1,4 @@
 import os
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -9,13 +8,7 @@ from scripts.create_dataset import create_dataset
 from scripts.train_model import train_model
 
 
-@pytest.fixture()
-def temp_dir() -> Path:
-    data_dir = tempfile.TemporaryDirectory()
-    yield Path(data_dir.name)
-    data_dir.cleanup()
-
-
+@pytest.mark.usefixtures("temp_dir")
 def test_plot_loss(temp_dir):
     n_mazes: int = 25
     grid_n: int = 3
@@ -30,7 +23,7 @@ def test_plot_loss(temp_dir):
         model_cfg="nano-v1",
     )
 
-    # hard mode: get log file name
+    # Log file name includes a timestamp so need to check the filesystem to determine the name
     list_subfolders_with_paths: list[Path] = [
         f.path for f in os.scandir(temp_dir / dataset_directory_name) if f.is_dir()
     ]

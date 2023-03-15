@@ -1,19 +1,10 @@
-import tempfile
-from pathlib import Path
-
 import pytest
 
 from scripts.create_dataset import create_dataset
 from scripts.train_model import train_model
 
 
-@pytest.fixture()
-def temp_dir() -> Path:
-    data_dir = tempfile.TemporaryDirectory()
-    yield Path(data_dir.name)
-    data_dir.cleanup()
-
-
+@pytest.mark.usefixtures("temp_dir")
 def test_train(temp_dir):
     create_dataset(path_base=str(temp_dir), n_mazes=5, grid_n=3, name="test")
 

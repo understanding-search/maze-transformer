@@ -53,9 +53,9 @@ class MazeTokenizer:
             # give path
             tokens.extend(
                 [
-                    SPECIAL_TOKENS["start_path"],
+                    SPECIAL_TOKENS["path_start"],
                     *[node_token_map[tuple(c.tolist())] for c in self.solution],
-                    SPECIAL_TOKENS["end_path"],
+                    SPECIAL_TOKENS["path_end"],
                 ]
             )
 
