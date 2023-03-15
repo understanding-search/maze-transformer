@@ -37,7 +37,6 @@ class GPTDatasetConfig:
     def _dataset_class(cls) -> type:
         raise NotImplementedError("this should be implemented by subclasses!")
 
-
     def tokenize_seq(self, seq: list[str]) -> ATensor:
         """tokenize sequence"""
         return torch.tensor(
