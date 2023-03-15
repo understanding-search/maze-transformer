@@ -19,6 +19,7 @@ def test_tokenization_encoding():
     maze = generate_MazeTokenizer(None, 3, (0, 0), (2, 1))
 
     # Need to generate a config to extract the token map >.<
+    # TODO: Part of https://github.com/AISC-understanding-search/maze-transformer/issues/77
     cfg = MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1)
     node_token_map = cfg.node_token_map
 
@@ -26,7 +27,7 @@ def test_tokenization_encoding():
     maze_str_tokens = maze.as_tokens(node_token_map)
 
     # Manual Tokenization
-    vocab_map = {k: v for v, k in enumerate(cfg.token_arr)}
+    vocab_map = {token: i for i, token in enumerate(cfg.token_arr)}
     maze_tokens = [vocab_map[token] for token in maze_str_tokens]
 
     # WrappedTokenizer

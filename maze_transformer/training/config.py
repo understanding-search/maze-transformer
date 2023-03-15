@@ -93,9 +93,9 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
     BaseGPTConfig(
         name="gpt2-small",
         act_fn="gelu",
-        d_model=(12 // 2) ** 3,  # 768//4,
-        d_head=12 // 2,
-        n_layers=12 // 2,
+        d_model=384,  # half of gpt2-small
+        d_head=64,  # match gpt-2 small
+        n_layers=6,  # half of gpt2-small
     ),
 ]
 
@@ -134,9 +134,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
     TrainConfig(
         name="gpt2-small",
         optimizer=torch.optim.AdamW,
-        optimizer_kwargs=dict(lr=0.00001, weight_decay=0.01),
-        # optimizer=torch.optim.RMSprop,
-        # optimizer_kwargs=dict(lr=0.00001),
+        optimizer_kwargs=dict(lr=6e-4, weight_decay=1e-1, betas=(0.9, 0.95)),
         batch_size=64,
         dataloader_cfg=dict(
             shuffle=True,
@@ -146,7 +144,6 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
         ),
         print_loss_interval=5000,
         checkpoint_interval=20000,
-        # epochs=1,
     ),
 ]
 
@@ -165,7 +162,7 @@ class ConfigHolder:
     train_cfg: TrainConfig
     dataset_cfg: GPTDatasetConfig | MazeDatasetConfig
     model_cfg: BaseGPTConfig
-    tokenizer: HuggingMazeTokenizer | PreTrainedTokenizer | None
+    tokenizer: PreTrainedTokenizer | None
 
     def create_model(self) -> HookedTransformer:
         hooked_transformer_cfg = HookedTransformerConfig(
@@ -176,7 +173,6 @@ class ConfigHolder:
             n_ctx=self.dataset_cfg.seq_len_max,
             d_vocab=len(self.dataset_cfg.token_arr),
         )
-        # TODO This will affect the training code
         if self.tokenizer is None and isinstance(self.dataset_cfg, MazeDatasetConfig):
             self.tokenizer = HuggingMazeTokenizer(self.dataset_cfg)
         return HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=self.tokenizer)

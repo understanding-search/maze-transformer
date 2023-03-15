@@ -4,13 +4,10 @@ from itertools import chain
 # Avoid circular import from training/config.py
 from typing import TYPE_CHECKING, Union  # need Union as "a" | "b" doesn't work
 
-from muutils.tensor_utils import ATensor, NDArray
-
-if TYPE_CHECKING:
-    from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig
-
 import torch
+from muutils.tensor_utils import ATensor, NDArray
 from transformers import PreTrainedTokenizer
+from transformers.tokenization_utils import BatchEncoding
 
 from maze_transformer.generation.latticemaze import (
     SPECIAL_TOKENS,
@@ -19,6 +16,8 @@ from maze_transformer.generation.latticemaze import (
     LatticeMaze,
 )
 
+if TYPE_CHECKING:
+    from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig
 # pylint: disable=unused-import
 
 
@@ -92,19 +91,21 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     name_or_path = "maze_tokenizer"
 
-    def __init__(self, cfg: Union["ConfigHolder", "MazeDatasetConfig"], **kwargs):
+    def __init__(
+        self, cfg: Union["ConfigHolder", "MazeDatasetConfig"], **kwargs
+    ) -> None:
         # Avoid isinstance() because of circular import
         if type(cfg).__name__ == "ConfigHolder":
             cfg = cfg.dataset_cfg
 
         super().__init__(max_len=cfg.seq_len_max, **kwargs)
         # We are having to do evil things here
-        vocab = {k: v for v, k in enumerate(cfg.token_arr)}
+        vocab = {token: i for i, token in enumerate(cfg.token_arr)}
         vocab[self.unk_token] = len(vocab)
         self.vocab = vocab
 
         self.added_tokens_encoder = vocab
-        self.added_tokens_decoder = {v: k for k, v in vocab.items()}
+        self.added_tokens_decoder = {i: token for token, i in vocab.items()}
 
         self.unique_no_split_tokens = cfg.token_arr
         self._create_trie(self.unique_no_split_tokens)
@@ -114,7 +115,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         self.eos_token_id = self.added_tokens_encoder[self.eos_token]
         self.pad_token_id = self.added_tokens_encoder[self.pad_token]
 
-    def __call__(self, text, **kwargs):
+    def __call__(self, text, **kwargs) -> BatchEncoding:
         """
         Tokenizer will take a list of strings and encode each
         I.e. a single example should be a continuous string
@@ -148,7 +149,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             str_sequence = sequence  # already decoded
         else:
             # remove padding
-            sequence = torch.tensor(sequence)  # .unsqueeze(-1)
+            sequence = torch.tensor(sequence)
             assert sequence.ndim == 1, f"Expected 1D sequence, got {sequence.ndim}D"
             sequence = sequence[sequence != self.pad_token_id]
             str_sequence = self.batch_decode(sequence)
