@@ -11,6 +11,7 @@ from muutils.statcounter import StatCounter  # type: ignore[import]
 from muutils.tensor_utils import ATensor  # type: ignore[import]
 from torch.utils.data import DataLoader
 from transformer_lens import HookedTransformer
+import wandb
 
 from maze_transformer.training.config import ConfigHolder, TrainConfig
 from maze_transformer.training.dataset import GPTDatasetConfig
@@ -118,6 +119,8 @@ def train(
     # ==================================================
     logger.log("initializing model", 10)
     model: HookedTransformer = cfg.create_model()
+    wandb.watch(model, model.loss_fn, log="all", log_freq=10)
+
     logger.log_elapsed_last()
     logger.mem_usage()
     logger.log({"device": device, "model.device": model.cfg.device}, 20)
@@ -194,6 +197,7 @@ def train(
                 or (iteration % checkpoint_interval_iters == 0)
             ),
         )
+        wandb.log(log_data, step=iteration)
 
         if iteration % checkpoint_interval_iters == 0:
             model_save_path: Path = (

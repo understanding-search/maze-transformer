@@ -3,6 +3,7 @@ from pathlib import Path
 
 from muutils.logger import Logger
 from transformers import PreTrainedTokenizer
+import wandb
 
 from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
@@ -46,10 +47,13 @@ def train_model(
         config=cfg,
     )
 
-    dataloader = get_dataloader(dataset, cfg, logger)
-    device = get_device()
+    with wandb.init(project="rusheb-testing", config=cfg.serialize()):
+        # cfg = wandb.config
 
-    train(dataloader, cfg, logger, output_path, device)
+        dataloader = get_dataloader(dataset, cfg, logger)
+        device = get_device()
+
+        train(dataloader, cfg, logger, output_path, device)
 
 
 if __name__ == "__main__":
