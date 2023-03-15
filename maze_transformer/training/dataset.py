@@ -37,16 +37,6 @@ class GPTDatasetConfig:
     def _dataset_class(cls) -> type:
         raise NotImplementedError("this should be implemented by subclasses!")
 
-    @cached_property
-    def gpt_config_kwargs(self) -> dict:
-        """gpt model config with vocab size, context size, and padding token"""
-        return dict(
-            d_vocab=len(self.token_arr),
-            n_positions=self.seq_len_max,
-            pad_token_id=self.padding_token_idx,  # The id of the _padding_ token.
-            bos_token_id=self.padding_token_idx,  # The id of the _beginning-of-stream_ token.
-            eos_token_id=self.padding_token_idx,  # The id of the _end-of-stream_ token.
-        )
 
     def tokenize_seq(self, seq: list[str]) -> ATensor:
         """tokenize sequence"""
