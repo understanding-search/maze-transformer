@@ -54,10 +54,10 @@ def test_maze_to_tokens():
         "<TARGET_START>",
         "(0,0)",
         "<TARGET_END>",
-        "<START_PATH>",
+        "<PATH_START>",
         "(1,1)",
         "(1,0)",
         "(0,0)",
-        "<END_PATH>",
+        "<PATH_END>",
     ]
     assert tokens == expected
