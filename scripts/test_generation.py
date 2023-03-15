@@ -6,6 +6,7 @@ from maze_transformer.evaluation.plot_maze import plot_path
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import LatticeMaze
 
+
 # start/end usage: --start=0,0 --end=4,4
 def generate_solve_plot(
     width: int = 5, height: int | None = None, start=None, end=None
