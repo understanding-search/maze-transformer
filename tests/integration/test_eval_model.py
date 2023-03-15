@@ -5,7 +5,6 @@ Test that loading the model and configuration works
     a HookedTransformer with folding etc., as they would be from
     just applying the model to the input
 """
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -16,13 +15,7 @@ from scripts.create_dataset import create_dataset
 from scripts.train_model import train_model
 
 
-@pytest.fixture()
-def temp_dir() -> Path:
-    data_dir = tempfile.TemporaryDirectory()
-    yield Path(data_dir.name)
-    data_dir.cleanup()
-
-
+@pytest.mark.usefixtures("temp_dir")
 def test_model_loading(temp_dir):
     # First create a dataset and train a model
     #! Awaiting change of all paths to Path for training scripts
@@ -30,8 +23,8 @@ def test_model_loading(temp_dir):
         create_dataset(path_base=str(temp_dir), n_mazes=5, grid_n=3, name="test")
         train_model(
             basepath=str(temp_dir / "g3-n5-test"),
-            training_cfg="tiny-v1",
-            model_cfg="tiny-v1",
+            training_cfg="integration-v1",
+            model_cfg="nano-v1",
         )
 
     # Now load the model and compare the outputs
