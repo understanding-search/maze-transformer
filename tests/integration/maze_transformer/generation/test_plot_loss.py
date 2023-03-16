@@ -33,4 +33,5 @@ def test_plot_loss(temp_dir):
 
     plot_loss(str(log_file_path), raw_loss="r.")
 
+
 # test_plot_loss('/tmp/bla')

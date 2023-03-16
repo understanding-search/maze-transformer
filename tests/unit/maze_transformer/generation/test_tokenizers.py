@@ -16,7 +16,7 @@ from scripts.create_dataset import generate_MazeTokenizer
 
 def test_tokenization_encoding():
     # Check that wrapped tokenizer __call__ returns the same as original tokenizer
-    maze = generate_MazeTokenizer(None, 3, (0, 0), (2, 1))
+    maze = generate_MazeTokenizer(None, 3)
 
     # Need to generate a config to extract the token map >.<
     # TODO: Part of https://github.com/AISC-understanding-search/maze-transformer/issues/77
@@ -50,13 +50,13 @@ def test_to_ascii():
     <ADJLIST_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
 
     target = [
-    "#######",
-    "#     #",
-    "# ### #",
-    "# # # #",
-    "# # ###",
-    "#     #",
-    "#######",
+        "#######",
+        "#     #",
+        "# ### #",
+        "# # # #",
+        "# # ###",
+        "#     #",
+        "#######",
     ]
 
     # Need to generate a config to extract the token map >.<
@@ -79,12 +79,8 @@ def test_to_ascii():
 
 
 def test_inside_hooked_transformer():
-    # Check that the wrapped tokenizer facilitates all HookedTransformer tokenizer-dependent functionality
-    maze = generate_MazeTokenizer(None, 3, (0, 0), (2, 1))
-
     # Need to generate a config to extract the token map >.<
     cfg = MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1)
-    node_token_map = cfg.node_token_map
 
     # Adjacency List Tokenization
     maze_str_tokens = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ; 
@@ -152,6 +148,7 @@ test_data = [
     param([1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6], id="too_long"),
 ]
 
+
 @mark.parametrize("inp,expected", test_data)
 def test_pad_sequence_param(inp, expected):
     # Initialized with a configholder - tokenizer will eventually be a string
@@ -160,7 +157,7 @@ def test_pad_sequence_param(inp, expected):
         train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None
     )
     tokenizer = HuggingMazeTokenizer(cfg_holder)
-    
+
     # Pad token id is chosen when the tokenizer is initialized
     expected = [x if x != PAD_PLACEHOLDER else tokenizer.pad_token_id for x in expected]
 
