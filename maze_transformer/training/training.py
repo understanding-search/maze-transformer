@@ -11,8 +11,8 @@ from muutils.statcounter import StatCounter  # type: ignore[import]
 from muutils.tensor_utils import ATensor  # type: ignore[import]
 from torch.utils.data import DataLoader
 from transformer_lens import HookedTransformer
-import wandb
 
+import wandb
 from maze_transformer.training.config import ConfigHolder, TrainConfig
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.mazedataset import MazeDataset
@@ -207,6 +207,7 @@ def train(
             )
             logger.saving(f"saving model to {model_save_path.as_posix()}", 10)
             torch.save(model.state_dict(), model_save_path)
+            upload_model(model_save_path, aliases=["latest", f"iter-{iteration}"])
             logger.log_elapsed_last(stream="saving")
 
     # save the final model
@@ -214,6 +215,13 @@ def train(
     final_model_path: str = output_dir / TRAIN_SAVE_FILES.model_final
     logger.saving(f"saving final model to {final_model_path.as_posix()}", 10)
     torch.save(model.state_dict(), final_model_path)
+    upload_model(final_model_path, aliases=["latest", "final"])
     logger.log_elapsed_last(stream="saving")
 
     logger.log("done!", 10)
+
+
+def upload_model(model_path: Path, aliases=None):
+    artifact = wandb.Artifact(name=wandb.run.id, type="model")
+    artifact.add_file(model_path)
+    wandb.run.log_artifact(artifact, aliases=aliases)

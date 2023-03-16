@@ -3,8 +3,8 @@ from pathlib import Path
 
 from muutils.logger import Logger
 from transformers import PreTrainedTokenizer
-import wandb
 
+import wandb
 from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDataset
@@ -38,8 +38,8 @@ def train_model(
     with open(Path(basepath) / TRAIN_SAVE_FILES.config_holder, "w") as f:
         json.dump(cfg.serialize(), f, indent="\t")
 
-    output_dir_name = TRAIN_SAVE_FILES.train_dir_format(cfg.dataset_cfg, cfg.train_cfg)
-    output_path: Path = Path(basepath) / output_dir_name
+    run_id = TRAIN_SAVE_FILES.train_dir_format(cfg.dataset_cfg, cfg.train_cfg)
+    output_path: Path = Path(basepath) / run_id
     (output_path / TRAIN_SAVE_FILES.checkpoints).mkdir(parents=True)
 
     logger: Logger = setup_logger(
@@ -47,7 +47,12 @@ def train_model(
         config=cfg,
     )
 
-    with wandb.init(project="rusheb-testing", job_type="train-model", config=cfg.serialize()):
+    with wandb.init(
+        project="rusheb-testing",
+        job_type="train-model",
+        config=cfg.serialize(),
+        id=run_id,
+    ):
         # cfg = wandb.config
 
         dataloader = get_dataloader(dataset, cfg, logger)

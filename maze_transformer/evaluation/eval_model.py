@@ -61,8 +61,6 @@ def load_model_with_configs(
 
     # Note: This should become less fragile in the future when we start keeping configs in the dataset file
 
-    # get path to the folder containing the model
-    config_folder: Path = model_path.parent
     # check for the filenames, go up a dir if they don't exist
     assert model_path.suffix == ".pt", "Model path must be a .pt file"
     config_path = find_config(model_path)
