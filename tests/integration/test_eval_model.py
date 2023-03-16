@@ -25,6 +25,7 @@ def test_model_loading(temp_dir):
             basepath=str(temp_dir / "g3-n5-test"),
             training_cfg="integration-v1",
             model_cfg="nano-v1",
+            wandb_project="integ-tests"
         )
 
     # Now load the model and compare the outputs

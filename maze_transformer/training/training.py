@@ -197,7 +197,7 @@ def train(
                 or (iteration % checkpoint_interval_iters == 0)
             ),
         )
-        wandb.log(log_data, step=iteration)
+        wandb.log({"loss": loss}, step=iteration)
 
         if iteration % checkpoint_interval_iters == 0:
             model_save_path: Path = (

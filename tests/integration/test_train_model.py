@@ -12,4 +12,5 @@ def test_train(temp_dir):
         basepath=str(temp_dir / "g3-n5-test"),
         training_cfg="tiny-v1",
         model_cfg="tiny-v1",
+        wandb_project="integ-tests"
     )

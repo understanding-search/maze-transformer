@@ -18,7 +18,7 @@ from maze_transformer.utils.utils import get_device
 
 
 def train_model(
-    basepath: str, training_cfg: str = "tiny-v1", model_cfg: str = "tiny-v1"
+    basepath: str, training_cfg: str = "tiny-v1", model_cfg: str = "tiny-v1", wandb_project: str="wandb-preview"
 ):
     dataset = MazeDataset.disk_load(basepath, do_config=True, do_tokenized=True)
 
@@ -45,7 +45,7 @@ def train_model(
     )
 
     with wandb.init(
-        project="rusheb-testing",
+        project=wandb_project,
         job_type="train-model",
         config=cfg.serialize(),
         id=run_id,
