@@ -15,8 +15,6 @@ from maze_transformer.training.tokenizer import MazeTokenizer
 def generate_MazeTokenizer(
     junk,
     grid_n: int,
-    c_start: tuple[int, int],
-    c_end: tuple[int, int],
 ) -> MazeTokenizer:
     """
     Generates and solves a maze then wraps the maze and its solution in a MazeTokenizer for serialization
@@ -32,12 +30,7 @@ def generate_MazeTokenizer(
     )
     return MazeTokenizer(
         maze=maze,
-        solution=np.array(
-            maze.find_shortest_path(
-                c_start=c_start,
-                c_end=c_end,
-            )
-        ),
+        solution=np.array(maze.generate_random_path()),
     )
 
 
@@ -78,9 +71,6 @@ def create_dataset(
     )
 
     # create and solve mazes
-    top_left = (0, 0)
-    bottom_right = (config.grid_n - 1, config.grid_n - 1)
-
     mazes: list[MazeTokenizer]
 
     with multiprocessing.Pool() as pool:
@@ -90,8 +80,6 @@ def create_dataset(
                     partial(
                         generate_MazeTokenizer,
                         grid_n=grid_n,
-                        c_start=top_left,
-                        c_end=bottom_right,
                     ),
                     range(config.n_mazes),
                 ),

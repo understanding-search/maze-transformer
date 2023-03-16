@@ -2,7 +2,6 @@ import json
 import typing
 from pathlib import Path
 
-import numpy as np
 import torch
 from muutils.tensor_utils import ATensor, NDArray
 from transformer_lens import HookedTransformer
@@ -10,8 +9,6 @@ from transformer_lens import HookedTransformer
 # bin these
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.evaluation.plot_maze import PathFormat, plot_multi_paths
-from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import (
     SPECIAL_TOKENS,
     CoordTup,
@@ -19,7 +16,7 @@ from maze_transformer.generation.latticemaze import (
 )
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
+from maze_transformer.training.tokenizer import SPECIAL_TOKENS
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access
@@ -263,76 +260,4 @@ def predict_maze_path(
         LatticeMaze.from_tokens(maze_tokens),
         path_true,
         path_predicted,
-    )
-
-
-def generate_plot_predicted_path(
-    model_path: Path,
-    n_tokens_pred: int = 5,
-):
-    model, cfg = load_model_with_configs(model_path)
-
-    # generate a maze
-    grid_n: int = cfg.dataset_cfg.grid_n
-    maze: LatticeMaze = LatticeMazeGenerators.gen_dfs((grid_n, grid_n))
-    c_start = (0, 0)
-    c_end = (grid_n - 1, grid_n - 1)
-
-    # solve the maze explicitly
-    path_true = np.array(
-        maze.find_shortest_path(
-            c_start=c_start,
-            c_end=c_end,
-        )
-    )
-
-    solved_maze: MazeTokenizer = MazeTokenizer(
-        maze=maze,
-        solution=np.array(
-            maze.find_shortest_path(
-                c_start=c_start,
-                c_end=c_end,
-            )
-        ),
-    )
-
-    # tokenize the maze
-    maze_only_tokens: list[str] = solved_maze.as_tokens(
-        cfg.dataset_cfg.node_token_map, solution=False
-    ) + [SPECIAL_TOKENS["path_start"]]
-
-    print("maze tokens:", maze_only_tokens)
-
-    array_nopad = torch.tensor(
-        [cfg.dataset_cfg.tokenizer_map[t] for t in maze_only_tokens],
-        dtype=torch.int32,
-        device="cpu",
-    )
-
-    array: ATensor = pad_sequence(array_nopad, cfg)
-
-    # have the model predict some tokens
-    predictions = predict_tokens(cfg, model, array.unsqueeze(0), n_tokens_pred)
-
-    print(predictions)
-
-    # decode the tokens
-    predicted_tokens = [cfg.dataset_cfg.token_arr[t] for t in predictions[0]]
-
-    print(predicted_tokens)
-
-    path_predicted: list[tuple[int, int]] = decode_maze_tokens_to_coords(
-        predicted_tokens[len(maze_only_tokens) :],
-        mazedata_cfg=cfg.dataset_cfg,
-        when_noncoord="skip",
-    )
-
-    # plot the maze and both solutions
-    # for label, fmt, color, path in paths
-    plot_multi_paths(
-        maze=maze,
-        paths=[
-            PathFormat(path_true, "true", "-", "red", {"width": 0.015}),
-            PathFormat(np.array(path_predicted), "predicted", ":", "blue", {}),
-        ],
     )
