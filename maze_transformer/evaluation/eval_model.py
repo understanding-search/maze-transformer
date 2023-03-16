@@ -2,7 +2,6 @@ import json
 import typing
 from pathlib import Path
 
-import numpy as np
 import torch
 from muutils.tensor_utils import ATensor, NDArray
 from transformer_lens import HookedTransformer
@@ -10,8 +9,6 @@ from transformer_lens import HookedTransformer
 # bin these
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.evaluation.plot_maze import PathFormat, plot_multi_paths
-from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import (
     SPECIAL_TOKENS,
     CoordTup,
@@ -19,7 +16,7 @@ from maze_transformer.generation.latticemaze import (
 )
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
+from maze_transformer.training.tokenizer import SPECIAL_TOKENS
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access
