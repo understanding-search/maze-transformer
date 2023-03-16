@@ -97,11 +97,33 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         d_head=64,  # match gpt-2 small
         n_layers=6,  # half of gpt2-small
     ),
+    # this one is just for integration tests
+    BaseGPTConfig(
+        name="nano-v1",
+        act_fn="gelu",
+        d_model=8,
+        d_head=4,
+        n_layers=2,
+    ),
 ]
 
 GPT_CONFIGS: dict[str, BaseGPTConfig] = {cfg.name: cfg for cfg in _GPT_CONFIGS_LIST}
 
 _TRAINING_CONFIG_LIST: list[TrainConfig] = [
+    TrainConfig(
+        name="integration-v1",
+        optimizer=torch.optim.RMSprop,
+        optimizer_kwargs=dict(lr=0.0001),
+        batch_size=16,
+        dataloader_cfg=dict(
+            shuffle=True,
+            num_workers=2,
+            persistent_workers=True,
+            drop_last=False,
+        ),
+        print_loss_interval=100,
+        checkpoint_interval=1000,
+    ),
     TrainConfig(
         name="tiny-v1",
         optimizer=torch.optim.RMSprop,

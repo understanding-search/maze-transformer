@@ -6,17 +6,15 @@ import torch
 from muutils.tensor_utils import ATensor
 from torch.utils.data import Dataset
 
+from maze_transformer.utils.utils import get_device
+
 
 @dataclass(kw_only=True)
 class GPTDatasetConfig:
     """base config class"""
 
     name: str
-    device: torch.device = field(
-        default_factory=lambda: torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
-    )
+    device: torch.device = field(default_factory=lambda: torch.device(get_device()))
     dtype: torch.dtype | np.dtype = field(default_factory=lambda: torch.int16)
     seq_len_min: int = 1
     seq_len_max: int = 512
@@ -38,17 +36,6 @@ class GPTDatasetConfig:
     @property
     def _dataset_class(cls) -> type:
         raise NotImplementedError("this should be implemented by subclasses!")
-
-    @cached_property
-    def gpt_config_kwargs(self) -> dict:
-        """gpt model config with vocab size, context size, and padding token"""
-        return dict(
-            d_vocab=len(self.token_arr),
-            n_positions=self.seq_len_max,
-            pad_token_id=self.padding_token_idx,  # The id of the _padding_ token.
-            bos_token_id=self.padding_token_idx,  # The id of the _beginning-of-stream_ token.
-            eos_token_id=self.padding_token_idx,  # The id of the _end-of-stream_ token.
-        )
 
     def tokenize_seq(self, seq: list[str]) -> ATensor:
         """tokenize sequence"""

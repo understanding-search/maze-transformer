@@ -19,7 +19,7 @@ from maze_transformer.training.training import TRAIN_SAVE_FILES
 # pylint: disable=protected-access
 
 MazePath = list[CoordTup]
-ArrMazePath = NDArray["node xypos", int]
+ArrMazePath = NDArray["node x_y_pos", int]
 
 
 def find_config(folder: Path) -> Path | tuple[Path, Path] | None:
@@ -142,7 +142,7 @@ def predict_maze_path(
     """
 
     # split the tokens into maze (prompt) and path
-    path_start_token: str = SPECIAL_TOKENS["start_path"]
+    path_start_token: str = SPECIAL_TOKENS["path_start"]
     path_start_idx: int = tokens.index(path_start_token) + 1
     maze_tokens: list[str] = tokens[:path_start_idx]
     path_true_tokens: list[str] = tokens[path_start_idx:]
