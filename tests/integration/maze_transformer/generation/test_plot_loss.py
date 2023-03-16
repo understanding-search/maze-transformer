@@ -21,7 +21,7 @@ def test_plot_loss(temp_dir):
         basepath=str(temp_dir / dataset_directory_name),
         training_cfg="integration-v1",
         model_cfg="nano-v1",
-        wandb_project="integ_tests"
+        wandb_project="integ-tests"
     )
 
     # Log file name includes a timestamp so need to check the filesystem to determine the name
