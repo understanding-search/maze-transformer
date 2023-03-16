@@ -43,61 +43,20 @@ def test_tokenization_encoding():
     ), "Tokenization mismatch"
 
 
-def test_ascii_encoding():
+def test_to_ascii():
     # Check that the ascii encoding works for multiple different inputs
-    maze_str_tokens = [
-        "<ADJLIST_START>",
-        "(1,1)",
-        "<-->",
-        "(2,1)",
-        ";",
-        "(2,0)",
-        "<-->",
-        "(1,0)",
-        ";",
-        "(0,1)",
-        "<-->",
-        "(0,0)",
-        ";",
-        "(2,2)",
-        "<-->",
-        "(2,1)",
-        ";",
-        "(2,0)",
-        "<-->",
-        "(2,1)",
-        ";",
-        "(0,2)",
-        "<-->",
-        "(1,2)",
-        ";",
-        "(0,0)",
-        "<-->",
-        "(1,0)",
-        ";",
-        "(0,2)",
-        "<-->",
-        "(0,1)",
-        ";",
-        "<ADJLIST_END>",
-        "<TARGET_START>",
-        "(2,1)",
-        "<TARGET_END>",
-        "<START_PATH>",
-        "(0,0)",
-        "(1,0)",
-        "(2,0)",
-        "(2,1)",
-        "<END_PATH>",
-    ]
+    maze_str_tokens = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
+    (2,2) <--> (2,1) ; (2,0) <--> (2,1) ; (0,2) <--> (1,2) ; (0,0) <--> (1,0) ; (0,2) <--> (0,1) ;
+    <ADJLIST_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
+
     target = [
-        "#######",
-        "#     #",
-        "# ### #",
-        "# #   #",
-        "# ### #",
-        "#   # #",
-        "#######",
+    "#######",
+    "#     #",
+    "# ### #",
+    "# # # #",
+    "# # ###",
+    "#     #",
+    "#######",
     ]
 
     # Need to generate a config to extract the token map >.<
@@ -128,51 +87,9 @@ def test_inside_hooked_transformer():
     node_token_map = cfg.node_token_map
 
     # Adjacency List Tokenization
-    maze_str_tokens = [
-        "<ADJLIST_START>",
-        "(1,1)",
-        "<-->",
-        "(2,1)",
-        ";",
-        "(2,0)",
-        "<-->",
-        "(1,0)",
-        ";",
-        "(0,1)",
-        "<-->",
-        "(0,0)",
-        ";",
-        "(2,2)",
-        "<-->",
-        "(2,1)",
-        ";",
-        "(2,0)",
-        "<-->",
-        "(2,1)",
-        ";",
-        "(0,2)",
-        "<-->",
-        "(1,2)",
-        ";",
-        "(0,0)",
-        "<-->",
-        "(1,0)",
-        ";",
-        "(0,2)",
-        "<-->",
-        "(0,1)",
-        ";",
-        "<ADJLIST_END>",
-        "<TARGET_START>",
-        "(2,1)",
-        "<TARGET_END>",
-        "<START_PATH>",
-        "(0,0)",
-        "(1,0)",
-        "(2,0)",
-        "(2,1)",
-        "<END_PATH>",
-    ]
+    maze_str_tokens = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ; 
+    (2,2) <--> (2,1) ; (2,0) <--> (2,1) ; (0,2) <--> (1,2) ; (0,0) <--> (1,0) ; (0,2) <--> (0,1) ;
+    <ADJLIST_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
 
     cfg_holder = ConfigHolder(
         train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None
@@ -206,33 +123,10 @@ def test_inside_hooked_transformer():
     ), "Simple tokenization decoding inside HookedTransformer failed"
 
     # -- Test Batched Tokenization --
-    maze_str_tokens_2 = [
-        "<ADJLIST_START>",
-        "(1,1)",
-        "<-->",
-        "(2,1)",
-        ";",
-        "(2,0)",
-        "<-->",
-        "(1,0)",
-        ";",
-        "(0,1)",
-        "<-->",
-        "(0,0)",
-        ";",
-        "(0,2)",
-        "<-->",
-        "(0,1)",
-        ";",
-        "<ADJLIST_END>",
-        "<TARGET_START>",
-        "(1,0)",
-        "<TARGET_END>",
-        "<START_PATH>",
-        "(0,0)",
-        "(1,0)",
-        "<END_PATH>",
-    ]
+    maze_str_tokens_2 = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; 
+    (0,1) <--> (0,0) ; (0,2) <--> (0,1) ; <ADJLIST_END> <TARGET_START> (1,0) <TARGET_END> 
+    <PATH_START> (0,0) (1,0) <PATH_END>""".split()
+
     batched_tokens = [" ".join(maze_str_tokens), " ".join(maze_str_tokens_2)]
 
     # Manual Tokenization
@@ -251,13 +145,12 @@ def test_inside_hooked_transformer():
 
 
 # Padding Tests
-PADDING_ID = 8
+PAD_PLACEHOLDER = -1
 test_data = [
-    param([1, 2, 3], [PADDING_ID, PADDING_ID, 1, 2, 3], id="short"),
+    param([1, 2, 3], [PAD_PLACEHOLDER, PAD_PLACEHOLDER, 1, 2, 3], id="short"),
     param([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], id="max_length"),
     param([1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6], id="too_long"),
 ]
-
 
 @mark.parametrize("inp,expected", test_data)
 def test_pad_sequence_param(inp, expected):
@@ -267,6 +160,9 @@ def test_pad_sequence_param(inp, expected):
         train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None
     )
     tokenizer = HuggingMazeTokenizer(cfg_holder)
+    
+    # Pad token id is chosen when the tokenizer is initialized
+    expected = [x if x != PAD_PLACEHOLDER else tokenizer.pad_token_id for x in expected]
 
     # Need to go to string representation to pad
     inp = tokenizer.decode(inp)

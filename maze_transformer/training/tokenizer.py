@@ -49,7 +49,7 @@ class MazeTokenizer:
                         node_token_map[tuple(c_e.tolist())],
                         SPECIAL_TOKENS["adjacency_endline"],
                     ]
-                    for c_s, c_e in self.maze.as_adj_list()
+                    for c_s, c_e in self.maze.as_adjlist()
                 ]
             ),
             SPECIAL_TOKENS["adjlist_end"],
@@ -79,8 +79,8 @@ class MazeTokenizer:
 class HuggingMazeTokenizer(PreTrainedTokenizer):
     vocab: dict[str, int]  # map of token_ids to strings
 
-    bos_token: str = SPECIAL_TOKENS["start_path"]
-    eos_token: str = SPECIAL_TOKENS["end_path"]
+    bos_token: str = SPECIAL_TOKENS["path_start"]
+    eos_token: str = SPECIAL_TOKENS["path_end"]
     pad_token: str = SPECIAL_TOKENS["padding"]
     unk_token: str = "<UNK>"
 

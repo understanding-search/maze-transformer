@@ -162,7 +162,7 @@ class LatticeMaze:
         path_char = " "
 
         # Determine the size of the maze
-        maze = self.as_img().T
+        maze = self.as_img()
         n_rows, n_cols = maze.shape
         maze_str = ""
 
