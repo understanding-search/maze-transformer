@@ -39,9 +39,6 @@ def train_model(
     output_path: Path = Path(basepath) / run_id
     (output_path / TRAIN_SAVE_FILES.checkpoints).mkdir(parents=True)
 
-    with open(output_path / TRAIN_SAVE_FILES.config_holder, "w") as f:
-        json.dump(cfg.serialize(), f, indent="\t")
-
     logger: Logger = setup_logger(
         output_path=output_path,
         config=cfg,
@@ -54,6 +51,12 @@ def train_model(
         id=run_id,
     ):
         # cfg = wandb.config
+
+        cfg_save_path = output_path / TRAIN_SAVE_FILES.config_holder
+        with open(cfg_save_path, "w") as f:
+            json.dump(cfg.serialize(), f, indent="\t")
+
+        wandb.save(str(cfg_save_path), base_path=str(cfg_save_path.parent))
 
         dataloader = get_dataloader(dataset, cfg, logger)
         device = get_device()
