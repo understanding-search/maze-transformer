@@ -110,38 +110,25 @@ class LatticeMaze:
 
     n_connections = property(lambda self: self.connection_list.sum())
 
-    def as_img(self, node_length=10, show_connections=False) -> NDArray["x y", bool]:
+    def as_img(self) -> NDArray["x y", bool]:
         """
         Plot an image to visualise the maze.
         - Nodes are displayed as white squares of area: node_length * node_length
         - Walls are displayed as black recktangles of area: 1 * node_length
-        - Connections are displayed as light grey / white recktangles of area: 1 * node_length; color is depending on show_connections argument
+        - Connections are displayed as light grey or white rectangles of area: 1 * node_length; color is depending on show_connections argument
 
         Returns a matrix of side length (node_length+1) * n + 1 where n is the number of nodes.
-
-        Example:
-          Connection List:
-          DOWN        RIGHT
-          [F, T, T]   [T, T, F]
-          [T, F, T]   [T, F, F]
-          [F, F, F]   [T, F, F]
-
-          Image:
-                                              x x x x x x x
-            N T N T N F       N - N - N       x           x
-            F   T   T             |   |       x x x   x   x
-            N T N F N F -->   N - N   N   --> x       x   x
-            T   F   T         |       |       x   x x x   x
-            N T N F N F       N - N   N       x       x   x
-            F   F   F                         x x x x x x x
-
-            The size of N is determined by node_length.
         """
+        # Set ratio of node and wall size
+        node_length=14
+        
 
         # Set color of connections (using plt.imshow(cmap='grey))
+        show_connections=True
+
         white_color = 100
         if show_connections:
-            connection_color = white_color * 0.8
+            connection_color = white_color * 0.93
         else:
             connection_color = white_color
         
