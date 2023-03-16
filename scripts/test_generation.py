@@ -7,7 +7,10 @@ from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import LatticeMaze
 
 
-def generate_solve_plot(width: int = 5, height: int | None = None):
+# start/end usage: --start=0,0 --end=4,4
+def generate_solve_plot(
+    width: int = 5, height: int | None = None, start=None, end=None
+):
     if height is None:
         height = width
 
@@ -16,16 +19,14 @@ def generate_solve_plot(width: int = 5, height: int | None = None):
     print(f"generation time: {time.time() - generation_start}")
 
     # show a path
-    c_start = (0, 0)
-    c_end = (width - 1, height - 1)
 
     solution_start = time.time()
-    path = np.array(
-        maze.find_shortest_path(
-            c_start=c_start,
-            c_end=c_end,
-        )
-    )
+
+    if start and end:
+        path = np.array(maze.find_shortest_path(start, end))
+    else:
+        path = np.array(maze.generate_random_path())
+
     print(f"solving time: {time.time() - solution_start}")
 
     plot_path(maze, path, show=True)
