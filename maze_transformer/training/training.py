@@ -143,7 +143,6 @@ def train(
     n_batches: int = len(dataloader)
     logger.log({"n_batches": n_batches}, 10)
 
-    n_sequences: int
     print_loss_interval_iters: int = int(
         cfg.train_cfg.print_loss_interval // cfg.train_cfg.batch_size
     )
@@ -152,7 +151,7 @@ def train(
     )
     for iteration, batch in enumerate(dataloader):
         # compute loss
-        with TimerContext() as timer_loss:
+        with TimerContext() as loss_time:
             batch_on_device: ATensor[("batch", "sequence")] = batch.type(
                 dtype=torch.LongTensor
             ).to(model.cfg.device)
@@ -166,12 +165,12 @@ def train(
             loss.backward()
 
         # optimize
-        with TimerContext() as timer_optim:
+        with TimerContext() as optimization_time:
             optimizer.step()
             optimizer.zero_grad()
 
         # logging
-        n_sequences = iteration * cfg.train_cfg.batch_size
+        n_sequences: int = iteration * cfg.train_cfg.batch_size
         log_data: dict[str, Any] = json_serialize(
             {
                 "iter": iteration,
@@ -179,8 +178,8 @@ def train(
                 # "train/grad_norm": output.grad_norm,
                 "n_sequences": n_sequences,
                 "time_current": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "timer_loss": round(timer_loss.elapsed_time, 6),
-                "timer_optim": round(timer_optim.elapsed_time, 6),
+                "loss_time": round(loss_time.elapsed_time, 6),
+                "optimization_time": round(optimization_time.elapsed_time, 6),
             }
         )
 

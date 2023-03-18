@@ -55,22 +55,28 @@ class GPTDatasetConfig:
 
 @dataclass(kw_only=True)
 class IndexedArray:
-    """join a list of arrays into a single big one with indices
+    """Contains a tensor made by concatenating a list of tensors, and a second tensor indicating the starting indices
+    of the original tensors in the first one. Mainly for getting __getitem__ to work nicely with datasets
 
-    mainly for allowing __getitem__ to work nice for datasets"""
+    arr: tensor containing all the elements of the original arrays: [1, 2], [3, 4] -> [1, 2, 3, 4]
+    idxs: tensor indicating the starting index in arr of each original array: [1, 2], [3, 4] -> [0, 2]
+    """
 
     arr: ATensor
     idxs: ATensor
 
-    def get_len(self, idx: int) -> int:
-        return self.idxs[idx + 1] - self.idxs[idx]
+    def get_len(self, i: int) -> int:
+        if i + 1 < len(self.idxs):
+            return self.idxs[i + 1] - self.idxs[i]
+
+        return self.arr.size(0) - self.idxs[i]
 
     def get_all_lengths(self) -> ATensor:
         return torch.cat(
             [
                 self.idxs[1:] - self.idxs[:-1],
                 torch.tensor(
-                    [self.arr.shape[0] - self.idxs[-1]],
+                    [self.arr.size(0) - self.idxs[-1]],
                     dtype=self.idxs.dtype,
                     device=self.idxs.device,
                 ),
@@ -79,14 +85,15 @@ class IndexedArray:
 
     @classmethod
     def from_sequences(cls, data: list[ATensor[("tokens")]]) -> "IndexedArray":
-        """process many sequences into a single array, keeping track of sequence start indices
+        """Process many sequences into a single array, keeping track of sequence start indices
 
         example:
         f( [[a,b,c], [d,e]] ) -> IndexedArray(
                 arr = [a,b,c,d,e],
-                idxs = [0,3],
+                idxs = [0,3]
         )
         """
+
         arr: ATensor = torch.cat(data)
         idxs: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
         return cls(arr=arr, idxs=idxs)
