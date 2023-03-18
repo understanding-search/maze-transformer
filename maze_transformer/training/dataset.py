@@ -24,7 +24,7 @@ class GPTDatasetConfig:
         raise NotImplementedError()
 
     @cached_property
-    def padding_token_idx(self) -> str:
+    def padding_token_index(self) -> str:
         raise NotImplementedError()
 
     @cached_property
@@ -43,9 +43,9 @@ class GPTDatasetConfig:
         return dict(
             d_vocab=len(self.token_arr),
             n_positions=self.seq_len_max,
-            pad_token_id=self.padding_token_idx,  # The id of the _padding_ token.
-            bos_token_id=self.padding_token_idx,  # The id of the _beginning-of-stream_ token.
-            eos_token_id=self.padding_token_idx,  # The id of the _end-of-stream_ token.
+            pad_token_id=self.padding_token_index,  # The id of the _padding_ token.
+            bos_token_id=self.padding_token_index,  # The id of the _beginning-of-stream_ token.
+            eos_token_id=self.padding_token_index,  # The id of the _end-of-stream_ token.
         )
 
     def tokenize_seq(self, seq: list[str]) -> ATensor:
@@ -70,26 +70,26 @@ class IndexedArray:
     of the original tensors in the first one. Mainly for getting __getitem__ to work nicely with datasets
 
     arr: tensor containing all the elements of the original arrays: [1, 2], [3, 4] -> [1, 2, 3, 4]
-    idxs: tensor indicating the starting index in arr of each original array: [1, 2], [3, 4] -> [0, 2]
+    indices: tensor indicating the starting index in arr of each original array: [1, 2], [3, 4] -> [0, 2]
     """
 
     arr: ATensor
-    idxs: ATensor
+    indices: ATensor
 
     def get_len(self, i: int) -> int:
-        if i + 1 < len(self.idxs):
-            return self.idxs[i + 1] - self.idxs[i]
+        if i + 1 < len(self.indices):
+            return self.indices[i + 1] - self.indices[i]
 
-        return self.arr.size(0) - self.idxs[i]
+        return self.arr.size(0) - self.indices[i]
 
     def get_all_lengths(self) -> ATensor:
         return torch.cat(
             [
-                self.idxs[1:] - self.idxs[:-1],
+                self.indices[1:] - self.indices[:-1],
                 torch.tensor(
-                    [self.arr.size(0) - self.idxs[-1]],
-                    dtype=self.idxs.dtype,
-                    device=self.idxs.device,
+                    [self.arr.size(0) - self.indices[-1]],
+                    dtype=self.indices.dtype,
+                    device=self.indices.device,
                 ),
             ]
         )
@@ -101,13 +101,13 @@ class IndexedArray:
         example:
         f( [[a,b,c], [d,e]] ) -> IndexedArray(
                 arr = [a,b,c,d,e],
-                idxs = [0,3]
+                indices = [0,3]
         )
         """
 
         arr: ATensor = torch.cat(data)
-        idxs: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
-        return cls(arr=arr, idxs=idxs)
+        indices: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
+        return cls(arr=arr, indices=indices)
 
 
 class GPTDataset(Dataset):
