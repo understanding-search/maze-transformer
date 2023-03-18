@@ -1,6 +1,8 @@
 import json
 import typing
 from pathlib import Path
+from datetime import datetime
+
 
 import torch
 from muutils.tensor_utils import ATensor, NDArray
@@ -167,6 +169,44 @@ def decode_maze_tokens_to_coords(
     return output
 
 
+def predict_maze_paths(mazes, data_cfg, model, n_tokens_pred):
+    path_start_token: str = SPECIAL_TOKENS["path_start"]
+    eos_token_id = data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]]
+    tokens_stack = []
+    for maze in mazes:
+        path_start_idx: int = maze.index(path_start_token) + 1
+        maze_tokens: list[str] = maze[:path_start_idx]
+        maze_tokens.append(maze[path_start_idx])
+
+        tokens_stack.append(
+            torch.tensor(
+                [data_cfg.tokenizer_map[t] for t in maze_tokens],
+                dtype=torch.long,
+            )
+        )
+
+    predictions = model.generate(
+        torch.stack(tokens_stack),
+        eos_token_id=eos_token_id,
+        stop_at_eos=True,
+        max_new_tokens=n_tokens_pred,
+    )
+    paths = []
+    for pred in predictions:
+        predicted_and_context_tokens: list[str] = [data_cfg.token_arr[t] for t in pred]
+        pac_path_start_idx: int = (
+            predicted_and_context_tokens.index(path_start_token) + 1
+        )
+        predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_idx:]
+        path_predicted = decode_maze_tokens_to_coords(
+            predicted_tokens,
+            mazedata_cfg=data_cfg,
+            when_noncoord="skip",
+        )
+        paths.append(path_predicted)
+    return paths
+
+
 def predict_maze_path(
     tokens: list[str],
     data_cfg: MazeDatasetConfig,
@@ -195,6 +235,7 @@ def predict_maze_path(
     """
 
     # split the tokens into maze (prompt) and path
+    start = datetime.now()
     path_start_token: str = SPECIAL_TOKENS["path_start"]
     path_start_idx: int = tokens.index(path_start_token) + 1
     maze_tokens: list[str] = tokens[:path_start_idx]
@@ -210,21 +251,30 @@ def predict_maze_path(
         [data_cfg.tokenizer_map[t] for t in maze_tokens],
         dtype=torch.long,
     )
+    maze_arr_nopad2: ATensor = torch.tensor(
+        [data_cfg.tokenizer_map[t] for t in maze_tokens],
+        dtype=torch.long,
+    )
     eos_token_id = data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]]
 
     # have the model predict some tokens
-    maze_arr_nopad = maze_arr_nopad.unsqueeze(0)
+    # maze_arr_nopad = maze_arr_nopad.unsqueeze(0)
+    # maze_arr_nopad2 = maze_arr_nopad2.unsqueeze(0)
     if verbose:
         print("Generating Model Completions")
     #! NOTE verbose flag here will require latest clone of TrasformerLens from github
+    pre_gen = datetime.now()
+    # everything happens here
+
     predictions = model.generate(
-        maze_arr_nopad,
+        torch.stack((maze_arr_nopad, maze_arr_nopad2)),
         eos_token_id=eos_token_id,
         stop_at_eos=True,
         max_new_tokens=n_tokens_pred,
         verbose=verbose,
     )
-
+    post_gen = datetime.now()
+    breakpoint()
     # decode the tokens
     predicted_and_context_tokens: list[str] = [
         data_cfg.token_arr[t] for t in predictions[0]
@@ -256,8 +306,13 @@ def predict_maze_path(
         + 1 : maze_tokens.index(SPECIAL_TOKENS["adjlist_end"])
     ]
 
+    lattice_maze = LatticeMaze.from_tokens(maze_tokens)
+    end = datetime.now()
+    print("pre-gen:", pre_gen - start)
+    print("gen:", post_gen - pre_gen)
+    print("post-gen:", end - post_gen)
     return (
-        LatticeMaze.from_tokens(maze_tokens),
+        lattice_maze,
         path_true,
         path_predicted,
     )

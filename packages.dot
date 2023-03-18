@@ -1,0 +1,44 @@
+digraph "packages" {
+rankdir=BT
+charset="utf-8"
+"maze_transformer" [color="black", label=<maze_transformer>, shape="box", style="solid"];
+"maze_transformer.evaluation" [color="black", label=<maze_transformer.evaluation>, shape="box", style="solid"];
+"maze_transformer.evaluation.eval_model" [color="black", label=<maze_transformer.evaluation.eval_model>, shape="box", style="solid"];
+"maze_transformer.evaluation.pathdist" [color="black", label=<maze_transformer.evaluation.pathdist>, shape="box", style="solid"];
+"maze_transformer.evaluation.plot_attention" [color="black", label=<maze_transformer.evaluation.plot_attention>, shape="box", style="solid"];
+"maze_transformer.evaluation.plot_loss" [color="black", label=<maze_transformer.evaluation.plot_loss>, shape="box", style="solid"];
+"maze_transformer.evaluation.plot_maze" [color="black", label=<maze_transformer.evaluation.plot_maze>, shape="box", style="solid"];
+"maze_transformer.generation" [color="black", label=<maze_transformer.generation>, shape="box", style="solid"];
+"maze_transformer.generation.generators" [color="black", label=<maze_transformer.generation.generators>, shape="box", style="solid"];
+"maze_transformer.generation.latticemaze" [color="black", label=<maze_transformer.generation.latticemaze>, shape="box", style="solid"];
+"maze_transformer.generation.utils" [color="black", label=<maze_transformer.generation.utils>, shape="box", style="solid"];
+"maze_transformer.training" [color="black", label=<maze_transformer.training>, shape="box", style="solid"];
+"maze_transformer.training.config" [color="black", label=<maze_transformer.training.config>, shape="box", style="solid"];
+"maze_transformer.training.dataset" [color="black", label=<maze_transformer.training.dataset>, shape="box", style="solid"];
+"maze_transformer.training.mazedataset" [color="black", label=<maze_transformer.training.mazedataset>, shape="box", style="solid"];
+"maze_transformer.training.tokenizer" [color="black", label=<maze_transformer.training.tokenizer>, shape="box", style="solid"];
+"maze_transformer.training.training" [color="black", label=<maze_transformer.training.training>, shape="box", style="solid"];
+"maze_transformer.utils" [color="black", label=<maze_transformer.utils>, shape="box", style="solid"];
+"maze_transformer.utils.notebook_utils" [color="black", label=<maze_transformer.utils.notebook_utils>, shape="box", style="solid"];
+"maze_transformer.utils.utils" [color="black", label=<maze_transformer.utils.utils>, shape="box", style="solid"];
+"maze_transformer.evaluation.eval_model" -> "maze_transformer.generation.latticemaze" [arrowhead="open", arrowtail="none"];
+"maze_transformer.evaluation.eval_model" -> "maze_transformer.training.config" [arrowhead="open", arrowtail="none"];
+"maze_transformer.evaluation.eval_model" -> "maze_transformer.training.mazedataset" [arrowhead="open", arrowtail="none"];
+"maze_transformer.evaluation.eval_model" -> "maze_transformer.training.training" [arrowhead="open", arrowtail="none"];
+"maze_transformer.evaluation.pathdist" -> "maze_transformer.evaluation.eval_model" [arrowhead="open", arrowtail="none"];
+"maze_transformer.evaluation.pathdist" -> "maze_transformer.generation.latticemaze" [arrowhead="open", arrowtail="none"];
+"maze_transformer.evaluation.plot_maze" -> "maze_transformer.generation.latticemaze" [arrowhead="open", arrowtail="none"];
+"maze_transformer.generation.generators" -> "maze_transformer.generation.latticemaze" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.config" -> "maze_transformer.training.dataset" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.config" -> "maze_transformer.training.mazedataset" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.dataset" -> "maze_transformer.utils.utils" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.mazedataset" -> "maze_transformer.generation.generators" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.mazedataset" -> "maze_transformer.generation.latticemaze" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.mazedataset" -> "maze_transformer.training.dataset" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.mazedataset" -> "maze_transformer.training.tokenizer" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.tokenizer" -> "maze_transformer.generation.latticemaze" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.training" -> "maze_transformer.training.config" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.training" -> "maze_transformer.training.dataset" [arrowhead="open", arrowtail="none"];
+"maze_transformer.training.training" -> "maze_transformer.training.mazedataset" [arrowhead="open", arrowtail="none"];
+"maze_transformer.utils.notebook_utils" -> "maze_transformer.utils.utils" [arrowhead="open", arrowtail="none"];
+}
