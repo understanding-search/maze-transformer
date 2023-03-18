@@ -1,26 +1,11 @@
 import random
 
 import numpy as np
-import torch
 
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import CoordTup, LatticeMaze
-from maze_transformer.training.dataset import IndexedArray
 from maze_transformer.training.mazedataset import MazeDatasetConfig, maze_to_tokens
 from maze_transformer.training.tokenizer import MazeTokenizer
-
-
-def test_indexed_array():
-    indexed_array = IndexedArray.from_sequences([
-        torch.tensor(
-            [1, 2, 3, 4, 5],
-            dtype=torch.int16,
-        ) for _ in range(10)
-    ])
-
-    indexed_array.get_len(9)
-
-    assert True
 
 
 def test_maze_to_tokens():

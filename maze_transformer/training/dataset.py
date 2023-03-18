@@ -4,7 +4,6 @@ from functools import cached_property
 import numpy as np
 import torch
 from muutils.tensor_utils import ATensor
-from torch import Tensor
 from torch.utils.data import Dataset
 
 from maze_transformer.utils.utils import get_device
@@ -67,24 +66,30 @@ class GPTDatasetConfig:
 
 @dataclass(kw_only=True)
 class IndexedArray:
-    """join a list of arrays into a single big one with indices
+    """Contains a tensor made by concatenating a list of tensors, and a second tensor indicating the starting indices
+    of the original tensors in the first one. Mainly for getting __getitem__ to work nicely with datasets
 
-    mainly for allowing __getitem__ to work nice for datasets"""
+    arr: tensor containing all the elements of the original arrays: [1, 2], [3, 4] -> [1, 2, 3, 4]
+    idxs: tensor indicating the starting index in arr of each original array: [1, 2], [3, 4] -> [0, 2]
+    """
 
     arr: ATensor
-    indices: ATensor
+    idxs: ATensor
 
     def get_len(self, i: int) -> int:
-        return self.indices[i + 1] - self.indices[i]
+        if i + 1 < len(self.idxs):
+            return self.idxs[i + 1] - self.idxs[i]
+
+        return self.arr.size(0) - self.idxs[i]
 
     def get_all_lengths(self) -> ATensor:
         return torch.cat(
             [
-                self.indices[1:] - self.indices[:-1],
+                self.idxs[1:] - self.idxs[:-1],
                 torch.tensor(
-                    [self.arr.shape[0] - self.indices[-1]],
-                    dtype=self.indices.dtype,
-                    device=self.indices.device,
+                    [self.arr.size(0) - self.idxs[-1]],
+                    dtype=self.idxs.dtype,
+                    device=self.idxs.device,
                 ),
             ]
         )
@@ -96,18 +101,13 @@ class IndexedArray:
         example:
         f( [[a,b,c], [d,e]] ) -> IndexedArray(
                 arr = [a,b,c,d,e],
-                indices = [0,3]
+                idxs = [0,3]
         )
         """
-        # arr: Tensor
-        # for item in data:
-        #     arr.
-
-
 
         arr: ATensor = torch.cat(data)
-        indices: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
-        return cls(arr=arr, indices=indices)
+        idxs: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
+        return cls(arr=arr, idxs=idxs)
 
 
 class GPTDataset(Dataset):

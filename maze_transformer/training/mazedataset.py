@@ -192,16 +192,16 @@ class MazeDataset(GPTDataset):
                     f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokens) = }"
                 )
 
-        if self.mazes_objs is not None and self.mazes_array.indices is not None:
-            if len(self.mazes_objs) != len(self.mazes_array.indices):
+        if self.mazes_objs is not None and self.mazes_array.idxs is not None:
+            if len(self.mazes_objs) != len(self.mazes_array.idxs):
                 raise ValueError(
-                    f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_array.indices) = }"
+                    f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_array.idxs) = }"
                 )
 
-        if self.mazes_tokens is not None and self.mazes_array.indices is not None:
-            if len(self.mazes_tokens) != len(self.mazes_array.indices):
+        if self.mazes_tokens is not None and self.mazes_array.idxs is not None:
+            if len(self.mazes_tokens) != len(self.mazes_array.idxs):
                 raise ValueError(
-                    f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_array.indices) = }"
+                    f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_array.idxs) = }"
                 )
 
     def __getitem__(self, idx: int) -> ATensor[("tokens")]:
@@ -213,15 +213,15 @@ class MazeDataset(GPTDataset):
         # the start of the correct sequence. The min value could be part of the dataset config.
 
         # last element in mazes_array.idxs whose value is smaller than `idx`
-        sequence_idx: int = torch.searchsorted(self.mazes_array.indices, idx) - 1
+        sequence_idx: int = torch.searchsorted(self.mazes_array.idxs, idx) - 1
         # slice the array from the start of the sequence to `idx`, including `idx`
         end_arr_idx: int = min(
             idx + 1,  # up to end of sequence
-            self.mazes_array.indices[sequence_idx]
+            self.mazes_array.idxs[sequence_idx]
             + self.cfg.seq_len_max,  # up to sequence length cutoff
         )
         subseq: ATensor = self.mazes_array.arr[
-                          self.mazes_array.indices[sequence_idx]: end_arr_idx
+            self.mazes_array.idxs[sequence_idx] : end_arr_idx
         ]
         # left-pad the sequence
         return torch.nn.functional.pad(
@@ -338,7 +338,7 @@ class MazeDataset(GPTDataset):
                 f"{path_base}/{self.DISK_SAVE_FILES.tokenized}",
                 **dict(
                     arr=self.mazes_array.arr.cpu().numpy(),
-                    idxs=self.mazes_array.indices.cpu().numpy(),
+                    idxs=self.mazes_array.idxs.cpu().numpy(),
                 ),
             )
 
