@@ -4,6 +4,7 @@ from functools import cached_property
 import numpy as np
 import torch
 from muutils.tensor_utils import ATensor
+from torch import Tensor
 from torch.utils.data import Dataset
 
 from maze_transformer.utils.utils import get_device
@@ -71,36 +72,42 @@ class IndexedArray:
     mainly for allowing __getitem__ to work nice for datasets"""
 
     arr: ATensor
-    idxs: ATensor
+    indices: ATensor
 
-    def get_len(self, idx: int) -> int:
-        return self.idxs[idx + 1] - self.idxs[idx]
+    def get_len(self, i: int) -> int:
+        return self.indices[i + 1] - self.indices[i]
 
     def get_all_lengths(self) -> ATensor:
         return torch.cat(
             [
-                self.idxs[1:] - self.idxs[:-1],
+                self.indices[1:] - self.indices[:-1],
                 torch.tensor(
-                    [self.arr.shape[0] - self.idxs[-1]],
-                    dtype=self.idxs.dtype,
-                    device=self.idxs.device,
+                    [self.arr.shape[0] - self.indices[-1]],
+                    dtype=self.indices.dtype,
+                    device=self.indices.device,
                 ),
             ]
         )
 
     @classmethod
     def from_sequences(cls, data: list[ATensor[("tokens")]]) -> "IndexedArray":
-        """process many sequences into a single array, keeping track of sequence start indices
+        """Process many sequences into a single array, keeping track of sequence start indices
 
         example:
         f( [[a,b,c], [d,e]] ) -> IndexedArray(
                 arr = [a,b,c,d,e],
-                idxs = [0,3],
+                indices = [0,3]
         )
         """
+        # arr: Tensor
+        # for item in data:
+        #     arr.
+
+
+
         arr: ATensor = torch.cat(data)
-        idxs: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
-        return cls(arr=arr, idxs=idxs)
+        indices: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
+        return cls(arr=arr, indices=indices)
 
 
 class GPTDataset(Dataset):
