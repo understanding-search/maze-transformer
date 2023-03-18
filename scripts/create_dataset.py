@@ -69,14 +69,21 @@ def create_dataset(
     if os.path.exists(data_path):
         raise FileExistsError(f"path {data_path} already exists!")
 
-    # create config
+
     config: MazeDatasetConfig = MazeDatasetConfig(
         name=name,
         grid_n=grid_n,
         n_mazes=n_mazes,
         **cfg_kwargs,
     )
+    dataset: MazeDataset = get_dataset(config)
 
+    dataset.disk_save(str(data_path))
+
+
+def get_dataset(
+    config: MazeDatasetConfig
+):
     # create and solve mazes
     top_left = (0, 0)
     bottom_right = (config.grid_n - 1, config.grid_n - 1)
@@ -89,7 +96,7 @@ def create_dataset(
                 pool.imap(
                     partial(
                         generate_MazeTokenizer,
-                        grid_n=grid_n,
+                        grid_n=config.grid_n,
                         c_start=top_left,
                         c_end=bottom_right,
                     ),
@@ -101,13 +108,10 @@ def create_dataset(
             )
         )
 
-    # create and save dataset
-    dataset: MazeDataset = MazeDataset(
+    return MazeDataset(
         cfg=config,
         mazes_objs=mazes,
     )
-
-    dataset.disk_save(str(data_path))
 
 
 def load(path: str) -> None:
