@@ -123,7 +123,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
         batch_size=32,
         dataloader_cfg=dict(
             shuffle=True,
-            num_workers=16,
+            num_workers=8,
             persistent_workers=True,
             drop_last=True,
         ),
