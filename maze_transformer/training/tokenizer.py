@@ -1,9 +1,8 @@
-from dataclasses import dataclass, field
 from itertools import chain
 
 from maze_transformer.generation.latticemaze import (
     SPECIAL_TOKENS,
-    CoordArray,
+    Coord,
     CoordTup,
     LatticeMaze,
 )
@@ -11,56 +10,38 @@ from maze_transformer.generation.latticemaze import (
 # pylint: disable=unused-import
 
 
-@dataclass(frozen=True, kw_only=True)
-class MazeTokenizer:
-    """solved maze for serialization"""
-
-    maze: LatticeMaze
-    solution: CoordArray
-    metadata: dict = field(default_factory=dict)
-
-    pos_start = property(lambda self: self.solution[0])
-    pos_end = property(lambda self: self.solution[-1])
-
-    def as_tokens(
-        self,
-        node_token_map: dict[CoordTup, str],
-        solution: bool = True,
-    ) -> list[str]:
-        """serialize maze and solution to tokens"""
-        tokens: list[str] = [
-            # give adjacency list
-            SPECIAL_TOKENS["adjlist_start"],
-            *chain.from_iterable(
+def maze_to_tokens(
+    maze: LatticeMaze,
+    solution: list[Coord],
+    node_token_map: dict[CoordTup, str],
+) -> list[str]:
+    """serialize maze and solution to tokens"""
+    tokens: list[str] = [
+        # give adjacency list
+        SPECIAL_TOKENS["adjlist_start"],
+        *chain.from_iterable(
+            [
                 [
-                    [
-                        node_token_map[tuple(c_s.tolist())],
-                        SPECIAL_TOKENS["connector"],
-                        node_token_map[tuple(c_e.tolist())],
-                        SPECIAL_TOKENS["adjacency_endline"],
-                    ]
-                    for c_s, c_e in self.maze.as_adj_list()
+                    node_token_map[tuple(c_s.tolist())],
+                    SPECIAL_TOKENS["connector"],
+                    node_token_map[tuple(c_e.tolist())],
+                    SPECIAL_TOKENS["adjacency_endline"],
                 ]
-            ),
-            SPECIAL_TOKENS["adjlist_end"],
-            # give origin
-            SPECIAL_TOKENS["origin_start"],
-            node_token_map[tuple(self.pos_start)],
-            SPECIAL_TOKENS["origin_end"],
-            # give target
-            SPECIAL_TOKENS["target_start"],
-            node_token_map[tuple(self.pos_end)],
-            SPECIAL_TOKENS["target_end"],
-        ]
+                for c_s, c_e in maze.as_adj_list()
+            ]
+        ),
+        SPECIAL_TOKENS["adjlist_end"],
+        # give origin
+        SPECIAL_TOKENS["origin_start"],
+        node_token_map[tuple(solution[0])],
+        SPECIAL_TOKENS["origin_end"],
+        # give target
+        SPECIAL_TOKENS["target_start"],
+        node_token_map[tuple(solution[-1])],
+        SPECIAL_TOKENS["target_end"],
+        SPECIAL_TOKENS["path_start"],
+        *[node_token_map[tuple(c.tolist())] for c in solution],
+        SPECIAL_TOKENS["path_end"],
+    ]
 
-        if solution:
-            # give path
-            tokens.extend(
-                [
-                    SPECIAL_TOKENS["path_start"],
-                    *[node_token_map[tuple(c.tolist())] for c in self.solution],
-                    SPECIAL_TOKENS["path_end"],
-                ]
-            )
-
-        return tokens
+    return tokens

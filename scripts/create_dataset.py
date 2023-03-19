@@ -1,37 +1,12 @@
 import multiprocessing
 import os
-from functools import partial
 from pathlib import Path
 
-import numpy as np
 from muutils.misc import shorten_numerical_to_str  # type: ignore[import]
 from tqdm import tqdm
 
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.training.mazedataset import MazeDataset, MazeDatasetConfig
-from maze_transformer.training.tokenizer import MazeTokenizer
-
-
-def generate_MazeTokenizer(
-    junk,
-    grid_n: int,
-) -> MazeTokenizer:
-    """
-    Generates and solves a maze then wraps the maze and its solution in a MazeTokenizer for serialization
-
-    Parameters:
-        grid_n (int): defines both the height and the width of the maze
-        c_start (tuple[int, int]): starting coordinate of the maze
-        c_end (tuple[int, int]): ending coordinate of the maze
-    """
-    maze = LatticeMazeGenerators.gen_dfs(
-        grid_shape=(grid_n, grid_n),
-        lattice_dim=2,
-    )
-    return MazeTokenizer(
-        maze=maze,
-        solution=np.array(maze.generate_random_path()),
-    )
 
 
 def create_dataset(
@@ -71,17 +46,12 @@ def create_dataset(
     )
 
     # create and solve mazes
-    mazes: list[MazeTokenizer]
-
     with multiprocessing.Pool() as pool:
-        mazes = list(
+        solved_mazes = list(
             tqdm(
                 pool.imap(
-                    partial(
-                        generate_MazeTokenizer,
-                        grid_n=grid_n,
-                    ),
-                    range(config.n_mazes),
+                    LatticeMazeGenerators.gen_dfs_with_solution,
+                    ((grid_n, grid_n) for _ in range(config.n_mazes)),
                 ),
                 total=config.n_mazes,
                 unit="maze",
@@ -92,7 +62,7 @@ def create_dataset(
     # create and save dataset
     dataset: MazeDataset = MazeDataset(
         cfg=config,
-        mazes_objs=mazes,
+        mazes_objs=solved_mazes,
     )
 
     dataset.disk_save(str(data_path))
