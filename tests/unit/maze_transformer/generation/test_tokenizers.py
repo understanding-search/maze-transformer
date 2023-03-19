@@ -8,15 +8,15 @@ import torch
 from pytest import mark, param
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 
+from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import HuggingMazeTokenizer
-from scripts.create_dataset import generate_MazeTokenizer
+from maze_transformer.training.tokenizer import HuggingMazeTokenizer, maze_to_tokens
 
 
 def test_tokenization_encoding():
     # Check that wrapped tokenizer __call__ returns the same as original tokenizer
-    maze = generate_MazeTokenizer(None, 3)
+    maze, solution = LatticeMazeGenerators.gen_dfs_with_solution((3, 3))
 
     # Need to generate a config to extract the token map >.<
     # TODO: Part of https://github.com/AISC-understanding-search/maze-transformer/issues/77
@@ -24,7 +24,7 @@ def test_tokenization_encoding():
     node_token_map = cfg.node_token_map
 
     # Adjacency List Tokenization
-    maze_str_tokens = maze.as_tokens(node_token_map)
+    maze_str_tokens = maze_to_tokens(maze, solution, node_token_map=node_token_map)
 
     # Manual Tokenization
     vocab_map = {token: i for i, token in enumerate(cfg.token_arr)}
@@ -83,7 +83,7 @@ def test_inside_hooked_transformer():
     cfg = MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1)
 
     # Adjacency List Tokenization
-    maze_str_tokens = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ; 
+    maze_str_tokens = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
     (2,2) <--> (2,1) ; (2,0) <--> (2,1) ; (0,2) <--> (1,2) ; (0,0) <--> (1,0) ; (0,2) <--> (0,1) ;
     <ADJLIST_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
 
@@ -119,8 +119,8 @@ def test_inside_hooked_transformer():
     ), "Simple tokenization decoding inside HookedTransformer failed"
 
     # -- Test Batched Tokenization --
-    maze_str_tokens_2 = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; 
-    (0,1) <--> (0,0) ; (0,2) <--> (0,1) ; <ADJLIST_END> <TARGET_START> (1,0) <TARGET_END> 
+    maze_str_tokens_2 = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ;
+    (0,1) <--> (0,0) ; (0,2) <--> (0,1) ; <ADJLIST_END> <TARGET_START> (1,0) <TARGET_END>
     <PATH_START> (0,0) (1,0) <PATH_END>""".split()
 
     batched_tokens = [" ".join(maze_str_tokens), " ".join(maze_str_tokens_2)]
