@@ -152,7 +152,7 @@ def decode_maze_tokens_to_coords(
 ) -> list[str | tuple[int, int]]:
     """given a list of tokens, decode the coordinate-tokens to a list of coordinates, leaving other tokens as-is"""
     output: list[str | tuple[int, int]] = list()
-    for idx, tk in enumerate(tokens):
+    for i, tk in enumerate(tokens):
         if tk in mazedata_cfg.token_node_map:
             output.append(mazedata_cfg.token_node_map[tk])
         else:
@@ -161,7 +161,7 @@ def decode_maze_tokens_to_coords(
             elif when_noncoord == "include":
                 output.append(tk)
             elif when_noncoord == "except":
-                raise ValueError(f"token '{tk}' at {idx = } is not a coordinate")
+                raise ValueError(f"token '{tk}' at {i = } is not a coordinate")
             else:
                 raise ValueError(f"invalid value for {when_noncoord = }")
     return output
@@ -196,9 +196,9 @@ def predict_maze_path(
 
     # split the tokens into maze (prompt) and path
     path_start_token: str = SPECIAL_TOKENS["path_start"]
-    path_start_idx: int = tokens.index(path_start_token) + 1
-    maze_tokens: list[str] = tokens[:path_start_idx]
-    path_true_tokens: list[str] = tokens[path_start_idx:]
+    path_start_index: int = tokens.index(path_start_token) + 1
+    maze_tokens: list[str] = tokens[:path_start_index]
+    path_true_tokens: list[str] = tokens[path_start_index:]
 
     if include_start_coord:
         # add the first coordinate to `maze_tokens`
@@ -229,8 +229,8 @@ def predict_maze_path(
     predicted_and_context_tokens: list[str] = [
         data_cfg.token_arr[t] for t in predictions[0]
     ]
-    pac_path_start_idx: int = predicted_and_context_tokens.index(path_start_token) + 1
-    predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_idx:]
+    pac_path_start_index: int = predicted_and_context_tokens.index(path_start_token) + 1
+    predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_index:]
 
     if verbose:
         print(
