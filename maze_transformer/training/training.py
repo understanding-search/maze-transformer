@@ -133,11 +133,6 @@ def train(
 
     # train the model
     # ==================================================
-    if cfg.train_cfg.epochs > 1:
-        raise NotImplementedError(
-            "multiple epochs not implemented, get more data instead"
-        )
-
     model.train()
     logger.log("starting training")
     n_batches: int = len(dataloader)

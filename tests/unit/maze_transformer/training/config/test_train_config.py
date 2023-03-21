@@ -28,7 +28,6 @@ def test_load_custom_values():
 def _custom_train_config() -> TrainConfig:
     return TrainConfig(
         name="test",
-        epochs=10,
         optimizer=torch.optim.SGD,
         optimizer_kwargs=dict(lr=0.01, momentum=0.9),
         batch_size=64,
@@ -41,7 +40,6 @@ def _custom_train_config() -> TrainConfig:
 def _custom_serialized_config() -> Dict[Any, Any]:
     return {
         "name": "test",
-        "epochs": 10,
         "optimizer": "SGD",
         "optimizer_kwargs": {"lr": 0.01, "momentum": 0.9},
         "batch_size": 64,
