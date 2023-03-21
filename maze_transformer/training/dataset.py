@@ -24,7 +24,7 @@ class GPTDatasetConfig:
         raise NotImplementedError()
 
     @cached_property
-    def padding_token_idx(self) -> str:
+    def padding_token_index(self) -> str:
         raise NotImplementedError()
 
     @cached_property
@@ -36,17 +36,6 @@ class GPTDatasetConfig:
     @property
     def _dataset_class(cls) -> type:
         raise NotImplementedError("this should be implemented by subclasses!")
-
-    @cached_property
-    def gpt_config_kwargs(self) -> dict:
-        """gpt model config with vocab size, context size, and padding token"""
-        return dict(
-            d_vocab=len(self.token_arr),
-            n_positions=self.seq_len_max,
-            pad_token_id=self.padding_token_idx,  # The id of the _padding_ token.
-            bos_token_id=self.padding_token_idx,  # The id of the _beginning-of-stream_ token.
-            eos_token_id=self.padding_token_idx,  # The id of the _end-of-stream_ token.
-        )
 
     def tokenize_seq(self, seq: list[str]) -> ATensor:
         """tokenize sequence"""
@@ -66,41 +55,48 @@ class GPTDatasetConfig:
 
 @dataclass(kw_only=True)
 class IndexedArray:
-    """join a list of arrays into a single big one with indices
+    """Contains a tensor made by concatenating a list of tensors, and a second tensor indicating the starting indices
+    of the original tensors in the first one. Mainly for getting __getitem__ to work nicely with datasets
 
-    mainly for allowing __getitem__ to work nice for datasets"""
+    arr: tensor containing all the elements of the original arrays: [1, 2], [3, 4] -> [1, 2, 3, 4]
+    indices: tensor indicating the starting index in arr of each original array: [1, 2], [3, 4] -> [0, 2]
+    """
 
     arr: ATensor
-    idxs: ATensor
+    indices: ATensor
 
-    def get_len(self, idx: int) -> int:
-        return self.idxs[idx + 1] - self.idxs[idx]
+    def get_len(self, i: int) -> int:
+        if i + 1 < len(self.indices):
+            return self.indices[i + 1] - self.indices[i]
+
+        return self.arr.size(0) - self.indices[i]
 
     def get_all_lengths(self) -> ATensor:
         return torch.cat(
             [
-                self.idxs[1:] - self.idxs[:-1],
+                self.indices[1:] - self.indices[:-1],
                 torch.tensor(
-                    [self.arr.shape[0] - self.idxs[-1]],
-                    dtype=self.idxs.dtype,
-                    device=self.idxs.device,
+                    [self.arr.size(0) - self.indices[-1]],
+                    dtype=self.indices.dtype,
+                    device=self.indices.device,
                 ),
             ]
         )
 
     @classmethod
     def from_sequences(cls, data: list[ATensor[("tokens")]]) -> "IndexedArray":
-        """process many sequences into a single array, keeping track of sequence start indices
+        """Process many sequences into a single array, keeping track of sequence start indices
 
         example:
         f( [[a,b,c], [d,e]] ) -> IndexedArray(
                 arr = [a,b,c,d,e],
-                idxs = [0,3],
+                indices = [0,3]
         )
         """
+
         arr: ATensor = torch.cat(data)
-        idxs: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
-        return cls(arr=arr, idxs=idxs)
+        indices: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
+        return cls(arr=arr, indices=indices)
 
 
 class GPTDataset(Dataset):

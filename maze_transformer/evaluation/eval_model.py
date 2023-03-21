@@ -2,7 +2,6 @@ import json
 import typing
 from pathlib import Path
 
-import numpy as np
 import torch
 from muutils.tensor_utils import ATensor, NDArray
 from transformer_lens import HookedTransformer
@@ -10,8 +9,6 @@ from transformer_lens import HookedTransformer
 # bin these
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.evaluation.plot_maze import PathFormat, plot_multi_paths
-from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import (
     SPECIAL_TOKENS,
     CoordTup,
@@ -19,13 +16,13 @@ from maze_transformer.generation.latticemaze import (
 )
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
+from maze_transformer.training.tokenizer import SPECIAL_TOKENS
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access
 
 MazePath = list[CoordTup]
-ArrMazePath = NDArray["node xypos", int]
+ArrMazePath = NDArray["node x_y_pos", int]
 
 
 def find_config(folder: Path) -> Path | tuple[Path, Path] | None:
@@ -62,7 +59,7 @@ def load_model_with_configs(
     # Note: This should become less fragile in the future when we start keeping configs in the dataset file
 
     # get path to the folder containing the model
-    config_folder: Path = Path(model_path).parent
+    config_folder: Path = model_path.parent
     # check for the filenames, go up a dir if they don't exist
     assert model_path.suffix == ".pt", "Model path must be a .pt file"
     config_path = find_config(model_path)
@@ -155,7 +152,7 @@ def decode_maze_tokens_to_coords(
 ) -> list[str | tuple[int, int]]:
     """given a list of tokens, decode the coordinate-tokens to a list of coordinates, leaving other tokens as-is"""
     output: list[str | tuple[int, int]] = list()
-    for idx, tk in enumerate(tokens):
+    for i, tk in enumerate(tokens):
         if tk in mazedata_cfg.token_node_map:
             output.append(mazedata_cfg.token_node_map[tk])
         else:
@@ -164,7 +161,7 @@ def decode_maze_tokens_to_coords(
             elif when_noncoord == "include":
                 output.append(tk)
             elif when_noncoord == "except":
-                raise ValueError(f"token '{tk}' at {idx = } is not a coordinate")
+                raise ValueError(f"token '{tk}' at {i = } is not a coordinate")
             else:
                 raise ValueError(f"invalid value for {when_noncoord = }")
     return output
@@ -198,10 +195,10 @@ def predict_maze_path(
     """
 
     # split the tokens into maze (prompt) and path
-    path_start_token: str = SPECIAL_TOKENS["start_path"]
-    path_start_idx: int = tokens.index(path_start_token) + 1
-    maze_tokens: list[str] = tokens[:path_start_idx]
-    path_true_tokens: list[str] = tokens[path_start_idx:]
+    path_start_token: str = SPECIAL_TOKENS["path_start"]
+    path_start_index: int = tokens.index(path_start_token) + 1
+    maze_tokens: list[str] = tokens[:path_start_index]
+    path_true_tokens: list[str] = tokens[path_start_index:]
 
     if include_start_coord:
         # add the first coordinate to `maze_tokens`
@@ -213,7 +210,7 @@ def predict_maze_path(
         [data_cfg.tokenizer_map[t] for t in maze_tokens],
         dtype=torch.long,
     )
-    eos_token_id = data_cfg.tokenizer_map[SPECIAL_TOKENS["end_path"]]
+    eos_token_id = data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]]
 
     # have the model predict some tokens
     maze_arr_nopad = maze_arr_nopad.unsqueeze(0)
@@ -232,8 +229,8 @@ def predict_maze_path(
     predicted_and_context_tokens: list[str] = [
         data_cfg.token_arr[t] for t in predictions[0]
     ]
-    pac_path_start_idx: int = predicted_and_context_tokens.index(path_start_token) + 1
-    predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_idx:]
+    pac_path_start_index: int = predicted_and_context_tokens.index(path_start_token) + 1
+    predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_index:]
 
     if verbose:
         print(
@@ -263,76 +260,4 @@ def predict_maze_path(
         LatticeMaze.from_tokens(maze_tokens),
         path_true,
         path_predicted,
-    )
-
-
-def generate_plot_predicted_path(
-    model_path: Path,
-    n_tokens_pred: int = 5,
-):
-    model, cfg = load_model_with_configs(model_path)
-
-    # generate a maze
-    grid_n: int = cfg.dataset_cfg.grid_n
-    maze: LatticeMaze = LatticeMazeGenerators.gen_dfs((grid_n, grid_n))
-    c_start = (0, 0)
-    c_end = (grid_n - 1, grid_n - 1)
-
-    # solve the maze explicitly
-    path_true = np.array(
-        maze.find_shortest_path(
-            c_start=c_start,
-            c_end=c_end,
-        )
-    )
-
-    solved_maze: MazeTokenizer = MazeTokenizer(
-        maze=maze,
-        solution=np.array(
-            maze.find_shortest_path(
-                c_start=c_start,
-                c_end=c_end,
-            )
-        ),
-    )
-
-    # tokenize the maze
-    maze_only_tokens: list[str] = solved_maze.as_tokens(
-        cfg.dataset_cfg.node_token_map, solution=False
-    ) + [SPECIAL_TOKENS["start_path"]]
-
-    print("maze tokens:", maze_only_tokens)
-
-    array_nopad = torch.tensor(
-        [cfg.dataset_cfg.tokenizer_map[t] for t in maze_only_tokens],
-        dtype=torch.int32,
-        device="cpu",
-    )
-
-    array: ATensor = pad_sequence(array_nopad, cfg)
-
-    # have the model predict some tokens
-    predictions = predict_tokens(cfg, model, array.unsqueeze(0), n_tokens_pred)
-
-    print(predictions)
-
-    # decode the tokens
-    predicted_tokens = [cfg.dataset_cfg.token_arr[t] for t in predictions[0]]
-
-    print(predicted_tokens)
-
-    path_predicted: list[tuple[int, int]] = decode_maze_tokens_to_coords(
-        predicted_tokens[len(maze_only_tokens) :],
-        mazedata_cfg=cfg.dataset_cfg,
-        when_noncoord="skip",
-    )
-
-    # plot the maze and both solutions
-    # for label, fmt, color, path in paths
-    plot_multi_paths(
-        maze=maze,
-        paths=[
-            PathFormat(path_true, "true", "-", "red", {"width": 0.015}),
-            PathFormat(np.array(path_predicted), "predicted", ":", "blue", {}),
-        ],
     )

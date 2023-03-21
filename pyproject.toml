@@ -16,7 +16,7 @@ muutils = "^0.2.1"
 plotly = "^5.13.1"
 circuitsvis = "^1.39.1"
 jupyter = "^1.0.0"
-
+wandb = "^0.13.5" # note: TransformerLens forces us to use 0.13.5
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.1"
 pycln = "^2.1.3"
@@ -36,6 +36,7 @@ filterwarnings = [
     # Warning from matplotlib. Issue: https://github.com/matplotlib/matplotlib/issues/25244
     "ignore:Deprecated call to `pkg_resources.declare_namespace:DeprecationWarning"
 ]
+norecursedirs="tests/helpers"
 
 [[tool.mypy.overrides]]
 module = "fire"

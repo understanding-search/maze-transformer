@@ -43,6 +43,10 @@ class MazeTokenizer:
                 ]
             ),
             SPECIAL_TOKENS["adjlist_end"],
+            # give origin
+            SPECIAL_TOKENS["origin_start"],
+            node_token_map[tuple(self.pos_start)],
+            SPECIAL_TOKENS["origin_end"],
             # give target
             SPECIAL_TOKENS["target_start"],
             node_token_map[tuple(self.pos_end)],
@@ -53,9 +57,9 @@ class MazeTokenizer:
             # give path
             tokens.extend(
                 [
-                    SPECIAL_TOKENS["start_path"],
+                    SPECIAL_TOKENS["path_start"],
                     *[node_token_map[tuple(c.tolist())] for c in self.solution],
-                    SPECIAL_TOKENS["end_path"],
+                    SPECIAL_TOKENS["path_end"],
                 ]
             )
 

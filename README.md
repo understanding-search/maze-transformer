@@ -51,10 +51,18 @@ poetry run python scripts/test_generation.py
 ## `create_dataset`
 Create or load a dataset of mazes.
 
+
 ### Example
 create 10 4x4 mazes in the directory ./data/maze:
 ```
 poetry run python scripts/create_dataset.py create ./data/maze 10 --grid_n=4
+```
+
+## `upload_dataset`
+Optionally upload the dataset to [Weights & Biases](https://wandb.ai/aisc-search/understanding-search/artifacts/).
+```
+poetry run wandb login
+poetry run python ./scripts/upload_dataset.py g4-n10 ./data/maze/g4-n10
 ```
 
 ## `train_model`

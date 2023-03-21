@@ -15,21 +15,22 @@ from maze_transformer.training.tokenizer import MazeTokenizer
 def generate_MazeTokenizer(
     junk,
     grid_n: int,
-    c_start: tuple[int, int],
-    c_end: tuple[int, int],
 ) -> MazeTokenizer:
+    """
+    Generates and solves a maze then wraps the maze and its solution in a MazeTokenizer for serialization
+
+    Parameters:
+        grid_n (int): defines both the height and the width of the maze
+        c_start (tuple[int, int]): starting coordinate of the maze
+        c_end (tuple[int, int]): ending coordinate of the maze
+    """
     maze = LatticeMazeGenerators.gen_dfs(
         grid_shape=(grid_n, grid_n),
         lattice_dim=2,
     )
     return MazeTokenizer(
         maze=maze,
-        solution=np.array(
-            maze.find_shortest_path(
-                c_start=c_start,
-                c_end=c_end,
-            )
-        ),
+        solution=np.array(maze.generate_random_path()),
     )
 
 
@@ -41,7 +42,9 @@ def create_dataset(
     **cfg_kwargs,
 ):
     if n_mazes < 0:
-        raise ValueError("m_mazes must be >= 0")
+        raise ValueError("n_mazes must be >= 0")
+    if grid_n < 0:
+        raise ValueError("grid_n must be >= 0")
 
     name_base: str = (
         f"g{grid_n}-n{shorten_numerical_to_str(n_mazes, small_as_decimal = False)}"
@@ -68,9 +71,6 @@ def create_dataset(
     )
 
     # create and solve mazes
-    top_left = (0, 0)
-    bottom_right = (config.grid_n - 1, config.grid_n - 1)
-
     mazes: list[MazeTokenizer]
 
     with multiprocessing.Pool() as pool:
@@ -80,8 +80,6 @@ def create_dataset(
                     partial(
                         generate_MazeTokenizer,
                         grid_n=grid_n,
-                        c_start=top_left,
-                        c_end=bottom_right,
                     ),
                     range(config.n_mazes),
                 ),

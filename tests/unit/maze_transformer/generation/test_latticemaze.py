@@ -1,7 +1,10 @@
+import pytest
 from numpy.testing import assert_array_equal
 
+from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import LatticeMaze
 from maze_transformer.generation.utils import bool_array_from_string
+from tests.helpers import utils
 
 
 def test_as_img():
@@ -55,13 +58,23 @@ def test_as_adj_list():
 
     expected = [[[0, 1], [1, 1]], [[0, 0], [0, 1]], [[1, 0], [1, 1]]]
 
-    assert _to_nested_set(expected) == _to_nested_set(adjlist)
+    assert utils.adjlist_to_nested_set(expected) == utils.adjlist_to_nested_set(adjlist)
 
 
-# We don't care about order of coordinate pairs within
-# the adjlist or coordinates within each coordinate pair.
-def _to_nested_set(nested_list):
-    return {
-        frozenset([tuple(start_coord), tuple(end_coord)])
-        for start_coord, end_coord in nested_list
-    }
+def test_get_nodes():
+    maze = LatticeMazeGenerators.gen_dfs((3, 2))
+    assert maze.get_nodes() == [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]
+
+
+def test_generate_random_path():
+    maze = LatticeMazeGenerators.gen_dfs((2, 2))
+    path = maze.generate_random_path()
+
+    # len > 1 ensures that we have unique start and end nodes
+    assert len(path) > 1
+
+
+def test_generate_random_path_size_1():
+    maze = LatticeMazeGenerators.gen_dfs((1, 1))
+    with pytest.raises(AssertionError):
+        maze.generate_random_path()

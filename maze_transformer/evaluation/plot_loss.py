@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple
+from typing import Sequence, Tuple
 
 import matplotlib.pyplot as plt  # type: ignore[import]
 import numpy as np
@@ -9,9 +9,45 @@ from muutils.logger.log_util import (  # type: ignore[import]
 )
 
 
+def parse_argument_list(
+    arg: int | Sequence[int] | str,
+    delimiter: str | None = ",",
+    typecast: type = int,
+) -> list[int]:
+    if isinstance(arg, typecast):
+        return [arg]
+    elif isinstance(arg, (list, tuple)):
+        return list(arg)
+    elif isinstance(arg, str):
+        return [typecast(x.strip()) for x in arg.split(delimiter)]
+    else:
+        raise ValueError(f"cant parse into list: {typecast = } {arg = }")
+
+
+def rolling_average(x: Tuple[float], window: int):
+    if window > len(x):
+        raise ValueError(
+            f"Window for rolling average {window} is greater than the number of datapoints {len(x)}"
+        )
+
+    return list(np.convolve(x, np.ones(window) / window, mode="valid"))
+
+
+def get_tile_from_config_stream(stream: list[dict]) -> str:
+    return ";  ".join(
+        [
+            f"dataset={get_any_from_stream(stream, 'dataset_cfg')['name']}",
+            f"train_config={get_any_from_stream(stream, 'train_cfg')['name']}",
+            f"lr={get_any_from_stream(stream, 'train_cfg')['optimizer_kwargs']['lr']}",
+            # vocab size is not in the model config -- this is just printing anyway
+            # f"vocab_size={get_any_from_stream(data_config, 'model_cfg')['vocab_size']}",
+        ]
+    )
+
+
 def plot_loss(
     log_path: str,
-    window_sizes: int | Iterable[int] | str = (10, 50, 100),
+    window_sizes: int | Sequence[int] | str = (10, 50, 100),
     raw_loss: bool | str = False,
 ):
     """
@@ -47,22 +83,15 @@ def plot_loss(
 
     print(f"{len(data_raw) = }")
 
-    print(data_raw[:20])
-
     total_sequences, loss = zip(*data_raw)
 
     # compute a rolling average
-    if isinstance(window_sizes, int):
-        window_sizes = [window_sizes]
-    elif isinstance(window_sizes, (list, tuple)):
-        pass
-    elif isinstance(window_sizes, str):
-        window_sizes = [int(x) for x in window_sizes.split(",")]
-    else:
-        raise ValueError(f"{window_sizes = }")
+    window_sizes = parse_argument_list(window_sizes, typecast=int)
 
     loss_rolling_arr: list[np.ndarray] = [
-        rolling_average(loss, window) for window in window_sizes
+        rolling_average(loss, window)
+        for window in window_sizes
+        if window < len(loss)  # just skip windows that are too large
     ]
 
     if raw_loss:
@@ -79,23 +108,6 @@ def plot_loss(
     plt.ylabel("Loss")
     plt.xlabel("Total sequences")
     plt.yscale("log")
-    title: str = ";  ".join(
-        [
-            f"dataset={get_any_from_stream(data_config, 'data_cfg')['name']}",
-            f"train_config={get_any_from_stream(data_config, 'train_cfg')['name']}",
-            f"lr={get_any_from_stream(data_config, 'train_cfg')['optimizer_kwargs']['lr']}",
-            f"vocab_size={get_any_from_stream(data_config, 'base_model_cfg')['vocab_size']}",
-        ]
-    )
-    plt.title(title)
+    plt.title(get_tile_from_config_stream(data_config))
     plt.legend()
     plt.show()
-
-
-def rolling_average(x: Tuple[float], window: int):
-    if window > len(x):
-        raise ValueError(
-            f"Window for rolling average {window} is greater than the number of datapoints {len(x)}"
-        )
-
-    return list(np.convolve(x, np.ones(window) / window, mode="valid"))

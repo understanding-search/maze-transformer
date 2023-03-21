@@ -109,11 +109,11 @@ def plot_path(maze: LatticeMaze, path: NDArray, show: bool = True) -> None:
     # show the maze
     path_transformed = points_transform_to_img(path)
 
-    # plot path
-    plt.plot(*zip(*path_transformed), "-", color="red")
+    # dimension swap -  we are translating from array notation to cartesian coordinates
+    plt.plot(path_transformed[:, 1], path_transformed[:, 0], "-", color="red")
     # mark endpoints
-    plt.plot([path_transformed[0][0]], [path_transformed[0][1]], "o", color="red")
-    plt.plot([path_transformed[-1][0]], [path_transformed[-1][1]], "x", color="red")
+    plt.plot([path_transformed[0][1]], [path_transformed[0][0]], "o", color="red")
+    plt.plot([path_transformed[-1][1]], [path_transformed[-1][0]], "x", color="red")
     # show actual maze
     plot_maze(maze, show=False)
 
@@ -139,18 +139,19 @@ def plot_multi_paths(
     paths: list[PathFormat | tuple | list],
     show: bool = True,
 ) -> None:
- 
+
     # plot paths
     for pf in paths:
         if isinstance(pf, (tuple, list)):
             pf = PathFormat(*pf)
 
-        # p_transformed: NDArray = maze.points_transform_to_img(pf.path)
         p_transformed = points_transform_to_img(np.array(pf.path))
-
         if pf.quiver_kwargs is not None:
-            x: NDArray = p_transformed[:, 0]
-            y: NDArray = p_transformed[:, 1]
+            # Pyplot uses Cartesian coordinates (x horixontal and y vertical)
+            # But our mazes and paths use array notation (row, col)
+            # So we swap the dimensions here
+            x: NDArray = p_transformed[:, 1]
+            y: NDArray = p_transformed[:, 0]
             plt.quiver(
                 x[:-1],
                 y[:-1],
@@ -165,8 +166,8 @@ def plot_multi_paths(
         else:
             plt.plot(*zip(*p_transformed), pf.fmt, color=pf.color, label=pf.label)
         # mark endpoints
-        plt.plot([p_transformed[0][0]], [p_transformed[0][1]], "o", color=pf.color)
-        plt.plot([p_transformed[-1][0]], [p_transformed[-1][1]], "x", color=pf.color)
+        plt.plot([p_transformed[0][1]], [p_transformed[0][0]], "o", color=pf.color)
+        plt.plot([p_transformed[-1][1]], [p_transformed[-1][0]], "x", color=pf.color)
 
     # show actual maze
     plot_maze(maze, show=False)

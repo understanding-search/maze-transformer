@@ -1,3 +1,4 @@
+import random
 from dataclasses import dataclass
 
 import numpy as np
@@ -14,8 +15,10 @@ SPECIAL_TOKENS: dict[str, str] = dict(
     adjlist_end="<ADJLIST_END>",
     target_start="<TARGET_START>",
     target_end="<TARGET_END>",
-    start_path="<START_PATH>",
-    end_path="<END_PATH>",
+    origin_start="<ORIGIN_START>",
+    origin_end="<ORIGIN_END>",
+    path_start="<PATH_START>",
+    path_end="<PATH_END>",
     connector="<-->",
     adjacency_endline=";",
     padding="<PADDING>",
@@ -122,7 +125,7 @@ class LatticeMaze:
             flip_d1: NDArray["conn", np.float16] = np.random.rand(self.n_connections)
 
         # loop over all nonzero elements of the connection list
-        idx: int = 0
+        i: int = 0
         for d, x, y in np.ndindex(self.connection_list.shape):
             if self.connection_list[d, x, y]:
                 c_start: CoordTup = (x, y)
@@ -130,16 +133,16 @@ class LatticeMaze:
                     x + (1 if d == 0 else 0),
                     y + (1 if d == 1 else 0),
                 )
-                adjlist[idx, 0] = np.array(c_start)
-                adjlist[idx, 1] = np.array(c_end)
+                adjlist[i, 0] = np.array(c_start)
+                adjlist[i, 1] = np.array(c_end)
 
                 # flip if shuffling
-                if shuffle_d1 and (flip_d1[idx] > 0.5):
-                    c_s, c_e = adjlist[idx, 0].copy(), adjlist[idx, 1].copy()
-                    adjlist[idx, 0] = c_e
-                    adjlist[idx, 1] = c_s
+                if shuffle_d1 and (flip_d1[i] > 0.5):
+                    c_s, c_e = adjlist[i, 0].copy(), adjlist[i, 1].copy()
+                    adjlist[i, 0] = c_e
+                    adjlist[i, 1] = c_s
 
-                idx += 1
+                i += 1
 
         if shuffle_d0:
             np.random.shuffle(adjlist)
@@ -242,6 +245,24 @@ class LatticeMaze:
                 source[neighbor] = c_current
                 g_score[neighbor] = g_temp
                 f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, c_end)
+
+    def get_nodes(self) -> list[Coord]:
+        """return a list of all nodes in the maze"""
+
+        return [
+            (row, col)
+            for row in range(self.grid_shape[0])
+            for col in range(self.grid_shape[1])
+        ]
+
+    def generate_random_path(self) -> list[Coord]:
+        """ "return a path between randomly chosen start and end nodes"""
+
+        # we can't create a "path" in a single-node maze
+        assert self.grid_shape[0] > 1 and self.grid_shape[1] > 1
+
+        start, end = random.sample(self.get_nodes(), 2)
+        return self.find_shortest_path(start, end)
 
     @classmethod
     def from_adjlist(
