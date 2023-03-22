@@ -16,9 +16,14 @@ from muutils.tensor_utils import DTYPE_MAP, ATensor, NDArray
 from tqdm import tqdm
 
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
-from maze_transformer.generation.latticemaze import CoordArray, CoordTup, LatticeMaze
+from maze_transformer.generation.latticemaze import (
+    CoordArray,
+    CoordTup,
+    LatticeMaze,
+    SolvedMaze,
+)
 from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, IndexedArray
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
+from maze_transformer.training.tokenizer import SPECIAL_TOKENS, maze_to_tokens
 
 
 @dataclass(kw_only=True)
@@ -121,11 +126,11 @@ class MazeDatasetConfig(GPTDatasetConfig):
         return output
 
 
-def maze_to_tokens(
-    maze: MazeTokenizer, node_token_map: dict[CoordTup, str]
+def solved_maze_to_tokens(
+    solved_maze: SolvedMaze, node_token_map: dict[CoordTup, str]
 ) -> list[str]:
     """convert a maze into a list of tokens"""
-    return maze.as_tokens(node_token_map)
+    return maze_to_tokens(solved_maze.maze, solved_maze.solution, node_token_map)
 
 
 class MazeDataset(GPTDataset):
@@ -134,7 +139,7 @@ class MazeDataset(GPTDataset):
     def __init__(
         self,
         cfg: MazeDatasetConfig,
-        mazes_objs: list[MazeTokenizer] | None = None,
+        mazes_objs: list[SolvedMaze] | None = None,
         mazes_tokens: list[list[str]] | None = None,
         mazes_array: IndexedArray | None = None,
         paths: dict[str, str] = None,
@@ -153,7 +158,7 @@ class MazeDataset(GPTDataset):
             )
 
         # transfer
-        self.mazes_objs: list[MazeTokenizer] | None = mazes_objs
+        self.mazes_objs: list[SolvedMaze] | None = mazes_objs
         self.mazes_tokens: list[list[str]] | None = mazes_tokens
         self.mazes_array: IndexedArray | None = mazes_array
 
@@ -163,7 +168,9 @@ class MazeDataset(GPTDataset):
                 self.mazes_tokens = list(
                     tqdm(
                         pool.imap(
-                            partial(maze_to_tokens, node_token_map=cfg.node_token_map),
+                            partial(
+                                solved_maze_to_tokens, node_token_map=cfg.node_token_map
+                            ),
                             self.mazes_objs,
                         ),
                         total=len(self.mazes_objs),
@@ -259,7 +266,7 @@ class MazeDataset(GPTDataset):
 			# end_node +=
 		"""
 
-        mazes: list[MazeTokenizer] = list()
+        solved_mazes: list[SolvedMaze] = list()
         endpoint_nodes: NDArray[
             (("maze_idx", cfg.n_mazes), ("start_end", 2), ("coord", 2)), np.int8
         ] = np.random.randint(0, cfg.grid_shape, (cfg.n_mazes, 2, 2))
@@ -269,16 +276,11 @@ class MazeDataset(GPTDataset):
         for i, (c_start, c_end) in enumerate(endpoint_nodes):
             m: LatticeMaze = cfg.maze_ctor(cfg.grid_shape)
             path: CoordArray = np.array(m.find_shortest_path(c_start, c_end))
-            mazes.append(
-                MazeTokenizer(
-                    maze=m,
-                    solution=path,
-                )
-            )
+            solved_mazes.append(SolvedMaze(m, path))
 
         return cls(
             cfg=cfg,
-            mazes_objs=mazes,
+            mazes_objs=solved_mazes,
         )
 
     def serialize_config(self) -> JSONitem:
@@ -357,7 +359,7 @@ class MazeDataset(GPTDataset):
             with open(f"{path_base}/{cls.DISK_SAVE_FILES.cfg}", "r") as f:
                 cfg = MazeDatasetConfig.load(json.load(f))
 
-        mazes_objs: list[MazeTokenizer] | None = None
+        mazes_objs: list[SolvedMaze] | None = None
         if do_obj:
             raise NotImplementedError("do_obj not implemented")
 
