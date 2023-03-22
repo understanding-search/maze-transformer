@@ -87,6 +87,7 @@ def test_inside_hooked_transformer():
     (2,2) <--> (2,1) ; (2,0) <--> (2,1) ; (0,2) <--> (1,2) ; (0,0) <--> (1,0) ; (0,2) <--> (0,1) ;
     <ADJLIST_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
 
+    #! Can I initalise this from the config hodler directly by using the nano model cfg
     cfg_holder = ConfigHolder(
         train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None
     )

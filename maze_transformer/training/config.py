@@ -95,7 +95,7 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         act_fn="gelu",
         d_model=384,  # half of gpt2-small
         d_head=64,  # match gpt-2 small
-        n_layers=6,  # half of gpt2-small
+        n_layers=12,  # half of gpt2-small
     ),
     # this one is just for integration tests
     BaseGPTConfig(
@@ -164,8 +164,8 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             persistent_workers=True,
             drop_last=True,
         ),
-        print_loss_interval=5000,
-        checkpoint_interval=20000,
+        print_loss_interval=50,
+        checkpoint_interval=10000,
     ),
 ]
 
