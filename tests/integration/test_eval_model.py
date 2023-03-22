@@ -10,7 +10,11 @@ from pathlib import Path
 import pytest
 import torch
 
-from maze_transformer.evaluation.eval_model import load_model_with_configs
+from maze_transformer.evaluation.eval_model import (
+    load_model_with_configs,
+    predict_maze_paths,
+)
+from maze_transformer.training.mazedataset import MazeDataset
 from scripts.create_dataset import create_dataset
 from scripts.train_model import train_model
 
@@ -54,3 +58,36 @@ def test_model_loading(temp_dir):
         model(input_sequence.clone()).argsort()
         == model_basic(input_sequence.clone()).argsort()
     )
+
+
+@pytest.mark.usefixtures("temp_dir")
+def test_predict_maze_paths(temp_dir):
+    # First create a dataset and train a model
+    # TODO: cache this!
+    if not Path.exists(temp_dir / "g3-n5-test"):
+        create_dataset(path_base=str(temp_dir), n_mazes=5, grid_n=3, name="test")
+        train_model(
+            basepath=str(temp_dir / "g3-n5-test"),
+            training_cfg="integration-v1",
+            model_cfg="nano-v1",
+        )
+
+    # Now load the model and compare the outputs
+    # Get directory of the training run
+    base_path = Path(temp_dir / "g3-n5-test")
+    run_path = [x for x in base_path.glob("*") if x.is_dir()][0]
+
+    # Load model using our function (with layernorm folding etc.)
+    model, cfg = load_model_with_configs(run_path / "model.final.pt")
+
+    dataset = MazeDataset.disk_load(path_base=base_path, do_config=True, do_tokens=True)
+
+    n_tokens_pred = 8
+    paths = predict_maze_paths(
+        mazes=dataset.mazes_tokens,
+        data_cfg=cfg.dataset_cfg,
+        model=model,
+        n_tokens_pred=n_tokens_pred,
+    )
+
+    assert len(paths) == 5

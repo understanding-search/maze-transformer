@@ -1,6 +1,6 @@
 import json
-import typing
 from pathlib import Path
+from typing import cast
 
 import torch
 from muutils.tensor_utils import ATensor, NDArray
@@ -9,15 +9,16 @@ from transformer_lens import HookedTransformer
 # bin these
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.generation.latticemaze import (
-    SPECIAL_TOKENS,
-    CoordTup,
-    LatticeMaze,
-)
+from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
+from maze_transformer.generation.latticemaze import LatticeMaze
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS
 from maze_transformer.training.training import TRAIN_SAVE_FILES
+from maze_transformer.utils.token_utils import (
+    decode_maze_tokens_to_coords,
+    get_path_tokens,
+    get_tokens_up_to_path_start,
+)
 
 # pylint: disable=protected-access
 
@@ -145,26 +146,39 @@ def pad_sequence(
     )
 
 
-def decode_maze_tokens_to_coords(
-    tokens: list[str],
-    mazedata_cfg: MazeDatasetConfig,
-    when_noncoord: typing.Literal["except", "skip", "include"] = "skip",
-) -> list[str | tuple[int, int]]:
-    """given a list of tokens, decode the coordinate-tokens to a list of coordinates, leaving other tokens as-is"""
-    output: list[str | tuple[int, int]] = list()
-    for idx, tk in enumerate(tokens):
-        if tk in mazedata_cfg.token_node_map:
-            output.append(mazedata_cfg.token_node_map[tk])
-        else:
-            if when_noncoord == "skip":
-                continue
-            elif when_noncoord == "include":
-                output.append(tk)
-            elif when_noncoord == "except":
-                raise ValueError(f"token '{tk}' at {idx = } is not a coordinate")
-            else:
-                raise ValueError(f"invalid value for {when_noncoord = }")
-    return output
+def predict_maze_paths(
+    tokens_batch: list[list[str]],
+    data_cfg: MazeDatasetConfig,
+    model: HookedTransformer,
+    n_tokens_pred: int = 8,
+    verbose: bool = False,
+) -> list[list[tuple[int, int]]]:
+    indices_batch: list[ATensor] = []
+    for tokens in tokens_batch:
+        maze = get_tokens_up_to_path_start(tokens)
+        indices = torch.tensor(
+            [data_cfg.tokenizer_map[t] for t in maze], dtype=torch.long
+        )
+        indices_batch.append(indices)
+
+    prediction_batch = model.generate(
+        torch.stack(indices_batch),
+        eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
+        stop_at_eos=True,
+        max_new_tokens=n_tokens_pred,
+    )
+
+    paths: list[list[tuple[int, int]]] = []
+    for preds in prediction_batch:
+        pred_tokens: list[str] = [data_cfg.token_arr[t] for t in preds]
+        path_tokens = get_path_tokens(pred_tokens)
+        path_coords = decode_maze_tokens_to_coords(
+            path_tokens, mazedata_cfg=data_cfg, when_noncoord="skip"
+        )
+        # This is the correct type when using "skip"
+        paths.append(cast(list[tuple[int, int]], path_coords))
+
+    return paths
 
 
 def predict_maze_path(
@@ -250,14 +264,9 @@ def predict_maze_path(
         when_noncoord="skip",
     )
 
-    # remove start and end tokens from maze_tokens
-    maze_tokens = maze_tokens[
-        maze_tokens.index(SPECIAL_TOKENS["adjlist_start"])
-        + 1 : maze_tokens.index(SPECIAL_TOKENS["adjlist_end"])
-    ]
-
+    lattice_maze = LatticeMaze.from_tokens(maze_tokens)
     return (
-        LatticeMaze.from_tokens(maze_tokens),
+        lattice_maze,
         path_true,
         path_predicted,
     )
