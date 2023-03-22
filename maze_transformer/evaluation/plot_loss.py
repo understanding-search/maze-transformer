@@ -110,4 +110,4 @@ def plot_loss(
     plt.yscale("log")
     plt.title(get_tile_from_config_stream(data_config))
     plt.legend()
-    plt.show()
+    # plt.show()
