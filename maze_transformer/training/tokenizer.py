@@ -126,8 +126,6 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             "a b c d e f" not ["a", "b", "c", "d", "e", "f"]
         """
         try:
-            if isinstance(text, LatticeMaze):
-                text = text.as_tokens(node_token_map=self.vocab)
             return super().__call__(text, **kwargs)
         except NotImplementedError as e:
             raise NotImplementedError(

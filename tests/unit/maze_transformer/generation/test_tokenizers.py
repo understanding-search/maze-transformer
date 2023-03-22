@@ -27,8 +27,8 @@ def test_tokenization_encoding():
     maze_str_tokens = maze.as_tokens(node_token_map)
 
     # Manual Tokenization
-    vocab_map = {token: i for i, token in enumerate(cfg.token_arr)}
-    maze_tokens = [vocab_map[token] for token in maze_str_tokens]
+    token_to_idx = {token: i for i, token in enumerate(cfg.token_arr)}
+    maze_tokens = [token_to_idx[token] for token in maze_str_tokens]
 
     # WrappedTokenizer
     # Initialized with a configholder - tokenizer will eventually be a string
@@ -78,7 +78,7 @@ def test_to_ascii():
     ), "ASCII encoding from token ids failed"
 
 
-def test_inside_hooked_transformer():
+def test_tokenizer_inside_hooked_transformer():
     # Need to generate a config to extract the token map >.<
     cfg = MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1)
 
