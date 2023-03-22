@@ -109,7 +109,7 @@ def decode_maze_tokens_to_coords(
             elif when_noncoord == "include":
                 output.append(tk)
             elif when_noncoord == "except":
-                raise ValueError(f"token '{tk}' at {idx = } is not a coordinate")
+                raise ValueError(f"token '{tk}' at {i = } is not a coordinate")
             else:
                 raise ValueError(f"invalid value for {when_noncoord = }")
     return output
@@ -144,9 +144,9 @@ def predict_maze_path(
 
     # split the tokens into maze (prompt) and path
     path_start_token: str = SPECIAL_TOKENS["path_start"]
-    path_start_idx: int = tokens.index(path_start_token) + 1
-    maze_tokens: list[str] = tokens[:path_start_idx]
-    path_true_tokens: list[str] = tokens[path_start_idx:]
+    path_start_index: int = tokens.index(path_start_token) + 1
+    maze_tokens: list[str] = tokens[:path_start_index]
+    path_true_tokens: list[str] = tokens[path_start_index:]
 
     if include_start_coord:
         # add the first coordinate to `maze_tokens`
