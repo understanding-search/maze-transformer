@@ -101,6 +101,7 @@ def load_model_with_configs(
     # only the normalization - to not trigger warning from torch.load - disgusting so:
     # TODO Probably just get Neel to allow the "strict" flag to be disabled inside of model.load_and_process_state_dict
     model.process_weights_(fold_ln=True)
+    model.setup()
     model.eval()
 
     return model, config_holder
