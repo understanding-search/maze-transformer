@@ -1,6 +1,5 @@
 # Generic
 import os
-import typing
 from pathlib import Path
 
 # Numerical Computing
@@ -12,18 +11,14 @@ from muutils.statcounter import StatCounter
 
 from maze_transformer.evaluation.eval_model import (
     MazePath,
+    evaluate_model,
     load_model_with_configs,
-    predict_maze_path,
-    predict_maze_paths,
 )
-from maze_transformer.evaluation.pathdist import (
-    MazeEvalFuncs,
-    MazeEvalFunction,
-)
-from maze_transformer.generation.latticemaze import LatticeMaze, SolvedMaze
+from maze_transformer.evaluation.path_evals import MazeEvalFuncs, MazeEvalFunction
+from maze_transformer.generation.latticemaze import LatticeMaze
 
 # Our Code
-from maze_transformer.utils.utils import chunks, set_reproducibility
+from maze_transformer.utils.utils import set_reproducibility
 
 # Plotting
 
@@ -97,50 +92,12 @@ def evaluate_model_pathdist_scores(
     return pathdist_scores
 
 
-def evaluate_model_pathdist_scores2(
-    model_path: Path,
-    maze_tokens_path: Path,
-    pathdist_functions: dict[str, MazeEvalFunction] = PATHDIST_FUNCS,
-    n_tokens_pred: int = 8,
-    batch_size: int = 64,
-    verbose: bool = False,
-) -> dict[str, StatCounter]:
-    model, cfg = load_model_with_configs(model_path)
-
-    # TODO: This seems like a utility fn - where to put it?
-    tokenized_mazes: list[list[str]] = [
-        line.split() for line in maze_tokens_path.read_text().splitlines()
-    ]
-
-    solved_mazes = [
-        SolvedMaze.from_tokens(tokens, cfg.dataset_cfg) for tokens in tokenized_mazes
-    ]
-
-    mazes, solutions = zip(*solved_mazes)
-    predictions: list[list[tuple[int, int]]] = []
-    for batch in chunks(tokenized_mazes, batch_size):
-        predictions += predict_maze_paths(
-            tokens_batch=batch,
-            data_cfg=cfg.dataset_cfg,
-            model=model,
-            n_tokens_pred=n_tokens_pred,
-        )
-
-    pathdist_scores: dict[str, StatCounter] = dict()
-    for name, func in pathdist_functions.items():
-        pathdist_scores[name] = StatCounter(
-            func(maze, np.array(solution), np.array(prediction))
-            for maze, solution, prediction in zip(mazes, solutions, predictions)
-        )
-    return pathdist_scores
-
-
 from datetime import datetime
 
 one_start = datetime.now()
 one = evaluate_model_pathdist_scores(model_path, maze_path)
 one_end = datetime.now()
-two = evaluate_model_pathdist_scores2(model_path, maze_path)
+two = evaluate_model(model_path, maze_path)
 two_end = datetime.now()
 for key in one.keys():
     breakpoint()

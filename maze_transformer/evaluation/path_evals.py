@@ -1,14 +1,14 @@
-from typing import Callable, Iterable
+from typing import Callable, Iterable, TypeAlias
 
 import numpy as np
+from muutils.tensor_utils import NDArray
 
-from maze_transformer.evaluation.eval_model import MazePath
 from maze_transformer.generation.constants import Coord, CoordTup
 from maze_transformer.generation.latticemaze import LatticeMaze
 
 # pylint: disable=unused-argument
-
-MazeEvalFunction = Callable[[LatticeMaze, MazePath, MazePath], float]
+MazePath: TypeAlias = NDArray["node x_y_pos", int]
+PathEvalFunction = Callable[[LatticeMaze, MazePath, MazePath], float]
 
 
 def path_as_segments_iter(path: MazePath) -> Iterable[tuple]:
@@ -23,7 +23,7 @@ def path_as_segments_iter(path: MazePath) -> Iterable[tuple]:
         yield (n_s, n_e)
 
 
-class MazeEvalFuncs:
+class PathEvals:
     """array path based eval functions. first path is always the "ground truth" path"""
 
     @staticmethod
@@ -66,7 +66,7 @@ class MazeEvalFuncs:
     ) -> float:
         """fraction of the connections in prediction which actually connect nodes that are adjacent on the lattice, ignoring if they are adjacent on the maze"""
 
-        return MazeEvalFuncs.num_connections_adjacent_lattice(
+        return PathEvals.num_connections_adjacent_lattice(
             maze, solution, prediction
         ) / len(prediction)
 
@@ -92,6 +92,16 @@ class MazeEvalFuncs:
     ) -> float:
         """fraction of connections in prediction which are are valid paths on the maze"""
 
-        return MazeEvalFuncs.num_connections_adjacent(maze, solution, prediction) / len(
+        return PathEvals.num_connections_adjacent(maze, solution, prediction) / len(
             prediction
         )
+
+    @classmethod
+    def all_functions(cls) -> dict[str, PathEvalFunction]:
+        return {
+            **{
+                name: func
+                for name, func in cls.__dict__.items()
+                if not name.startswith("_")
+            }
+        }

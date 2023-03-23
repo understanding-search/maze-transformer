@@ -1,5 +1,6 @@
 import os
 import random
+from itertools import islice
 
 import numpy as np
 import torch
@@ -36,8 +37,9 @@ def set_reproducibility(seed=DEFAULT_SEED):
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
-def chunks(lst, n):
-    """Yield successive n-sized chunks from lst."""
-    # https://stackoverflow.com/a/312464
-    for i in range(0, len(lst), n):
-        yield lst[i : i + n]
+def chunks(it, chunk_size):
+    """Yield successive chunks from an iterator."""
+    # https://stackoverflow.com/a/61435714
+    iterator = iter(it)
+    while chunk := list(islice(iterator, chunk_size)):
+        yield chunk
