@@ -44,7 +44,6 @@ class TrainConfig:
 
     name: str
 
-    epochs: int = 1
     optimizer: Type[torch.optim.Optimizer] = torch.optim.RMSprop
     optimizer_kwargs: dict[str, Any] = field(default_factory=lambda: dict(lr=0.000001))
     batch_size: int = 128
@@ -137,21 +136,6 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
         ),
         print_loss_interval=1000,
         checkpoint_interval=5000,
-    ),
-    TrainConfig(
-        name="tiny-v1-long",
-        optimizer=torch.optim.RMSprop,
-        optimizer_kwargs=dict(lr=0.000001),
-        batch_size=64,
-        dataloader_cfg=dict(
-            shuffle=True,
-            num_workers=16,
-            persistent_workers=True,
-            drop_last=True,
-        ),
-        print_loss_interval=1000,
-        checkpoint_interval=5000,
-        epochs=20,
     ),
     TrainConfig(
         name="gpt2-small",
