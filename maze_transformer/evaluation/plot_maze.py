@@ -37,13 +37,7 @@ def as_img(maze: LatticeMaze) -> NDArray["x y", bool]:
     """
 
     # Set color of connections (using plt.imshow(cmap='grey))
-    show_connections = True
-
-    white_color = 100
-    if show_connections:
-        connection_color = white_color * 0.93
-    else:
-        connection_color = white_color
+    connection_color = white_color * 0.93
 
     # Set up the background (walls everywhere)
     img: NDArray["x y", int] = np.zeros(
