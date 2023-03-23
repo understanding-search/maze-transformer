@@ -83,10 +83,10 @@ def load_model_with_configs(
     # We're folding layernorm, but not using HookedTransformer.from_pretrained
     # This means when torch.load_state_dict is invoked by transformer_lens, it
     # will complain about the fact that we deleted layernorm from the state_dict
-    # NOTE temporary fix until https://github.com/neelnanda-io/TransformerLens/issues/219 is resolved 
+    # NOTE temporary fix until https://github.com/neelnanda-io/TransformerLens/issues/219 is resolved
 
     model.process_weights_(fold_ln=True)
-    model.setup() # Re-attach layernorm hooks by calling setup 
+    model.setup()  # Re-attach layernorm hooks by calling setup
     model.eval()
 
     return model, config_holder
