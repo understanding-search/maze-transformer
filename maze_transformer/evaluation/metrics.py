@@ -1,3 +1,6 @@
+"""
+This script contains metrics for evaluating the model.
+"""
 from typing import Callable, Iterable
 
 import numpy as np
