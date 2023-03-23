@@ -97,11 +97,10 @@ def load_model_with_configs(
     # We're folding layernorm, but not using HookedTransformer.from_pretrained
     # This means when torch.load_state_dict is invoked by transformer_lens, it
     # will complain about the fact that we deleted layernorm from the state_dict
-    # Neel has a function to address this which Inserts layernorms that implement
-    # only the normalization - to not trigger warning from torch.load - disgusting so:
-    # TODO Probably just get Neel to allow the "strict" flag to be disabled inside of model.load_and_process_state_dict
+    # NOTE temporary fix until https://github.com/neelnanda-io/TransformerLens/issues/219 is resolved 
+
     model.process_weights_(fold_ln=True)
-    model.setup()
+    model.setup() # Re-attach layernorm hooks by calling setup 
     model.eval()
 
     return model, config_holder
