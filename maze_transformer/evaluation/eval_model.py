@@ -22,8 +22,7 @@ from maze_transformer.utils.token_utils import (
 
 # pylint: disable=protected-access
 
-MazePath = list[CoordTup]
-ArrMazePath = NDArray["node x_y_pos", int]
+MazePath = NDArray["node x_y_pos", int]
 
 
 def find_config(folder: Path) -> Path | tuple[Path, Path] | None:

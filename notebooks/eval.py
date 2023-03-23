@@ -11,15 +11,12 @@ import torch
 from muutils.statcounter import StatCounter
 
 from maze_transformer.evaluation.eval_model import (
-    ArrMazePath,
     MazePath,
     load_model_with_configs,
     predict_maze_path,
     predict_maze_paths,
 )
 from maze_transformer.evaluation.pathdist import (
-    ArrMazeEvalFuncs,
-    ArrMazeEvalFunction,
     MazeEvalFuncs,
     MazeEvalFunction,
 )
@@ -48,30 +45,19 @@ model_path = list(sorted(run_path.glob("**/model.final.pt"), key=os.path.getmtim
 ].resolve()
 maze_path = run_path / "maze_tokens.jsonl"
 
-EvalFuncTuple = tuple[
-    typing.Literal["arr", "list"], MazeEvalFunction | ArrMazeEvalFunction
-]
-
-ALL_PATHDIST_FUNCS: dict[str, EvalFuncTuple] = {
+PATHDIST_FUNCS: dict[str, MazeEvalFunction] = {
     **{
-        name: ("arr", func)
-        for name, func in ArrMazeEvalFuncs.__dict__.items()
-        if not name.startswith("_")
-    },
-    **{
-        name: ("list", func)
+        name: func
         for name, func in MazeEvalFuncs.__dict__.items()
         if not name.startswith("_")
     },
 }
 
-print(ALL_PATHDIST_FUNCS)
-
 
 def evaluate_model_pathdist_scores(
     model_path: Path,
     maze_tokens_path: Path,
-    pathdist_functions: dict[str, EvalFuncTuple] | None = ALL_PATHDIST_FUNCS,
+    pathdist_functions: dict[str, MazeEvalFunction] | None = PATHDIST_FUNCS,
     n_tokens_pred: int = 8,
     n_mazes: int = 64,
     verbose: bool = False,
@@ -101,38 +87,20 @@ def evaluate_model_pathdist_scores(
             print(f"{p_true = }")
             print(f"{p_pred = }")
 
-    # convert paths
-    mazes_solved_arrpath: list[tuple[LatticeMaze, ArrMazePath, ArrMazePath]] = [
-        (maze, np.array(p_true), np.array(p_pred))
-        for maze, p_true, p_pred in mazes_solved
-    ]
-    return mazes_solved_arrpath
-
     # evaluate
-    # pathdist_scores: dict[str, StatCounter] = dict()
-    # for name, (pathdist_type, pathdist_func) in pathdist_functions.items():
-    #     # TODO: notebook should not worry about lists vs np arrays - either standardize all eval functions on one, or have them all accept both and convert as needed
-    #     # alternative start using np arrays everywhere
-    #     if pathdist_type == "list":
-    #         pathdist_scores[name] = StatCounter(
-    #             pathdist_func(maze, p_true, p_pred)
-    #             for maze, p_true, p_pred in mazes_solved
-    #         )
-    #     elif pathdist_type == "arr":
-    #         pathdist_scores[name] = StatCounter(
-    #             pathdist_func(maze, p_true, p_pred)
-    #             for maze, p_true, p_pred in mazes_solved_arrpath
-    #         )
-    #     else:
-    #         raise ValueError(f"Invalid pathdist_type: {pathdist_type}")
-
-    # return pathdist_scores
+    pathdist_scores: dict[str, StatCounter] = dict()
+    for name, func in pathdist_functions.items():
+        pathdist_scores[name] = StatCounter(
+            func(maze, np.array(p_true), np.array(p_pred))
+            for maze, p_true, p_pred in mazes_solved
+        )
+    return pathdist_scores
 
 
 def evaluate_model_pathdist_scores2(
     model_path: Path,
     maze_tokens_path: Path,
-    pathdist_functions: dict[str, EvalFuncTuple] | None = ALL_PATHDIST_FUNCS,
+    pathdist_functions: dict[str, MazeEvalFunction] = PATHDIST_FUNCS,
     n_tokens_pred: int = 8,
     batch_size: int = 64,
     verbose: bool = False,
@@ -147,17 +115,24 @@ def evaluate_model_pathdist_scores2(
     solved_mazes = [
         SolvedMaze.from_tokens(tokens, cfg.dataset_cfg) for tokens in tokenized_mazes
     ]
-    predicted_paths: list[list[tuple[int, int]]] = []
+
+    mazes, solutions = zip(*solved_mazes)
+    predictions: list[list[tuple[int, int]]] = []
     for batch in chunks(tokenized_mazes, batch_size):
-        predicted_paths += predict_maze_paths(
+        predictions += predict_maze_paths(
             tokens_batch=batch,
             data_cfg=cfg.dataset_cfg,
             model=model,
             n_tokens_pred=n_tokens_pred,
         )
 
-    return predicted_paths
-    # return pathdist_scores
+    pathdist_scores: dict[str, StatCounter] = dict()
+    for name, func in pathdist_functions.items():
+        pathdist_scores[name] = StatCounter(
+            func(maze, np.array(solution), np.array(prediction))
+            for maze, solution, prediction in zip(mazes, solutions, predictions)
+        )
+    return pathdist_scores
 
 
 from datetime import datetime
@@ -167,5 +142,7 @@ one = evaluate_model_pathdist_scores(model_path, maze_path)
 one_end = datetime.now()
 two = evaluate_model_pathdist_scores2(model_path, maze_path)
 two_end = datetime.now()
+for key in one.keys():
+    breakpoint()
 print("one - ", one_end - one_start)
 print("two - ", two_end - one_end)
