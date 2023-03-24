@@ -5,6 +5,7 @@ from maze_transformer.generation.latticemaze import LatticeMaze
 from maze_transformer.generation.utils import bool_array_from_string
 from tests.helpers import utils
 
+
 def test_as_adj_list():
     connection_list = bool_array_from_string(
         """
@@ -19,7 +20,7 @@ def test_as_adj_list():
 
     maze = LatticeMaze(connection_list=connection_list)
 
-    adjlist = maze.as_adjlist(shuffle_d0=False, shuffle_d1=False)
+    adjlist = maze.as_adj_list(shuffle_d0=False, shuffle_d1=False)
 
     expected = [[[0, 1], [1, 1]], [[0, 0], [0, 1]], [[1, 0], [1, 1]]]
 
