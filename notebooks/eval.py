@@ -1,38 +1,23 @@
-# Generic
 import os
 from pathlib import Path
 
-# Numerical Computing
 import numpy as np
 import torch
 
-# Utilities
 from muutils.statcounter import StatCounter
 
 from maze_transformer.evaluation.eval_model import (
-    MazePath,
     evaluate_model,
     load_model_with_configs,
 )
-from maze_transformer.evaluation.path_evals import MazeEvalFuncs, MazeEvalFunction
+from maze_transformer.evaluation.path_evals import PathEvals, PathEvalFunction, MazePath
 from maze_transformer.generation.latticemaze import LatticeMaze
 
-# Our Code
 from maze_transformer.utils.utils import set_reproducibility
 
-# Plotting
-
-
-# Setup
-# device = configure_notebook(seed=42, dark_mode=True)
-# We won't be training any models
 torch.set_grad_enabled(False)
 set_reproducibility()
 
-# Get latest model
-# this should point towards a directory containing a run.
-# If you don't have any runs, you can create a dataset with `poetry run python scripts/create_dataset.py create ./data/maze 10 --grid_n=4`
-# Then train a model with poetry run python scripts/train_model.py ./data/maze/g4-n10`
 run_path = Path("./data/maze/g4-n100")
 assert run_path.exists(), f"Run path {run_path.as_posix()} does not exist"
 model_path = list(sorted(run_path.glob("**/model.final.pt"), key=os.path.getmtime))[
@@ -40,66 +25,66 @@ model_path = list(sorted(run_path.glob("**/model.final.pt"), key=os.path.getmtim
 ].resolve()
 maze_path = run_path / "maze_tokens.jsonl"
 
-PATHDIST_FUNCS: dict[str, MazeEvalFunction] = {
-    **{
-        name: func
-        for name, func in MazeEvalFuncs.__dict__.items()
-        if not name.startswith("_")
-    },
-}
 
-
-def evaluate_model_pathdist_scores(
-    model_path: Path,
+def evaluate_pathdist_scores_checkpoints(
+    run_path: Path,  # Path to run, not model.final.pt or checkpoints
     maze_tokens_path: Path,
-    pathdist_functions: dict[str, MazeEvalFunction] | None = PATHDIST_FUNCS,
-    n_tokens_pred: int = 8,
-    n_mazes: int = 64,
-    verbose: bool = False,
-) -> dict[str, StatCounter]:
-    # load model and configs
-    model, cfg = load_model_with_configs(model_path)
+    checkpoint_idxs: list[int] | None = None,
+    # pathdist_functions: dict[str, EvalFuncTuple]|None = ALL_PATHDIST_FUNCS,
+    # skip_every_nth: int = 1,
+    # n_tokens_pred: int = 8,
+    # n_mazes: int = 10,
+    # verbose: bool = False,
+) -> dict[str, dict[int, StatCounter]]:
 
-    # load maze test data
-    mazes_tokens: list[list[str]] = [
-        line.split() for line in maze_tokens_path.read_text().splitlines()
-    ]
+    model_checkpoints: list[tuple[int, Path]]
+    assert (
+        run_path.is_dir()
+    ), f"Model path {run_path} is not a directory (expect run directory, not model files)"
 
-    # predict paths
-    mazes_solved: list[tuple[LatticeMaze, MazePath, MazePath]] = list()
-    for tokens in mazes_tokens:
-        maze, p_true, p_pred = predict_maze_path(
-            tokens=tokens,
-            data_cfg=cfg.dataset_cfg,
-            model=model,
-            n_tokens_pred=n_tokens_pred,
-            verbose=verbose,
+    # this is utility - loading checkpoints from a run dir
+    if checkpoint_idxs is not None:
+        model_checkpoints = list()
+        for idx in checkpoint_idxs:
+            mdl_path: Path = Path(run_path) / f"checkpoints/model.iter_{idx}.pt"
+            if not mdl_path.exists():
+                raise ValueError(f"Checkpoint file {mdl_path} does not exist")
+            model_checkpoints.append((idx, mdl_path))
+    else:
+        model_checkpoints = [
+            (int(mdl_path.stem.split("_")[-1].split(".")[0]), mdl_path)
+            for mdl_path in sorted(Path(run_path).glob("checkpoints/model.iter_*.pt"))
+        ]
+
+    print(f"Found {len(model_checkpoints)} checkpoints:\n\t{model_checkpoints = }")
+
+    pathdist_scores_idx: dict[int, dict[str, StatCounter]] = dict()
+
+    # skip not needed... utility returns list of checkpoints, just slice that in notebook
+    for idx, mdl_path in model_checkpoints:
+
+        print(f"# Evaluating checkpoint {idx} at {mdl_path}")
+        pathdist_scores_idx[idx] = evaluate_model(
+            model_path=mdl_path,
+            # pathdist_functions = pathdist_functions,
+            # n_tokens_pred = n_tokens_pred,
+            maze_tokens_path=maze_tokens_path,
+            # n_mazes = n_mazes,
+            # verbose = verbose,
         )
 
-        mazes_solved.append((maze, p_true, p_pred))
-
-        if verbose:
-            print(f"{p_true = }")
-            print(f"{p_pred = }")
-
-    # evaluate
-    pathdist_scores: dict[str, StatCounter] = dict()
-    for name, func in pathdist_functions.items():
-        pathdist_scores[name] = StatCounter(
-            func(maze, np.array(p_true), np.array(p_pred))
-            for maze, p_true, p_pred in mazes_solved
-        )
-    return pathdist_scores
+    return {
+        name: {idx: scores[name] for idx, scores in pathdist_scores_idx.items()}
+        for name in pathdist_scores_idx[0]
+    }
 
 
-from datetime import datetime
+data = evaluate_pathdist_scores_checkpoints(
+    run_path=model_path.parent,
+    maze_tokens_path=maze_path,
+    # n_mazes = 4,
+    # skip_every_nth=10,
+    # verbose = True,
+)
 
-one_start = datetime.now()
-one = evaluate_model_pathdist_scores(model_path, maze_path)
-one_end = datetime.now()
-two = evaluate_model(model_path, maze_path)
-two_end = datetime.now()
-for key in one.keys():
-    breakpoint()
-print("one - ", one_end - one_start)
-print("two - ", two_end - one_end)
+breakpoint()

@@ -13,8 +13,10 @@ import torch
 from maze_transformer.evaluation.eval_model import (
     load_model_with_configs,
     predict_maze_paths,
+    evaluate_model,
 )
 from maze_transformer.training.mazedataset import MazeDataset
+from maze_transformer.evaluation.path_evals import PathEvals
 from scripts.create_dataset import create_dataset
 from scripts.train_model import train_model
 
@@ -62,10 +64,11 @@ def test_model_loading(temp_dir):
 
 @pytest.mark.usefixtures("temp_dir")
 def test_predict_maze_paths(temp_dir):
+    # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
     # First create a dataset and train a model
-    # TODO: cache this!
+    grid_n = 3
     if not Path.exists(temp_dir / "g3-n5-test"):
-        create_dataset(path_base=str(temp_dir), n_mazes=5, grid_n=3, name="test")
+        create_dataset(path_base=str(temp_dir), n_mazes=5, grid_n=grid_n, name="test")
         train_model(
             basepath=str(temp_dir / "g3-n5-test"),
             training_cfg="integration-v1",
@@ -82,12 +85,52 @@ def test_predict_maze_paths(temp_dir):
 
     dataset = MazeDataset.disk_load(path_base=base_path, do_config=True, do_tokens=True)
 
-    n_tokens_pred = 8
+    max_new_tokens = 2
     paths = predict_maze_paths(
-        mazes=dataset.mazes_tokens,
+        tokens_batch=dataset.mazes_tokens,
         data_cfg=cfg.dataset_cfg,
         model=model,
-        n_tokens_pred=n_tokens_pred,
+        max_new_tokens=max_new_tokens,
     )
 
+    all_coordinates = [coord for path in paths for coords in path for coord in coords]
     assert len(paths) == 5
+    assert max([len(path) for path in paths]) <= max_new_tokens + 1
+    assert max(all_coordinates) == grid_n - 1
+
+
+@pytest.mark.usefixtures("temp_dir")
+def test_evaluate_model(temp_dir):
+    # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
+    # First create a dataset and train a model
+    n_mazes = 5
+    if not Path.exists(temp_dir / "g3-n5-test"):
+        create_dataset(path_base=str(temp_dir), n_mazes=n_mazes, grid_n=3, name="test")
+        train_model(
+            basepath=str(temp_dir / "g3-n5-test"),
+            training_cfg="integration-v1",
+            model_cfg="nano-v1",
+        )
+
+    # Now load the model and compare the outputs
+    # Get directory of the training run
+    base_path = Path(temp_dir / "g3-n5-test")
+    run_path = [x for x in base_path.glob("*") if x.is_dir()][0]
+
+    # Load model using our function (with layernorm folding etc.)
+    model, cfg = load_model_with_configs(run_path / "model.final.pt")
+
+    dataset = MazeDataset.disk_load(path_base=base_path, do_config=True, do_tokens=True)
+
+    # maybe mock this out, and use a stub model to avoid need for training, and manually create a small dataset
+    # mock_predictions = [[(0, 0), (0, 1), (0, 2)], [(0, 1), (2, 1)]]
+    # mocker.patch(
+    #     "maze_transformer.evaluation.eval_model.predict_maze_paths",
+    #     return_value=mock_predictions,
+    # )
+    path_evals = PathEvals.all_functions()
+    eval_names = [name for name in path_evals.keys()]
+    scores = evaluate_model(dataset=dataset, model=model)
+
+    assert path_evals.keys() == scores.keys()
+    assert scores[eval_names[0]].summary()["total_items"] == n_mazes

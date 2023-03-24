@@ -98,10 +98,12 @@ class PathEvals:
 
     @classmethod
     def all_functions(cls) -> dict[str, PathEvalFunction]:
+        excluded = ["all_functions"]
+
         return {
             **{
                 name: func
                 for name, func in cls.__dict__.items()
-                if not name.startswith("_")
+                if not name.startswith("_") and name not in excluded
             }
         }

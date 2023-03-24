@@ -20,7 +20,7 @@ from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.latticemaze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder
-from maze_transformer.training.mazedataset import MazeDatasetConfig
+from maze_transformer.training.mazedataset import MazeDatasetConfig, MazeDataset
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 from maze_transformer.utils.token_utils import (
     decode_maze_tokens_to_coords,
@@ -119,7 +119,8 @@ def predict_maze_paths(
     tokens_batch: list[list[str]],
     data_cfg: MazeDatasetConfig,
     model: HookedTransformer,
-    n_tokens_pred: int = 8,
+    # Note: The start coord is included in the model input, so max_new_tokens is how many tokens can be predicted AFTER the start. This function returns the full paths, including start coord, so in general the max returned path length is max_new_tokens + 1
+    max_new_tokens: int = 8,
     verbose: bool = False,
 ) -> list[list[tuple[int, int]]]:
     indices_batch: list[ATensor] = []
@@ -134,7 +135,7 @@ def predict_maze_paths(
         torch.stack(indices_batch),
         eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
         stop_at_eos=True,
-        max_new_tokens=n_tokens_pred,
+        max_new_tokens=max_new_tokens,
         verbose=verbose,
     )
 
@@ -151,43 +152,84 @@ def predict_maze_paths(
     return paths
 
 
+# def evaluate_model(
+#     # TODO: take a model, not a path
+#     model_path: Path,
+#     # TODO: Make this able to take a dataset instead of a maze_tokens_path - also should be an easy way to get a subset of a dataset
+#     maze_tokens_path: Path,
+#     eval_functions: dict[str, PathEvalFunction] | None = None,
+#     max_new_tokens: int = 8,
+#     batch_size: int = 64,
+#     verbose: bool = False,
+# ) -> dict[str, StatCounter]:
+#     if not eval_functions:
+#         eval_functions = PathEvals.all_functions()
+
+#     model, cfg = load_model_with_configs(model_path)
+#     score_counters: dict[str, StatCounter] = {
+#         name: StatCounter() for name in eval_functions.keys()
+#     }
+
+#     with maze_tokens_path.open() as token_file:
+#         for batch in chunks(token_file, batch_size):
+#             tokenized_mazes = [line.split() for line in batch]
+
+#             solved_mazes = [
+#                 SolvedMaze.from_tokens(tokens, cfg.dataset_cfg)
+#                 for tokens in tokenized_mazes
+#             ]
+#             mazes, solutions = zip(*solved_mazes)
+
+#             predictions = predict_maze_paths(
+#                 tokens_batch=tokenized_mazes,
+#                 data_cfg=cfg.dataset_cfg,
+#                 model=model,
+#                 max_new_tokens=max_new_tokens,
+#             )
+
+#             for name, func in eval_functions.items():
+#                 score_counters[name].update(
+#                     func(maze, np.array(solution), np.array(prediction))
+#                     for maze, solution, prediction in zip(mazes, solutions, predictions)
+#                 )
+
+#     return score_counters
+
+
 def evaluate_model(
-    model_path: Path,
-    maze_tokens_path: Path,
+    # TODO: take a model, not a path
+    model: HookedTransformer,
+    # TODO: Make this able to take a dataset instead of a maze_tokens_path - also should be an easy way to get a subset of a dataset
+    dataset: MazeDataset,
     eval_functions: dict[str, PathEvalFunction] | None = None,
-    n_tokens_pred: int = 8,
+    max_new_tokens: int = 8,
     batch_size: int = 64,
     verbose: bool = False,
 ) -> dict[str, StatCounter]:
+    """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function."""
     if not eval_functions:
         eval_functions = PathEvals.all_functions()
 
-    model, cfg = load_model_with_configs(model_path)
     score_counters: dict[str, StatCounter] = {
         name: StatCounter() for name in eval_functions.keys()
     }
+    for batch in chunks(dataset.mazes_tokens, batch_size):
+        # This won't be needed after #124, then we can call mazes_objs instead
+        # https://github.com/orgs/AISC-understanding-search/projects/1/views/1?pane=issue&itemId=23879308
+        solved_mazes = [SolvedMaze.from_tokens(tokens, dataset.cfg) for tokens in batch]
+        mazes, solutions = zip(*solved_mazes)
 
-    with maze_tokens_path.open() as token_file:
-        for batch in chunks(token_file, batch_size):
-            tokenized_mazes = [line.split() for line in batch]
+        predictions = predict_maze_paths(
+            tokens_batch=batch,
+            data_cfg=dataset.cfg,
+            model=model,
+            max_new_tokens=max_new_tokens,
+        )
 
-            solved_mazes = [
-                SolvedMaze.from_tokens(tokens, cfg.dataset_cfg)
-                for tokens in tokenized_mazes
-            ]
-            mazes, solutions = zip(*solved_mazes)
-
-            predictions = predict_maze_paths(
-                tokens_batch=tokenized_mazes,
-                data_cfg=cfg.dataset_cfg,
-                model=model,
-                n_tokens_pred=n_tokens_pred,
+        for name, func in eval_functions.items():
+            score_counters[name].update(
+                func(maze, np.array(solution), np.array(prediction))
+                for maze, solution, prediction in zip(mazes, solutions, predictions)
             )
-
-            for name, func in eval_functions.items():
-                score_counters[name].update(
-                    func(maze, np.array(solution), np.array(prediction))
-                    for maze, solution, prediction in zip(mazes, solutions, predictions)
-                )
 
     return score_counters
