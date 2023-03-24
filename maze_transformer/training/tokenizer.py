@@ -15,6 +15,7 @@ from maze_transformer.generation.latticemaze import (
     CoordTup,
     LatticeMaze,
 )
+from maze_transformer.evaluation.plot_maze import MazePlot
 
 if TYPE_CHECKING:
     from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig
@@ -162,4 +163,4 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         ]
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence)
-        return lattice_maze.as_ascii(start=start, end=end)
+        return MazePlot(lattice_maze).as_ascii(start=start, end=end)

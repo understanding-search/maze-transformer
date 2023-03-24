@@ -44,8 +44,6 @@ class MazePlot:
 
     def __init__(self, maze: LatticeMaze) -> None:
         self.maze: LatticeMaze = maze
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(1, 1, 1)
         self.true_path: PathFormat = None
         self.predicted_paths: list = []
 
@@ -103,7 +101,9 @@ class MazePlot:
         )
         return self
 
-    def _latticemaze_to_img(self) -> NDArray["row col", bool]:
+    def _latticemaze_to_img(
+        self, unit_length: int = UNIT_LENGTH
+    ) -> NDArray["row col", bool]:
         """
         Build an image to visualise the maze.
         Each "unit" consists of a node and the right and lower adjacent wall/connection. Its area is ul * ul.
@@ -128,8 +128,8 @@ class MazePlot:
         # Set up the background (walls everywhere)
         img: NDArray["row col", int] = np.zeros(
             (
-                self.maze.grid_shape[0] * self.UNIT_LENGTH + 1,
-                self.maze.grid_shape[1] * self.UNIT_LENGTH + 1,
+                self.maze.grid_shape[0] * unit_length + 1,
+                self.maze.grid_shape[1] * unit_length + 1,
             ),
             dtype=float,
         )
@@ -139,22 +139,22 @@ class MazePlot:
             for col in range(self.maze.grid_shape[1]):
                 # Draw node
                 img[
-                    row * self.UNIT_LENGTH + 1 : (row + 1) * self.UNIT_LENGTH,
-                    col * self.UNIT_LENGTH + 1 : (col + 1) * self.UNIT_LENGTH,
+                    row * unit_length + 1 : (row + 1) * unit_length,
+                    col * unit_length + 1 : (col + 1) * unit_length,
                 ] = node_color
 
                 # Down connection
                 if self.maze.connection_list[0, row, col]:
                     img[
-                        (row + 1) * self.UNIT_LENGTH,
-                        col * self.UNIT_LENGTH + 1 : (col + 1) * self.UNIT_LENGTH,
+                        (row + 1) * unit_length,
+                        col * unit_length + 1 : (col + 1) * unit_length,
                     ] = connection_color
 
                 # Right connection
                 if self.maze.connection_list[1, row, col]:
                     img[
-                        row * self.UNIT_LENGTH + 1 : (row + 1) * self.UNIT_LENGTH,
-                        (col + 1) * self.UNIT_LENGTH,
+                        row * unit_length + 1 : (row + 1) * unit_length,
+                        (col + 1) * unit_length,
                     ] = connection_color
 
         return img
@@ -164,8 +164,34 @@ class MazePlot:
         points = np.array([(x, y) for (y, x) in points])
         return self.UNIT_LENGTH * (points + 0.5)
 
-    # Image rendering functions (plt involved)
+    def as_ascii(self, start=None, end=None):
+        """
+        Returns an ASCII visualization of the maze.
+        Courtesy of ChatGPT
+        """
+        wall_char = "#"
+        path_char = " "
 
+        # Determine the size of the maze
+        maze = self._latticemaze_to_img(unit_length=2)
+        n_rows, n_cols = maze.shape
+        maze_str = ""
+
+        # Iterate through each element of the maze and print the appropriate symbol
+        for i in range(n_rows):
+            for j in range(n_cols):
+                if start is not None and start[0] == i - 1 and start[1] == j - 1:
+                    maze_str += "S"
+                elif end is not None and end[0] == i - 1 and end[1] == j - 1:
+                    maze_str += "E"
+                elif maze[i, j]:
+                    maze_str += path_char
+                else:
+                    maze_str += wall_char
+            maze_str += "\n"  # Start a new line after each row
+        return maze_str
+
+    # Image rendering functions (plt involved)
     def _plot_maze(self) -> None:
         img = self._latticemaze_to_img()
         self.ax.imshow(img, cmap="gray", vmin=0, vmax=1)
@@ -202,6 +228,8 @@ class MazePlot:
 
     def show(self) -> None:
         """Plot the maze and paths."""
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(1, 1, 1)
 
         self._plot_maze()
 
@@ -214,7 +242,7 @@ class MazePlot:
         tick_arr = np.arange(self.maze.grid_shape[0])
         self.ax.set_xticks(self.UNIT_LENGTH * (tick_arr + 0.5), tick_arr)
         self.ax.set_yticks(self.UNIT_LENGTH * (tick_arr + 0.5), tick_arr)
-        # self.ax.set_xlabel("y")
-        # self.ax.set_ylabel("x")
+        self.ax.set_xlabel("col")
+        self.ax.set_ylabel("row")
 
         plt.show()
