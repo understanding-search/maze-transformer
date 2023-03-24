@@ -34,7 +34,10 @@ filterwarnings = [
     "ignore:`np\\.\\w*` is a deprecated alias for:DeprecationWarning",
 
     # Warning from matplotlib. Issue: https://github.com/matplotlib/matplotlib/issues/25244
-    "ignore:Deprecated call to `pkg_resources.declare_namespace:DeprecationWarning"
+    "ignore:Deprecated call to `pkg_resources.declare_namespace:DeprecationWarning",
+
+    # Warning setuptools. Issue: https://github.com/pypa/setuptools/issues/2466
+    "ignore:pkg_resources is deprecated as an API:DeprecationWarning"
 ]
 norecursedirs="tests/helpers"
 
