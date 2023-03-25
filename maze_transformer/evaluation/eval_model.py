@@ -51,6 +51,8 @@ def load_model_with_configs(
 ) -> tuple[HookedTransformer, ConfigHolder]:
     """
     Load a model and associated config files from a path.
+
+    # TODO: replace this whole thing with a single zanj.read(fname) call
     """
     # load the configs
     # check for the filenames, go up a dir if they don't exist

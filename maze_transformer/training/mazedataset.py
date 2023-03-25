@@ -8,7 +8,13 @@ from typing import Callable
 
 import numpy as np
 import torch
-from muutils.json_serialize import JSONitem, json_serialize, serializable_dataclass, SerializableDataclass, serializable_field
+from muutils.json_serialize import (
+    JSONitem,
+    json_serialize,
+    serializable_dataclass,
+    SerializableDataclass,
+    serializable_field,
+)
 from muutils.misc import freeze
 from muutils.statcounter import StatCounter
 from muutils.tensor_utils import DTYPE_MAP, ATensor, NDArray

@@ -2,7 +2,11 @@ from functools import cached_property
 
 import numpy as np
 import torch
-from muutils.json_serialize import serializable_dataclass, SerializableDataclass, serializable_field
+from muutils.json_serialize import (
+    serializable_dataclass,
+    SerializableDataclass,
+    serializable_field,
+)
 from muutils.tensor_utils import DTYPE_MAP, ATensor
 from torch.utils.data import Dataset
 
@@ -16,7 +20,10 @@ def _dtype_serialization_fn(x: torch.dtype | np.dtype) -> str:
     return x_str
 
 
-@serializable_dataclass(kw_only=True, properties_to_serialize=["token_arr", "padding_token_index", "tokenizer_map"])
+@serializable_dataclass(
+    kw_only=True,
+    properties_to_serialize=["token_arr", "padding_token_index", "tokenizer_map"],
+)
 class GPTDatasetConfig(SerializableDataclass):
     """base config class"""
 

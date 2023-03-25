@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import Any, Dict, Type
 
 import torch
-from muutils.json_serialize import serializable_dataclass, SerializableDataclass, serializable_field
+from muutils.json_serialize import (
+    serializable_dataclass,
+    SerializableDataclass,
+    serializable_field,
+)
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
@@ -20,11 +24,11 @@ class BaseGPTConfig(SerializableDataclass):
     Add a name property and serialization to HookedTransformerConfig
     """
 
-    name: str
-    act_fn: str
-    d_model: int
-    d_head: int
-    n_layers: int
+    name: str = serializable_field()
+    act_fn: str = serializable_field()
+    d_model: int = serializable_field()
+    d_head: int = serializable_field()
+    n_layers: int = serializable_field()
 
 
 # ==================================================
@@ -43,19 +47,19 @@ class TrainConfig(SerializableDataclass):
 
     name: str
 
-    optimizer: Type[torch.optim.Optimizer] = serializable_field( # type: ignore
+    optimizer: Type[torch.optim.Optimizer] = serializable_field(  # type: ignore
         default_factory=lambda: torch.optim.RMSprop,
         serialization_fn=_optimizer_save_fn,
         loading_fn=lambda data: TORCH_OPTIMIZERS_MAP[data["optimizer"]],
     )
 
-    optimizer_kwargs: dict[str, Any] = serializable_field( # type: ignore
+    optimizer_kwargs: dict[str, Any] = serializable_field(  # type: ignore
         default_factory=lambda: dict(lr=0.000001)
-    ) 
+    )
 
     batch_size: int = serializable_field(default=128)
 
-    dataloader_cfg: dict = serializable_field( # type: ignore
+    dataloader_cfg: dict = serializable_field(  # type: ignore
         default_factory=lambda: dict(
             shuffle=True,
             num_workers=16,  # make this smaller if you're not running on a big cluster probably
@@ -160,7 +164,13 @@ class ConfigHolder(SerializableDataclass):
     train_cfg: TrainConfig
     dataset_cfg: GPTDatasetConfig | MazeDatasetConfig
     model_cfg: BaseGPTConfig
-    tokenizer: PreTrainedTokenizer | None
+    tokenizer: PreTrainedTokenizer | None = serializable_field(
+        default=None,
+        serialization_fn=lambda x: x.__class__.__name__,
+        loading_fn=lambda data: HuggingMazeTokenizer(
+            MazeDatasetConfig.load(data["dataset_cfg"])
+        ),
+    )
 
     def create_model(self) -> HookedTransformer:
         hooked_transformer_cfg = HookedTransformerConfig(
@@ -175,22 +185,5 @@ class ConfigHolder(SerializableDataclass):
             self.tokenizer = HuggingMazeTokenizer(self.dataset_cfg)
         return HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=self.tokenizer)
 
-    def serialize(self):
-        return dict(
-            train_cfg=self.train_cfg.serialize(),
-            dataset_cfg=self.dataset_cfg.serialize(),
-            model_cfg=self.model_cfg.serialize(),
-        )
-
     def __repr__(self) -> str:
         return str(self.serialize())
-
-    @classmethod
-    def load(cls, serialized: Dict[str, Dict[Any, Any]]):
-        dataset_cfg = MazeDatasetConfig.load(serialized["dataset_cfg"])
-        return cls(
-            train_cfg=TrainConfig.load(serialized["train_cfg"]),
-            dataset_cfg=dataset_cfg,
-            model_cfg=BaseGPTConfig.load(serialized["model_cfg"]),
-            tokenizer=HuggingMazeTokenizer(dataset_cfg),
-        )
