@@ -1,6 +1,7 @@
 import os
 import random
 from itertools import islice
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -43,3 +44,16 @@ def chunks(it, chunk_size):
     iterator = iter(it)
     while chunk := list(islice(iterator, chunk_size)):
         yield chunk
+
+
+def get_checkpoint_paths_for_run(run_path: Path) -> list[tuple[int, Path]]:
+    assert (
+        run_path.is_dir()
+    ), f"Model path {run_path} is not a directory (expect run directory, not model files)"
+
+    return [
+        (int(checkpoint_path.stem.split("_")[-1].split(".")[0]), checkpoint_path)
+        for checkpoint_path in sorted(
+            Path(run_path).glob("checkpoints/model.iter_*.pt")
+        )
+    ]
