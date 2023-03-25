@@ -137,10 +137,5 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             sequence = sequence[sequence != self.pad_token_id]
             str_sequence = self.batch_decode(sequence)
 
-        # Filter out the adjacency list
-        str_sequence = str_sequence[
-            1 : str_sequence.index(SPECIAL_TOKENS["adjlist_end"])
-        ]
-
         lattice_maze = LatticeMaze.from_tokens(str_sequence)
         return lattice_maze.as_ascii(start=start, end=end)

@@ -8,10 +8,10 @@ import torch
 from pytest import mark, param
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 
+from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import HuggingMazeTokenizer, maze_to_tokens
-from maze_transformer.generation.generators import LatticeMazeGenerators
 
 
 def test_tokenization_encoding():
@@ -70,7 +70,6 @@ def test_to_ascii():
     assert (
         tokenizer.to_ascii(maze_str_tokens).splitlines() == target
     ), "ASCII encoding from string tokens failed"
-
     # And with token ids
     token_ids = tokenizer.encode(maze_str_tokens)
     assert (
