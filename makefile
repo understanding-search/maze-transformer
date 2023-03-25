@@ -14,5 +14,4 @@ unit:
 integration:
 	poetry run python -m pytest -s tests/integration
 
-test:
-	poetry run python -m pytest tests
+test: unit integration
