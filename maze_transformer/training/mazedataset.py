@@ -60,7 +60,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
         return len(self.token_arr)
 
     @cached_property
-    def padding_token_idx(self) -> str:
+    def padding_token_index(self) -> str:
         return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
     def serialize(self) -> JSONitem:
@@ -199,19 +199,19 @@ class MazeDataset(GPTDataset):
                     f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokens) = }"
                 )
 
-        if self.mazes_objs is not None and self.mazes_array.idxs is not None:
-            if len(self.mazes_objs) != len(self.mazes_array.idxs):
+        if self.mazes_objs is not None and self.mazes_array.indices is not None:
+            if len(self.mazes_objs) != len(self.mazes_array.indices):
                 raise ValueError(
-                    f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_array.idxs) = }"
+                    f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_array.indices) = }"
                 )
 
-        if self.mazes_tokens is not None and self.mazes_array.idxs is not None:
-            if len(self.mazes_tokens) != len(self.mazes_array.idxs):
+        if self.mazes_tokens is not None and self.mazes_array.indices is not None:
+            if len(self.mazes_tokens) != len(self.mazes_array.indices):
                 raise ValueError(
-                    f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_array.idxs) = }"
+                    f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_array.indices) = }"
                 )
 
-    def __getitem__(self, idx: int) -> ATensor[("tokens")]:
+    def __getitem__(self, index: int) -> ATensor[("tokens")]:
         """index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
 
         # A nice-to-have refactor would be to have some notion of a minimum sequence length here, such that this method
@@ -219,22 +219,22 @@ class MazeDataset(GPTDataset):
         # that the first N tokens are always part of the maze, so this method can safetly skip that many before it finds
         # the start of the correct sequence. The min value could be part of the dataset config.
 
-        # last element in mazes_array.idxs whose value is smaller than `idx`
-        sequence_idx: int = torch.searchsorted(self.mazes_array.idxs, idx) - 1
-        # slice the array from the start of the sequence to `idx`, including `idx`
-        end_arr_idx: int = min(
-            idx + 1,  # up to end of sequence
-            self.mazes_array.idxs[sequence_idx]
+        # last element in mazes_array.indices whose value is smaller than `index`
+        sequence_index: int = torch.searchsorted(self.mazes_array.indices, index) - 1
+        # slice the array from the start of the sequence to `index`, including `index`
+        end_arr_index: int = min(
+            index + 1,  # up to end of sequence
+            self.mazes_array.indices[sequence_index]
             + self.cfg.seq_len_max,  # up to sequence length cutoff
         )
         subseq: ATensor = self.mazes_array.arr[
-            self.mazes_array.idxs[sequence_idx] : end_arr_idx
+            self.mazes_array.indices[sequence_index] : end_arr_index
         ]
         # left-pad the sequence
         return torch.nn.functional.pad(
             subseq,
             (self.cfg.seq_len_max + 1 - len(subseq), 0),
-            value=self.cfg.padding_token_idx,
+            value=self.cfg.padding_token_index,
         )
 
     def __len__(self) -> int:
@@ -268,7 +268,7 @@ class MazeDataset(GPTDataset):
 
         solved_mazes: list[SolvedMaze] = list()
         endpoint_nodes: NDArray[
-            (("maze_idx", cfg.n_mazes), ("start_end", 2), ("coord", 2)), np.int8
+            (("maze_index", cfg.n_mazes), ("start_end", 2), ("coord", 2)), np.int8
         ] = np.random.randint(0, cfg.grid_shape, (cfg.n_mazes, 2, 2))
 
         print(endpoint_nodes)
@@ -340,7 +340,7 @@ class MazeDataset(GPTDataset):
                 f"{path_base}/{self.DISK_SAVE_FILES.tokenized}",
                 **dict(
                     arr=self.mazes_array.arr.cpu().numpy(),
-                    idxs=self.mazes_array.idxs.cpu().numpy(),
+                    indices=self.mazes_array.indices.cpu().numpy(),
                 ),
             )
 
@@ -378,7 +378,7 @@ class MazeDataset(GPTDataset):
             )
 
             assert "arr" in loaded_dict
-            assert "idxs" in loaded_dict
+            assert "indices" in loaded_dict
 
         return cls(
             cfg=cfg,
@@ -388,7 +388,7 @@ class MazeDataset(GPTDataset):
             if loaded_dict is None
             else IndexedArray(
                 arr=torch.tensor(loaded_dict["arr"], device="cpu"),
-                idxs=torch.tensor(loaded_dict["idxs"], device="cpu"),
+                indices=torch.tensor(loaded_dict["indices"], device="cpu"),
             ),
         )
 

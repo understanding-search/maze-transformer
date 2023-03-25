@@ -1,13 +1,19 @@
 from pathlib import Path
 
-import wandb
+from maze_transformer.training.wandb_logger import (
+    WandbJobType,
+    WandbLogger,
+    WandbProject,
+)
 
 
 def upload_dataset(name: str, path: Path):
-    wandb.init(project="understanding-search", job_type="create-dataset")
-    artifact = wandb.Artifact(name=name, type="dataset")
-    artifact.add_dir(local_path=path)
-    wandb.log_artifact(artifact)
+    logger = WandbLogger.create(
+        config={},
+        project=WandbProject.UNDERSTANDING_SEARCH,
+        job_type=WandbJobType.CREATE_DATASET,
+    )
+    logger.upload_dataset(name, path)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ def test_coordinate_system():
     """
     maze_size = 3
     maze, solution = LatticeMazeGenerators.gen_dfs_with_solution((maze_size, maze_size))
-    maze_adjlist = maze.as_adj_list()
+    maze_adjlist = maze.as_adjlist()
 
     # convert to the same format as the tokenizer adjlist
     maze_adjlist_connections = [

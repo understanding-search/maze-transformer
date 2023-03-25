@@ -155,7 +155,34 @@ class LatticeMaze:
 
         return img
 
-    def as_adj_list(
+    def as_ascii(self, start=None, end=None):
+        """
+        Returns an ASCII visualization of the maze.
+        Courtesy of ChatGPT
+        """
+        wall_char = "#"
+        path_char = " "
+
+        # Determine the size of the maze
+        maze = self.as_img()
+        n_rows, n_cols = maze.shape
+        maze_str = ""
+
+        # Iterate through each element of the maze and print the appropriate symbol
+        for i in range(n_rows):
+            for j in range(n_cols):
+                if start is not None and start[0] == i - 1 and start[1] == j - 1:
+                    maze_str += "S"
+                elif end is not None and end[0] == i - 1 and end[1] == j - 1:
+                    maze_str += "E"
+                elif maze[i, j]:
+                    maze_str += path_char
+                else:
+                    maze_str += wall_char
+            maze_str += "\n"  # Start a new line after each row
+        return maze_str
+
+    def as_adjlist(
         self, shuffle_d0: bool = True, shuffle_d1: bool = True
     ) -> NDArray["conn start_end coord", np.int8]:
         adjlist: NDArray["conn start_end coord", np.int8] = np.full(
@@ -167,7 +194,7 @@ class LatticeMaze:
             flip_d1: NDArray["conn", np.float16] = np.random.rand(self.n_connections)
 
         # loop over all nonzero elements of the connection list
-        idx: int = 0
+        i: int = 0
         for d, x, y in np.ndindex(self.connection_list.shape):
             if self.connection_list[d, x, y]:
                 c_start: CoordTup = (x, y)
@@ -175,16 +202,16 @@ class LatticeMaze:
                     x + (1 if d == 0 else 0),
                     y + (1 if d == 1 else 0),
                 )
-                adjlist[idx, 0] = np.array(c_start)
-                adjlist[idx, 1] = np.array(c_end)
+                adjlist[i, 0] = np.array(c_start)
+                adjlist[i, 1] = np.array(c_end)
 
                 # flip if shuffling
-                if shuffle_d1 and (flip_d1[idx] > 0.5):
-                    c_s, c_e = adjlist[idx, 0].copy(), adjlist[idx, 1].copy()
-                    adjlist[idx, 0] = c_e
-                    adjlist[idx, 1] = c_s
+                if shuffle_d1 and (flip_d1[i] > 0.5):
+                    c_s, c_e = adjlist[i, 0].copy(), adjlist[i, 1].copy()
+                    adjlist[i, 0] = c_e
+                    adjlist[i, 1] = c_s
 
-                idx += 1
+                i += 1
 
         if shuffle_d0:
             np.random.shuffle(adjlist)
