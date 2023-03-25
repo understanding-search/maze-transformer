@@ -17,7 +17,7 @@ def get_adjlist_tokens(tokens: list[str]) -> list[str]:
 
 
 def get_path_tokens(tokens: list[str]) -> list[str]:
-    """The path is considered everything from path_start to the end of the list, because model predictions will not always include path_end"""
+    """The path is considered everything from the first path coord to the end of the list, including the path_end token (ie everything we are asking the model to predict)"""
     start_idx = tokens.index(SPECIAL_TOKENS["path_start"]) + 1
     return tokens[start_idx:]
 

@@ -11,12 +11,12 @@ import pytest
 import torch
 
 from maze_transformer.evaluation.eval_model import (
+    evaluate_model,
     load_model_with_configs,
     predict_maze_paths,
-    evaluate_model,
 )
-from maze_transformer.training.mazedataset import MazeDataset
 from maze_transformer.evaluation.path_evals import PathEvals
+from maze_transformer.training.mazedataset import MazeDataset
 from scripts.create_dataset import create_dataset
 from scripts.train_model import train_model
 
@@ -122,12 +122,6 @@ def test_evaluate_model(temp_dir):
 
     dataset = MazeDataset.disk_load(path_base=base_path, do_config=True, do_tokens=True)
 
-    # maybe mock this out, and use a stub model to avoid need for training, and manually create a small dataset
-    # mock_predictions = [[(0, 0), (0, 1), (0, 2)], [(0, 1), (2, 1)]]
-    # mocker.patch(
-    #     "maze_transformer.evaluation.eval_model.predict_maze_paths",
-    #     return_value=mock_predictions,
-    # )
     path_evals = PathEvals.all_functions()
     eval_names = [name for name in path_evals.keys()]
     scores = evaluate_model(dataset=dataset, model=model)
