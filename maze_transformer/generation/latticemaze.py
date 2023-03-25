@@ -416,4 +416,4 @@ class SolvedMaze(NamedTuple):
     """Stores a maze and a solution"""
 
     maze: LatticeMaze
-    solution: list[tuple[int, int]]
+    solution: list[CoordTup]

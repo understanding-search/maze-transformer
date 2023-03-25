@@ -1,63 +1,40 @@
-import random
-
-import numpy as np
-
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.generation.latticemaze import LatticeMaze, SolvedMaze
-from maze_transformer.training.mazedataset import (
-    MazeDatasetConfig,
-    solved_maze_to_tokens,
-)
+from maze_transformer.training.mazedataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.training.tokenizer import SPECIAL_TOKENS, maze_to_tokens
 
 
-def test_solved_maze_to_tokens():
-    random.seed(42)
-    np.random.seed(42)
-    # generate a maze
-    grid_n: int = 2
-    maze: LatticeMaze = LatticeMazeGenerators.gen_dfs((grid_n, grid_n))
-
-    solution = np.array(
-        maze.find_shortest_path(
-            c_start=(1, 1),
-            c_end=(0, 0),
-        )
+def test_dataset_construction():
+    n_mazes = 3
+    grid_n = 2
+    config = MazeDatasetConfig(
+        name="test",
+        grid_n=grid_n,
+        n_mazes=n_mazes,
     )
+    solved_mazes = []
+    for _ in range(n_mazes):
+        solved_maze = LatticeMazeGenerators.gen_dfs_with_solution((grid_n, grid_n))
+        solved_mazes.append(solved_maze)
 
-    # generate a dataset config
-    node_token_map = MazeDatasetConfig(
-        name="test", grid_n=grid_n, n_mazes=10
-    ).node_token_map
+    dataset = MazeDataset(cfg=config, mazes_objs=solved_mazes)
 
-    solved_maze = SolvedMaze(maze, solution)
+    # check the tokenization
 
-    tokens: list[str] = solved_maze_to_tokens(solved_maze, node_token_map)
-
-    expected: list[str] = [
-        "<ADJLIST_START>",
-        "(1,1)",
-        "<-->",
-        "(0,1)",
-        ";",
-        "(1,1)",
-        "<-->",
-        "(1,0)",
-        ";",
-        "(0,0)",
-        "<-->",
-        "(1,0)",
-        ";",
-        "<ADJLIST_END>",
-        "<ORIGIN_START>",
-        "(1,1)",
-        "<ORIGIN_END>",
-        "<TARGET_START>",
-        "(0,0)",
-        "<TARGET_END>",
-        "<PATH_START>",
-        "(1,1)",
-        "(1,0)",
-        "(0,0)",
-        "<PATH_END>",
+    test_tokenizations = [
+        maze_to_tokens(maze, solution, node_token_map=config.node_token_map)
+        for maze, solution in solved_mazes
     ]
-    assert tokens == expected
+
+    # the adj_list always gets shuffled, so easier to check the paths
+    # this will be much simpler once token utils are merged
+    test_tokenization_paths = [
+        tokens[tokens.index(SPECIAL_TOKENS["path_start"]) :]
+        for tokens in test_tokenizations
+    ]
+
+    dataset_tokenization_paths = [
+        tokens[tokens.index(SPECIAL_TOKENS["path_start"]) :]
+        for tokens in dataset.mazes_tokens
+    ]
+
+    assert sorted(test_tokenization_paths) == sorted(dataset_tokenization_paths)
