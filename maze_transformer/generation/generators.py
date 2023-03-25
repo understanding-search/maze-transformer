@@ -3,7 +3,8 @@ from typing import Any, Callable
 
 import numpy as np
 
-from maze_transformer.generation.latticemaze import NEIGHBORS_MASK, Coord, LatticeMaze
+from maze_transformer.generation.constants import NEIGHBORS_MASK, Coord
+from maze_transformer.generation.latticemaze import LatticeMaze, SolvedMaze
 
 
 class LatticeMazeGenerators:
@@ -14,7 +15,7 @@ class LatticeMazeGenerators:
         grid_shape: Coord,
         start_coord: Coord | None = None,
         lattice_dim: int = 2,
-    ) -> "LatticeMaze":
+    ) -> LatticeMaze:
         """generate a lattice maze using depth first search, iterative
 
         algorithm:
@@ -93,6 +94,13 @@ class LatticeMazeGenerators:
                 start_coord=start_coord,
             ),
         )
+
+    @classmethod
+    def gen_dfs_with_solution(cls, grid_shape: Coord):
+        maze = cls.gen_dfs(grid_shape)
+        solution = np.array(maze.generate_random_path())
+
+        return SolvedMaze(maze, solution)
 
 
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {

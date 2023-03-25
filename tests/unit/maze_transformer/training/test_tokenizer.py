@@ -1,19 +1,18 @@
-import numpy as np
-
+from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.training.mazedataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
+from maze_transformer.training.tokenizer import maze_to_tokens
 from tests.helpers import utils
 
 
 def test_coordinate_system():
     """
-    Check that the adjlist created by .as_tokens() uses the same coordinate system as the LatticeMaze adjlist.
+    Check that the adjlist created by .maze_to_tokens() uses the same coordinate system as the LatticeMaze adjlist.
 
     To test this, generate both adjlists, sort them and convert to a common format, and check that they are equal.
     """
     maze_size = 3
-    maze = LatticeMazeGenerators.gen_dfs((maze_size, maze_size))
+    maze, solution = LatticeMazeGenerators.gen_dfs_with_solution((maze_size, maze_size))
     maze_adjlist = maze.as_adj_list()
 
     # convert to the same format as the tokenizer adjlist
@@ -26,10 +25,7 @@ def test_coordinate_system():
         grid_n=maze_size, name="test", n_mazes=1
     ).node_token_map
 
-    tokenized_maze = MazeTokenizer(
-        maze=maze,
-        solution=np.array([[0, 0]]),
-    ).as_tokens(node_token_map)
+    tokenized_maze = maze_to_tokens(maze, solution, node_token_map)
 
     tokenizer_adjlist = tokenized_maze[
         tokenized_maze.index(SPECIAL_TOKENS["adjlist_start"])
