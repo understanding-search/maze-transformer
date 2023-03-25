@@ -3,13 +3,12 @@ import json
 import multiprocessing
 import os
 import sys
-from dataclasses import dataclass
 from functools import cached_property, partial
 from typing import Callable
 
 import numpy as np
 import torch
-from muutils.json_serialize import JSONitem, json_serialize
+from muutils.json_serialize import JSONitem, json_serialize, serializable_dataclass, SerializableDataclass, serializable_field
 from muutils.misc import freeze
 from muutils.statcounter import StatCounter
 from muutils.tensor_utils import DTYPE_MAP, ATensor, NDArray
@@ -21,16 +20,24 @@ from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, Inde
 from maze_transformer.training.tokenizer import SPECIAL_TOKENS, MazeTokenizer
 
 
-@dataclass(kw_only=True)
+@serializable_dataclass(kw_only=True)
 class MazeDatasetConfig(GPTDatasetConfig):
     """maze dataset configuration, including tokenizers"""
 
     grid_n: int
     n_mazes: int
-    grid_shape = property(lambda self: (self.grid_n, self.grid_n))
-    maze_ctor: Callable = LatticeMazeGenerators.gen_dfs
+    maze_ctor: Callable = serializable_field(
+        default_factory=lambda: LatticeMazeGenerators.gen_dfs,
+        serialization_fn=lambda x: x.__name__,
+        loading_fn=lambda data: GENERATORS_MAP[data["maze_ctor"]],
+    )
+
     # paths_per_maze: int = 5,
     # p_min_tgt_dist: float = 0.2,
+
+    @property
+    def grid_shape(self) -> tuple[int, int]:
+        return (self.grid_n, self.grid_n)
 
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:
