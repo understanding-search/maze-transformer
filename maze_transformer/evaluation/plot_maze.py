@@ -24,15 +24,7 @@ class PathFormat:
 
 
 class MazePlot:
-    """Class for displaying mazes and paths
-
-    UNIT_LENGTH: Set ratio between node size and wall thickness in image.
-    Wall thickness is fixed to 1px
-    A "unit" consists of a single node and the right and lower connection/wall.
-    Example: ul = 14 yields 13:1 ratio between node size and wall thickness
-    """
-
-    UNIT_LENGTH = 14
+    """Class for displaying mazes and paths"""
     DEFAULT_PREDICTED_PATH_COLORS = [
         "tab:blue",
         "tab:green",
@@ -43,9 +35,17 @@ class MazePlot:
     ]
 
     def __init__(self, maze: LatticeMaze) -> None:
+        """
+        UNIT_LENGTH: Set ratio between node size and wall thickness in image.
+        Wall thickness is fixed to 1px
+        A "unit" consists of a single node and the right and lower connection/wall.
+        Example: ul = 14 yields 13:1 ratio between node size and wall thickness
+        """
+        self.unit_length: int = 14
         self.maze: LatticeMaze = maze
         self.true_path: PathFormat = None
         self.predicted_paths: list = []
+        self.node_values: NDArray(self.maze.grid_shape) = None
 
     def add_true_path(
         self,
@@ -100,36 +100,53 @@ class MazePlot:
             )
         )
         return self
+    
+    def add_node_values(
+            self,
+            node_values: NDArray
+    ) -> MazePlot:
+        # Always true warning??
+        # assert(node_values.shape == self.maze.grid_shape,
+        #            'Passed node values have to have the same shape as the maze.')
+            #TODO normalize node values
 
-    def _latticemaze_to_img(
-        self, unit_length: int = UNIT_LENGTH
-    ) -> NDArray["row col", bool]:
+        self.node_values = node_values
+        return self
+
+    def _latticemaze_to_img(self) -> NDArray["row col", bool]:
         """
         Build an image to visualise the maze.
         Each "unit" consists of a node and the right and lower adjacent wall/connection. Its area is ul * ul.
-        - Nodes are displayed as white squares of area: (ul-1) * (ul-1)
-        - Walls are displayed as black recktangles of area: 1 * (ul-1)
-        - Connections are displayed as light grey or white rectangles of area: 1 * (ul-1); color is depending on show_connections argument
+        - Nodes have area: (ul-1) * (ul-1) and value 1 by default
+            - take node_value if passed via .add_node_values()
+        - Walls have area: 1 * (ul-1) and value -1
+        - Connections have area: 1 * (ul-1); color and value 0.93 by default
+            - take node_value if passed via .add_node_values()
 
         Axes definition:
-        (0,0)     y, col
+        (0,0)     col
         ----|----------->
-        x,  |
+            |
         row |
             |
             v
 
         Returns a matrix of side length (ul) * n + 1 where n is the number of nodes.
         """
-        # Set color of connections (using plt.imshow(cmap='grey))
-        node_color = 1
-        connection_color = node_color * 0.93
+        
 
-        # Set up the background (walls everywhere)
-        img: NDArray["row col", int] = np.zeros(
+        # Set node and connection values
+        if self.node_values is None:
+            self.node_values = np.ones(self.maze.grid_shape)
+            connection_values = np.ones(self.maze.grid_shape) * 0.93
+        else:
+            connection_values = self.node_values
+
+        # Create background image (all pixels set to -1, walls everywhere)
+        img: NDArray["row col", int] = -np.ones(
             (
-                self.maze.grid_shape[0] * unit_length + 1,
-                self.maze.grid_shape[1] * unit_length + 1,
+                self.maze.grid_shape[0] * self.unit_length + 1,
+                self.maze.grid_shape[1] * self.unit_length + 1,
             ),
             dtype=float,
         )
@@ -139,30 +156,30 @@ class MazePlot:
             for col in range(self.maze.grid_shape[1]):
                 # Draw node
                 img[
-                    row * unit_length + 1 : (row + 1) * unit_length,
-                    col * unit_length + 1 : (col + 1) * unit_length,
-                ] = node_color
+                    row * self.unit_length + 1 : (row + 1) * self.unit_length,
+                    col * self.unit_length + 1 : (col + 1) * self.unit_length,
+                ] = self.node_values[row, col]
 
                 # Down connection
                 if self.maze.connection_list[0, row, col]:
                     img[
-                        (row + 1) * unit_length,
-                        col * unit_length + 1 : (col + 1) * unit_length,
-                    ] = connection_color
+                        (row + 1) * self.unit_length,
+                        col * self.unit_length + 1 : (col + 1) * self.unit_length,
+                    ] = connection_values[row, col]
 
                 # Right connection
                 if self.maze.connection_list[1, row, col]:
                     img[
-                        row * unit_length + 1 : (row + 1) * unit_length,
-                        (col + 1) * unit_length,
-                    ] = connection_color
+                        row * self.unit_length + 1 : (row + 1) * self.unit_length,
+                        (col + 1) * self.unit_length,
+                    ] = connection_values[row, col]
 
         return img
 
     def _rowcol_to_coord(self, points: CoordArray) -> NDArray:
         """transform points to img coordinates"""
         points = np.array([(x, y) for (y, x) in points])
-        return self.UNIT_LENGTH * (points + 0.5)
+        return self.unit_length * (points + 0.5)
 
     def as_ascii(self, start=None, end=None):
         """
@@ -171,9 +188,10 @@ class MazePlot:
         """
         wall_char = "#"
         path_char = " "
+        self.unit_length = 2
 
         # Determine the size of the maze
-        maze = self._latticemaze_to_img(unit_length=2)
+        maze = self._latticemaze_to_img()
         n_rows, n_cols = maze.shape
         maze_str = ""
 
@@ -240,8 +258,8 @@ class MazePlot:
 
         # Plot labels
         tick_arr = np.arange(self.maze.grid_shape[0])
-        self.ax.set_xticks(self.UNIT_LENGTH * (tick_arr + 0.5), tick_arr)
-        self.ax.set_yticks(self.UNIT_LENGTH * (tick_arr + 0.5), tick_arr)
+        self.ax.set_xticks(self.unit_length * (tick_arr + 0.5), tick_arr)
+        self.ax.set_yticks(self.unit_length * (tick_arr + 0.5), tick_arr)
         self.ax.set_xlabel("col")
         self.ax.set_ylabel("row")
 
