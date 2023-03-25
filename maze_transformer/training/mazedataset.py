@@ -126,13 +126,6 @@ class MazeDatasetConfig(GPTDatasetConfig):
         return output
 
 
-def solved_maze_to_tokens(
-    solved_maze: SolvedMaze, node_token_map: dict[CoordTup, str]
-) -> list[str]:
-    """convert a maze into a list of tokens"""
-    return maze_to_tokens(solved_maze.maze, solved_maze.solution, node_token_map)
-
-
 class MazeDataset(GPTDataset):
     """maze dataset"""
 
@@ -167,10 +160,8 @@ class MazeDataset(GPTDataset):
             with multiprocessing.Pool() as pool:
                 self.mazes_tokens = list(
                     tqdm(
-                        pool.imap(
-                            partial(
-                                solved_maze_to_tokens, node_token_map=cfg.node_token_map
-                            ),
+                        pool.starmap(
+                            partial(maze_to_tokens, node_token_map=cfg.node_token_map),
                             self.mazes_objs,
                         ),
                         total=len(self.mazes_objs),

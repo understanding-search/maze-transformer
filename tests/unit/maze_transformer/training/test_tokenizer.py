@@ -6,7 +6,7 @@ from tests.helpers import utils
 
 def test_coordinate_system():
     """
-    Check that the adjlist created by .maze_to_tokens() uses the same coordinate system as the LatticeMaze adjlist.
+    Check that the adjlist created by maze_to_tokens() uses the same coordinate system as the LatticeMaze adjlist.
 
     To test this, generate both adjlists, sort them and convert to a common format, and check that they are equal.
     """
