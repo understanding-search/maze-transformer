@@ -2,7 +2,8 @@
 data/**
 models/
 wandb
-tests/temp_data/**
+tests/_temp/**
+tests/**/_temp/**
 
 
 

@@ -24,11 +24,11 @@ class BaseGPTConfig(SerializableDataclass):
     Add a name property and serialization to HookedTransformerConfig
     """
 
-    name: str = serializable_field()
-    act_fn: str = serializable_field()
-    d_model: int = serializable_field()
-    d_head: int = serializable_field()
-    n_layers: int = serializable_field()
+    name: str
+    act_fn: str
+    d_model: int
+    d_head: int
+    n_layers: int
 
 
 # ==================================================
@@ -155,14 +155,15 @@ TRAINING_CONFIGS: dict[str, TrainConfig] = {
 }
 
 
-@serializable_dataclass
+@serializable_dataclass(kw_only=True)
 class ConfigHolder(SerializableDataclass):
     """
     Handles any logic that moves data between the configs below it.
     """
 
+    # name: str = serializable_field(default="default")
     train_cfg: TrainConfig
-    dataset_cfg: GPTDatasetConfig | MazeDatasetConfig
+    dataset_cfg: MazeDatasetConfig
     model_cfg: BaseGPTConfig
     tokenizer: PreTrainedTokenizer | None = serializable_field(
         default=None,
@@ -184,6 +185,3 @@ class ConfigHolder(SerializableDataclass):
         if self.tokenizer is None and isinstance(self.dataset_cfg, MazeDatasetConfig):
             self.tokenizer = HuggingMazeTokenizer(self.dataset_cfg)
         return HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=self.tokenizer)
-
-    def __repr__(self) -> str:
-        return str(self.serialize())

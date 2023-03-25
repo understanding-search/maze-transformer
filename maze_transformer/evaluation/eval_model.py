@@ -68,7 +68,7 @@ def load_model_with_configs(
     # load the configs
     with open(config_path, "r") as f:
         combined_json = json.load(f)
-        config_holder = ConfigHolder.load(combined_json)
+    config_holder = ConfigHolder.load(combined_json)
 
     if verbose:
         print(f"Loaded config\n{config_holder}\n" + ("-" * 40))
