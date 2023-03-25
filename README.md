@@ -75,7 +75,7 @@ Notes:
 
 ### Example
 ```
-poetry run python scripts/train_model.py ./data/maze/g4-n10
+poetry run python scripts/train_model.py ./data/maze/g4-n10 --wandb-project="understanding-search"
 ```
 
 
