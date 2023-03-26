@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
@@ -12,7 +13,7 @@ from transformer_lens import HookedTransformer
 from maze_transformer.training.config import ConfigHolder, TrainConfig
 from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.mazedataset import MazeDataset
-from maze_transformer.training.wandb_logger import WandbLogger
+from maze_transformer.training.wandb_logger import WandbClient
 
 
 @freeze
@@ -34,7 +35,7 @@ class TRAIN_SAVE_FILES:
 
 
 def get_dataloader(
-    dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
+    dataset: MazeDataset, cfg: ConfigHolder, logger: WandbClient
 ) -> DataLoader:
     length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
     logger.summary({"dataset_seq_len_stats_summary": length_stats.summary()})
@@ -42,8 +43,8 @@ def get_dataloader(
         {"dataset_seq_len_stats": length_stats.serialize(typecast=lambda x: str(x))}
     )
 
-    logger.progress(f"Loaded {len(dataset)} sequences")
-    logger.progress("Creating dataloader")
+    logging.info(f"Loaded {len(dataset)} sequences")
+    logging.info("Creating dataloader")
     dataloader: DataLoader = DataLoader(
         dataset,
         batch_size=cfg.train_cfg.batch_size,
@@ -56,25 +57,25 @@ def get_dataloader(
 def train(
     dataloader: DataLoader,
     cfg: ConfigHolder,
-    logger: WandbLogger,
+    wandb_client: WandbClient,
     output_dir: Path,
     device: torch.device,
 ) -> None:
-    logger.progress("Initializing model")
+    logging.info("Initializing model")
     model: HookedTransformer = cfg.create_model()
-    logger.summary({"device": str(device), "model.device": model.cfg.device})
+    wandb_client.summary({"device": str(device), "model.device": model.cfg.device})
 
-    logger.progress("Initializing optimizer")
+    logging.info("Initializing optimizer")
     optimizer: torch.optim.Optimizer = cfg.train_cfg.optimizer(
         model.parameters(),
         **cfg.train_cfg.optimizer_kwargs,
     )
-    logger.summary(dict(model_n_params=model.cfg.n_params))
+    wandb_client.summary(dict(model_n_params=model.cfg.n_params))
 
     model.train()
-    logger.progress("Starting training")
+    logging.info("Starting training")
     n_batches: int = len(dataloader)
-    logger.summary({"n_batches": n_batches})
+    wandb_client.summary({"n_batches": n_batches})
 
     checkpoint_interval_iters: int = int(
         cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size
@@ -91,7 +92,7 @@ def train(
         optimizer.step()
         optimizer.zero_grad()
 
-        logger.log_metric({"loss": loss})
+        wandb_client.log_metric({"loss": loss})
 
         del loss
 
@@ -101,17 +102,17 @@ def train(
                 / TRAIN_SAVE_FILES.checkpoints
                 / TRAIN_SAVE_FILES.model_checkpt(iteration)
             )
-            logger.progress(f"Saving model to {model_save_path.as_posix()}")
+            logging.info(f"Saving model to {model_save_path.as_posix()}")
             torch.save(model.state_dict(), model_save_path)
-            logger.upload_model(
+            wandb_client.upload_model(
                 model_save_path, aliases=["latest", f"iter-{iteration}"]
             )
 
     # save the final model
     # ==================================================
     final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final
-    logger.progress(f"Saving final model to {final_model_path.as_posix()}")
+    logging.info(f"Saving final model to {final_model_path.as_posix()}")
     torch.save(model.state_dict(), final_model_path)
-    logger.upload_model(final_model_path, aliases=["latest", "final"])
+    wandb_client.upload_model(final_model_path, aliases=["latest", "final"])
 
-    logger.progress("Done!")
+    logging.info("Done!")

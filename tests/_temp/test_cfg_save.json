@@ -1,0 +1,225 @@
+{
+	"__format__": "ConfigHolder(SerializableDataclass)",
+	"name": "default",
+	"train_cfg": {
+		"__format__": "TrainConfig(SerializableDataclass)",
+		"name": "test_cfg_save-train",
+		"optimizer": "RMSprop",
+		"optimizer_kwargs": {
+			"lr": 1e-06
+		},
+		"batch_size": 128,
+		"dataloader_cfg": {
+			"shuffle": true,
+			"num_workers": 16,
+			"persistent_workers": true,
+			"drop_last": true
+		},
+		"print_loss_interval": 1000,
+		"checkpoint_interval": 50000
+	},
+	"dataset_cfg": {
+		"__format__": "MazeDatasetConfig(SerializableDataclass)",
+		"name": "test_cfg_save-data",
+		"device": "mps",
+		"dtype": "torch.int16",
+		"seq_len_min": 1,
+		"seq_len_max": 512,
+		"grid_n": 5,
+		"n_mazes": 10,
+		"maze_ctor": "gen_dfs",
+		"padding_token_index": 10,
+		"token_arr": [
+			"<ADJLIST_START>",
+			"<ADJLIST_END>",
+			"<TARGET_START>",
+			"<TARGET_END>",
+			"<ORIGIN_START>",
+			"<ORIGIN_END>",
+			"<PATH_START>",
+			"<PATH_END>",
+			"<-->",
+			";",
+			"<PADDING>",
+			"(0,0)",
+			"(0,1)",
+			"(0,2)",
+			"(0,3)",
+			"(0,4)",
+			"(1,0)",
+			"(1,1)",
+			"(1,2)",
+			"(1,3)",
+			"(1,4)",
+			"(2,0)",
+			"(2,1)",
+			"(2,2)",
+			"(2,3)",
+			"(2,4)",
+			"(3,0)",
+			"(3,1)",
+			"(3,2)",
+			"(3,3)",
+			"(3,4)",
+			"(4,0)",
+			"(4,1)",
+			"(4,2)",
+			"(4,3)",
+			"(4,4)"
+		],
+		"tokenizer_map": {
+			"<ADJLIST_START>": 0,
+			"<ADJLIST_END>": 1,
+			"<TARGET_START>": 2,
+			"<TARGET_END>": 3,
+			"<ORIGIN_START>": 4,
+			"<ORIGIN_END>": 5,
+			"<PATH_START>": 6,
+			"<PATH_END>": 7,
+			"<-->": 8,
+			";": 9,
+			"<PADDING>": 10,
+			"(0,0)": 11,
+			"(0,1)": 12,
+			"(0,2)": 13,
+			"(0,3)": 14,
+			"(0,4)": 15,
+			"(1,0)": 16,
+			"(1,1)": 17,
+			"(1,2)": 18,
+			"(1,3)": 19,
+			"(1,4)": 20,
+			"(2,0)": 21,
+			"(2,1)": 22,
+			"(2,2)": 23,
+			"(2,3)": 24,
+			"(2,4)": 25,
+			"(3,0)": 26,
+			"(3,1)": 27,
+			"(3,2)": 28,
+			"(3,3)": 29,
+			"(3,4)": 30,
+			"(4,0)": 31,
+			"(4,1)": 32,
+			"(4,2)": 33,
+			"(4,3)": 34,
+			"(4,4)": 35
+		},
+		"grid_shape": [
+			5,
+			5
+		],
+		"token_node_map": {
+			"(0,0)": [
+				0,
+				0
+			],
+			"(0,1)": [
+				0,
+				1
+			],
+			"(0,2)": [
+				0,
+				2
+			],
+			"(0,3)": [
+				0,
+				3
+			],
+			"(0,4)": [
+				0,
+				4
+			],
+			"(1,0)": [
+				1,
+				0
+			],
+			"(1,1)": [
+				1,
+				1
+			],
+			"(1,2)": [
+				1,
+				2
+			],
+			"(1,3)": [
+				1,
+				3
+			],
+			"(1,4)": [
+				1,
+				4
+			],
+			"(2,0)": [
+				2,
+				0
+			],
+			"(2,1)": [
+				2,
+				1
+			],
+			"(2,2)": [
+				2,
+				2
+			],
+			"(2,3)": [
+				2,
+				3
+			],
+			"(2,4)": [
+				2,
+				4
+			],
+			"(3,0)": [
+				3,
+				0
+			],
+			"(3,1)": [
+				3,
+				1
+			],
+			"(3,2)": [
+				3,
+				2
+			],
+			"(3,3)": [
+				3,
+				3
+			],
+			"(3,4)": [
+				3,
+				4
+			],
+			"(4,0)": [
+				4,
+				0
+			],
+			"(4,1)": [
+				4,
+				1
+			],
+			"(4,2)": [
+				4,
+				2
+			],
+			"(4,3)": [
+				4,
+				3
+			],
+			"(4,4)": [
+				4,
+				4
+			]
+		},
+		"n_tokens": 36
+	},
+	"model_cfg": {
+		"__format__": "BaseGPTConfig(SerializableDataclass)",
+		"name": "test_cfg_save-model",
+		"act_fn": "dummy-act-fn",
+		"d_model": 500,
+		"d_head": 60,
+		"n_layers": 4
+	},
+	"pretrainedtokenizer_kwargs": null
+}
