@@ -8,6 +8,7 @@ from muutils.json_serialize import (
     serializable_dataclass,
     SerializableDataclass,
     serializable_field,
+    JSONitem,
 )
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
 from transformer_lens import HookedTransformer  # type: ignore[import]
@@ -166,10 +167,17 @@ class ConfigHolder(SerializableDataclass):
     train_cfg: TrainConfig
     dataset_cfg: MazeDatasetConfig
     model_cfg: BaseGPTConfig
+    pretrainedtokenizer_kwargs: dict[str, JSONitem]|None = serializable_field(
+        default_factory=lambda: None,
+    )
 
     @cached_property
     def tokenizer(self) -> PreTrainedTokenizer:
-        return HuggingMazeTokenizer(self.dataset_cfg)
+        """if pretrained tokenizer kwargs are provided, use those, otherwise use the HuggingMazeTokenizer derived from the dataset_cfg"""
+        if self.pretrainedtokenizer_kwargs is not None:
+            return PreTrainedTokenizer(**self.pretrainedtokenizer_kwargs)
+        else:
+            return HuggingMazeTokenizer(self.dataset_cfg)
 
     def create_model(self) -> HookedTransformer:
         hooked_transformer_cfg: HookedTransformerConfig = HookedTransformerConfig(

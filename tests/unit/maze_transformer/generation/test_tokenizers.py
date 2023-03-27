@@ -167,3 +167,27 @@ def test_pad_sequence_param(inp, expected):
     )["input_ids"][0]
 
     assert torch.equal(result, torch.tensor(expected))
+
+
+def test_manual_tokenizer():
+    """tests setting the kwargs for a pretrained tokenizer, instead of getting HuggingMazeTokenizer
+
+    this is mostly just testing to make sure it doesnt crash lol
+    """
+
+    cfg: ConfigHolder = ConfigHolder(
+        train_cfg=None,
+        dataset_cfg=MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1),
+        model_cfg=None,
+        pretrainedtokenizer_kwargs=dict(
+            bos_token="<bos>",
+            eos_token="<eos>",
+            pad_token="<pad>",
+        ),
+    )
+
+    tok = cfg.tokenizer
+
+    assert tok.bos_token == "<bos>"
+    assert tok.eos_token == "<eos>"
+    assert tok.pad_token == "<pad>"
