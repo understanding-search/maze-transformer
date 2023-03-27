@@ -9,12 +9,8 @@ from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
 from maze_transformer.evaluation.plot_maze import MazePlot
-from maze_transformer.generation.latticemaze import (
-    SPECIAL_TOKENS,
-    Coord,
-    CoordTup,
-    LatticeMaze,
-)
+from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
+from maze_transformer.generation.latticemaze import LatticeMaze
 
 if TYPE_CHECKING:
     from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig

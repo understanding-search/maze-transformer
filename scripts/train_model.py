@@ -4,7 +4,7 @@ from typing import Union
 
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
+from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDataset
 from maze_transformer.training.training import TRAIN_SAVE_FILES, get_dataloader, train
