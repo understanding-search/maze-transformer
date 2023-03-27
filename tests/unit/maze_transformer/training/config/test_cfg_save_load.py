@@ -13,8 +13,8 @@ def test_misc():
 	assert dataset_cfg == MazeDatasetConfig.load(dataset_cfg.serialize())
 
 cfg = ConfigHolder(
-	# train_cfg=TrainConfig(name="test_cfg_save-train"),
-	# dataset_cfg=MazeDatasetConfig(name="test_cfg_save-data", grid_n=5, n_mazes=10),
+	train_cfg=TrainConfig(name="test_cfg_save-train"),
+	dataset_cfg=MazeDatasetConfig(name="test_cfg_save-data", grid_n=5, n_mazes=10),
 	model_cfg=BaseGPTConfig(
 		name="test_cfg_save-model",
 		act_fn="dummy-act-fn",

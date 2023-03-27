@@ -162,8 +162,8 @@ class ConfigHolder(SerializableDataclass):
     """
 
     name: str = serializable_field(default="default")
-    # train_cfg: TrainConfig
-    # dataset_cfg: MazeDatasetConfig
+    train_cfg: TrainConfig
+    dataset_cfg: MazeDatasetConfig
     model_cfg: BaseGPTConfig
     tokenizer: PreTrainedTokenizer | None = serializable_field(
         default=None,
