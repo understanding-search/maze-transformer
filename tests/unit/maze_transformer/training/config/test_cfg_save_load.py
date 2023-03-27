@@ -4,6 +4,15 @@ import json
 from muutils.zanj import ZANJ
 from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig, TrainConfig, BaseGPTConfig
 
+
+def test_misc():
+	dataset_cfg=MazeDatasetConfig(name="test_cfg_save-data", grid_n=5, n_mazes=10)
+	print(dataset_cfg)
+	print(dataset_cfg.serialize())
+
+	assert dataset_cfg == MazeDatasetConfig.load(dataset_cfg.serialize())
+
+
 def test_cfg_save():
 
 	fname: Path = Path("tests/_temp/test_cfg_save.json")
@@ -26,6 +35,8 @@ def test_cfg_save():
 
 	with open(fname, "r") as f:
 		loaded = ConfigHolder.load(json.load(f))
+
+	print(loaded)
 
 	assert loaded == cfg, f"{loaded} != {cfg}"
 
