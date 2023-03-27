@@ -18,9 +18,6 @@ from maze_transformer.training.training import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access
 
-MazePath = list[CoordTup]
-ArrMazePath = NDArray["node x_y_pos", int]
-
 
 def find_config(folder: Path) -> Path | tuple[Path, Path] | None:
     """Assumed directory structure:
