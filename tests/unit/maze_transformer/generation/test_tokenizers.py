@@ -8,7 +8,7 @@ import torch
 from pytest import mark, param
 from transformer_lens import HookedTransformer, HookedTransformerConfig
 
-from maze_transformer.training.config import ConfigHolder
+from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import HuggingMazeTokenizer
 from scripts.create_dataset import generate_MazeTokenizer
@@ -33,11 +33,10 @@ def test_tokenization_encoding():
     # WrappedTokenizer
     # Initialized with a configholder - tokenizer will eventually be a string
     cfg_holder = ConfigHolder(
-        train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None
+        train_cfg=None, dataset_cfg=cfg, model_cfg=None,
     )
-    tokenizer = HuggingMazeTokenizer(cfg_holder)
 
-    tokenizer_out = tokenizer(maze_str_tokens)["input_ids"]
+    tokenizer_out = cfg_holder.tokenizer(maze_str_tokens)["input_ids"]
     assert torch.all(
         torch.tensor(tokenizer_out).flatten() == torch.tensor(maze_tokens)
     ), "Tokenization mismatch"
@@ -62,19 +61,18 @@ def test_to_ascii():
     # Need to generate a config to extract the token map >.<
     cfg = MazeDatasetConfig(name="testing_maze", grid_n=5, n_mazes=1)
     cfg_holder = ConfigHolder(
-        train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None
+        train_cfg=None, dataset_cfg=cfg, model_cfg=None,
     )
-    tokenizer = HuggingMazeTokenizer(cfg_holder)
 
     # Try with string tokens
     assert (
-        tokenizer.to_ascii(maze_str_tokens).splitlines() == target
+        cfg_holder.tokenizer.to_ascii(maze_str_tokens).splitlines() == target
     ), "ASCII encoding from string tokens failed"
 
     # And with token ids
-    token_ids = tokenizer.encode(maze_str_tokens)
+    token_ids = cfg_holder.tokenizer.encode(maze_str_tokens)
     assert (
-        tokenizer.to_ascii(token_ids).splitlines() == target
+        cfg_holder.tokenizer.to_ascii(token_ids).splitlines() == target
     ), "ASCII encoding from token ids failed"
 
 
@@ -88,20 +86,21 @@ def test_tokenizer_inside_hooked_transformer():
     <ADJLIST_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
 
     #! Can I initalise this from the config hodler directly by using the nano model cfg
+    # refactored on 2023-03-27 15:50 to do just that
     cfg_holder = ConfigHolder(
-        train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None
+        train_cfg=None, 
+        dataset_cfg=cfg, 
+        model_cfg=BaseGPTConfig(
+            name="for test_tokenizer_inside_hooked_transformer",
+            act_fn="relu",
+            d_model=5,
+            d_head=1,
+            n_layers=1,
+        ),
     )
-    tokenizer = HuggingMazeTokenizer(cfg_holder)
+    
+    hktransformer: HookedTransformer = cfg_holder.create_model()
 
-    hooked_transformer_cfg = HookedTransformerConfig(
-        act_fn="relu",
-        d_model=5,
-        d_head=1,
-        n_layers=1,
-        n_ctx=100,  # context size
-        d_vocab=tokenizer.vocab_size,
-    )
-    hktransformer = HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=tokenizer)
     token_ids = hktransformer.to_tokens("".join(maze_str_tokens), prepend_bos=False)
 
     # -- Test Simple Tokenization --
@@ -155,16 +154,15 @@ def test_pad_sequence_param(inp, expected):
     # Initialized with a configholder - tokenizer will eventually be a string
     cfg = MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1)
     cfg_holder = ConfigHolder(
-        train_cfg=None, dataset_cfg=cfg, model_cfg=None, tokenizer=None
+        train_cfg=None, dataset_cfg=cfg, model_cfg=None,
     )
-    tokenizer = HuggingMazeTokenizer(cfg_holder)
 
     # Pad token id is chosen when the tokenizer is initialized
-    expected = [x if x != PAD_PLACEHOLDER else tokenizer.pad_token_id for x in expected]
+    expected = [x if x != PAD_PLACEHOLDER else cfg_holder.tokenizer.pad_token_id for x in expected]
 
     # Need to go to string representation to pad
-    inp = tokenizer.decode(inp)
-    result = tokenizer(
+    inp = cfg_holder.tokenizer.decode(inp)
+    result = cfg_holder.tokenizer(
         inp, padding="max_length", truncation=True, max_length=5, return_tensors="pt"
     )["input_ids"][0]
 
