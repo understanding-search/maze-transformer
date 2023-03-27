@@ -162,17 +162,21 @@ class ConfigHolder(SerializableDataclass):
     """
 
     name: str = serializable_field(default="default")
-    train_cfg: TrainConfig
-    dataset_cfg: MazeDatasetConfig
+    # train_cfg: TrainConfig
+    # dataset_cfg: MazeDatasetConfig
     model_cfg: BaseGPTConfig
-    # tokenizer: PreTrainedTokenizer | None = serializable_field(
-    #     default=None,
-    #     serialization_fn=lambda x: x.__class__.__name__,
-    #     loading_fn=lambda data: HuggingMazeTokenizer(
-    #         token_arr = data["dataset_cfg"]["token_arr"],
-    #         seq_len_max = data["dataset_cfg"]["seq_len_max"],
-    #         # MazeDatasetConfig.load(data["dataset_cfg"])
-    #     ),
+    tokenizer: PreTrainedTokenizer | None = serializable_field(
+        default=None,
+        serialization_fn=lambda x: repr(x) if x is not None else None,
+        loading_fn=lambda data: None if data["tokenizer"] is None else NotImplementedError,
+    )
+        # loading_fn=lambda data: HuggingMazeTokenizer(
+        #     token_arr=["<PADDING>", "(0,0)"],
+        #     seq_len_max=100,
+        #     # token_arr = data["dataset_cfg"]["token_arr"].copy(),
+        #     # seq_len_max = data["dataset_cfg"]["seq_len_max"],
+        #     # MazeDatasetConfig.load(data["dataset_cfg"])
+        # ),
     # )
 
     # def create_model(self) -> HookedTransformer:
