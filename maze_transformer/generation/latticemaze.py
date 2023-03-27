@@ -6,6 +6,14 @@ import numpy as np
 from muutils.misc import list_split
 from muutils.tensor_utils import NDArray
 
+from maze_transformer.generation.constants import (
+    NEIGHBORS_MASK,
+    SPECIAL_TOKENS,
+    Coord,
+    CoordArray,
+    CoordTup,
+)
+
 
 def coord_str_to_tuple(coord_str: str) -> CoordTup:
     """convert a coordinate string to a tuple"""
