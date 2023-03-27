@@ -227,9 +227,8 @@ class MazePlot:
                 label=path_format.label,
             )
         # mark endpoints
-        self.ax.plot([p_transformed[0][1]], [p_transformed[0][0]], "o", color=path_format.color)
-        self.ax.plot(
-            [p_transformed[-1][1]], [p_transformed[-1][0]], "x", color=path_format.color
+        self.ax.plot(p_transformed[0][0], p_transformed[0][1], "o", color=path_format.color)
+        self.ax.plot(p_transformed[-1][0], p_transformed[-1][1], "x", color=path_format.color
         )
 
     def as_ascii(self, start=None, end=None):
