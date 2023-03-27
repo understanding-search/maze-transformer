@@ -87,7 +87,9 @@ class MazePlot:
                 path_num=len(self.predicted_paths) + 1
             )
         if color is None:
-            color_num = len(self.predicted_paths) % len(self.DEFAULT_PREDICTED_PATH_COLORS)
+            color_num = len(self.predicted_paths) % len(
+                self.DEFAULT_PREDICTED_PATH_COLORS
+            )
             color = self.DEFAULT_PREDICTED_PATH_COLORS[color_num]
 
         self.predicted_paths.append(
@@ -101,8 +103,8 @@ class MazePlot:
             )
         )
         return self
-    
-    def add_multiple_paths(self, path_list:list):
+
+    def add_multiple_paths(self, path_list: list):
         """
         Function for adding multiple paths to MazePlot at once. This can be done in two ways:
         1. Passing a list of
@@ -150,7 +152,7 @@ class MazePlot:
         """Transform Points from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
         points = np.array([(x, y) for (y, x) in points])
         return self.UNIT_LENGTH * (points + 0.5)
-    
+
     def _plot_maze(self) -> None:
         img = self._latticemaze_to_img()
         self.ax.imshow(img, cmap="gray", vmin=0, vmax=1)
@@ -217,7 +219,7 @@ class MazePlot:
                     ] = connection_values[row, col]
 
         return img
-    
+
     def _plot_path(self, path_format: PathFormat) -> None:
         p_transformed = self._rowcol_to_coord(path_format.path)
         if path_format.quiver_kwargs is not None:
