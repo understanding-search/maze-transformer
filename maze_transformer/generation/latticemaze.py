@@ -1,6 +1,6 @@
 import random
 from dataclasses import dataclass
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 import numpy as np
 from muutils.misc import list_split
@@ -12,6 +12,11 @@ from maze_transformer.generation.constants import (
     Coord,
     CoordArray,
     CoordTup,
+)
+from maze_transformer.utils.token_utils import (
+    decode_maze_tokens_to_coords,
+    get_adjlist_tokens,
+    get_path_tokens,
 )
 
 
@@ -329,15 +334,18 @@ class LatticeMaze:
         )
 
     @classmethod
-    def from_tokens(cls, maze_tokens: list[str]) -> "LatticeMaze":
+    def from_tokens(cls, tokens: list[str]) -> "LatticeMaze":
         """create a LatticeMaze from a list of tokens"""
-
+        adjlist_tokens = get_adjlist_tokens(tokens)
         edges: list[str] = list_split(
-            maze_tokens,
+            adjlist_tokens,
             SPECIAL_TOKENS["adjacency_endline"],
         )
 
         coordinates: list[tuple[str, str]] = list()
+        # what we're doing here:
+        # for each edge, convert to a coord tuple and add it to the list
+        # check that for each edge we have a connector, and a single token on each side
         for e in edges:
             # skip last endline
             if len(e) != 0:
@@ -371,3 +379,11 @@ class SolvedMaze(NamedTuple):
 
     maze: LatticeMaze
     solution: list[CoordTup]
+
+    @classmethod
+    def from_tokens(cls, tokens: list[str], data_cfg) -> "SolvedMaze":
+        maze = LatticeMaze.from_tokens(tokens)
+        path_tokens = get_path_tokens(tokens)
+        solution = decode_maze_tokens_to_coords(path_tokens, data_cfg)
+
+        return cls(maze, cast(list[CoordTup], solution))

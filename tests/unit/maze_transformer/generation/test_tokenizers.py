@@ -70,7 +70,6 @@ def test_to_ascii():
     assert (
         tokenizer.to_ascii(maze_str_tokens).splitlines() == target
     ), "ASCII encoding from string tokens failed"
-
     # And with token ids
     token_ids = tokenizer.encode(maze_str_tokens)
     assert (
