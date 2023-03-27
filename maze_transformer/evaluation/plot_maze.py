@@ -87,7 +87,9 @@ class MazePlot:
                 path_num=len(self.predicted_paths) + 1
             )
         if color is None:
-            color = self.DEFAULT_PREDICTED_PATH_COLORS[len(self.predicted_paths)]
+            color_num = len(self.predicted_paths) % len(self.DEFAULT_PREDICTED_PATH_COLORS)
+            print(color_num)
+            color = self.DEFAULT_PREDICTED_PATH_COLORS[color_num]
 
         self.predicted_paths.append(
             PathFormat(
