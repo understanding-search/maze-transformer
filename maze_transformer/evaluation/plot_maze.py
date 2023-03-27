@@ -88,7 +88,6 @@ class MazePlot:
             )
         if color is None:
             color_num = len(self.predicted_paths) % len(self.DEFAULT_PREDICTED_PATH_COLORS)
-            print(color_num)
             color = self.DEFAULT_PREDICTED_PATH_COLORS[color_num]
 
         self.predicted_paths.append(
@@ -103,6 +102,18 @@ class MazePlot:
         )
         return self
     
+    def add_multiple_paths(self, path_list:list):
+        """
+        Function for adding multiple paths to MazePlot at once. This can be done in two ways:
+        1. Passing a list of
+        """
+        for path in path_list:
+            if type(path) == PathFormat:
+                self.predicted_paths.append(path)
+            else:
+                self.add_predicted_path(path=path)
+        return self
+
     def add_node_values(
             self,
             node_values: NDArray
@@ -111,9 +122,38 @@ class MazePlot:
         # assert(node_values.shape == self.maze.grid_shape,
         #            'Passed node values have to have the same shape as the maze.')
             #TODO normalize node values
-
         self.node_values = node_values
         return self
+    
+    def show(self) -> None:
+        """Plot the maze and paths."""
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(1, 1, 1)
+
+        self._plot_maze()
+
+        if self.true_path is not None:
+            self._plot_path(self.true_path)
+        for path in self.predicted_paths:
+            self._plot_path(path)
+
+        # Plot labels
+        tick_arr = np.arange(self.maze.grid_shape[0])
+        self.ax.set_xticks(self.UNIT_LENGTH * (tick_arr + 0.5), tick_arr)
+        self.ax.set_yticks(self.UNIT_LENGTH * (tick_arr + 0.5), tick_arr)
+        self.ax.set_xlabel("col")
+        self.ax.set_ylabel("row")
+
+        plt.show()
+
+    def _rowcol_to_coord(self, points: CoordArray) -> NDArray:
+        """Transform Points from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
+        points = np.array([(x, y) for (y, x) in points])
+        return self.UNIT_LENGTH * (points + 0.5)
+    
+    def _plot_maze(self) -> None:
+        img = self._latticemaze_to_img()
+        self.ax.imshow(img, cmap="gray", vmin=0, vmax=1)
 
     def _latticemaze_to_img(self) -> NDArray["row col", bool]:
         """
@@ -177,11 +217,34 @@ class MazePlot:
                     ] = connection_values[row, col]
 
         return img
-
-    def _rowcol_to_coord(self, points: CoordArray) -> NDArray:
-        """transform points to img coordinates"""
-        points = np.array([(x, y) for (y, x) in points])
-        return self.unit_length * (points + 0.5)
+    
+    def _plot_path(self, path_format: PathFormat) -> None:
+        p_transformed = self._rowcol_to_coord(path_format.path)
+        if path_format.quiver_kwargs is not None:
+            x: NDArray = p_transformed[:, 0]
+            y: NDArray = p_transformed[:, 1]
+            self.ax.quiver(
+                x[:-1],
+                y[:-1],
+                x[1:] - x[:-1],
+                y[1:] - y[:-1],
+                scale_units="xy",
+                angles="xy",
+                scale=1,
+                color=path_format.color,
+                **path_format.quiver_kwargs,
+            )
+        else:
+            self.ax.plot(
+                *zip(*p_transformed),
+                path_format.fmt,
+                lw=path_format.line_width,
+                color=path_format.color,
+                label=path_format.label,
+            )
+        # mark endpoints
+        self.ax.plot([p_transformed[0][0]], [p_transformed[0][1]], "o", color=path_format.color)
+        self.ax.plot([p_transformed[-1][0]], [p_transformed[-1][1]], "x", color=path_format.color)
 
     def as_ascii(self, start=None, end=None):
         """
@@ -210,59 +273,3 @@ class MazePlot:
                     maze_str += wall_char
             maze_str += "\n"  # Start a new line after each row
         return maze_str
-
-    # Image rendering functions (plt involved)
-    def _plot_maze(self) -> None:
-        img = self._latticemaze_to_img()
-        self.ax.imshow(img, cmap="gray", vmin=0, vmax=1)
-
-    def _plot_path(self, pf: PathFormat) -> None:
-        p_transformed = self._rowcol_to_coord(pf.path)
-        if pf.quiver_kwargs is not None:
-            x: NDArray = p_transformed[:, 0]
-            y: NDArray = p_transformed[:, 1]
-            self.ax.quiver(
-                x[:-1],
-                y[:-1],
-                x[1:] - x[:-1],
-                y[1:] - y[:-1],
-                scale_units="xy",
-                angles="xy",
-                scale=1,
-                color=pf.color,
-                **pf.quiver_kwargs,
-            )
-        else:
-            self.ax.plot(
-                *zip(*p_transformed),
-                pf.fmt,
-                lw=pf.line_width,
-                color=pf.color,
-                label=pf.label,
-            )
-        # mark endpoints
-        self.ax.plot([p_transformed[0][1]], [p_transformed[0][0]], "o", color=pf.color)
-        self.ax.plot(
-            [p_transformed[-1][1]], [p_transformed[-1][0]], "x", color=pf.color
-        )
-
-    def show(self) -> None:
-        """Plot the maze and paths."""
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(1, 1, 1)
-
-        self._plot_maze()
-
-        if self.true_path is not None:
-            self._plot_path(self.true_path)
-        for path in self.predicted_paths:
-            self._plot_path(path)
-
-        # Plot labels
-        tick_arr = np.arange(self.maze.grid_shape[0])
-        self.ax.set_xticks(self.unit_length * (tick_arr + 0.5), tick_arr)
-        self.ax.set_yticks(self.unit_length * (tick_arr + 0.5), tick_arr)
-        self.ax.set_xlabel("col")
-        self.ax.set_ylabel("row")
-
-        plt.show()
