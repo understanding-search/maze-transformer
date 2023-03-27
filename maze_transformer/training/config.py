@@ -1,4 +1,5 @@
 from __future__ import annotations
+from functools import cached_property
 
 from typing import Any, Dict, Type
 
@@ -165,24 +166,18 @@ class ConfigHolder(SerializableDataclass):
     train_cfg: TrainConfig
     dataset_cfg: MazeDatasetConfig
     model_cfg: BaseGPTConfig
-    tokenizer: PreTrainedTokenizer | None = serializable_field(
-        default=None,
-        serialization_fn=lambda x: repr(x) if x is not None else None,
-        loading_fn=lambda data: None if data["tokenizer"] is None else HuggingMazeTokenizer(
-            token_arr = data["dataset_cfg"]["token_arr"].copy(),
-            seq_len_max = data["dataset_cfg"]["seq_len_max"],
-        ),
-    )
 
-    # def create_model(self) -> HookedTransformer:
-    #     hooked_transformer_cfg = HookedTransformerConfig(
-    #         act_fn=self.model_cfg.act_fn,
-    #         d_model=self.model_cfg.d_model,
-    #         d_head=self.model_cfg.d_head,
-    #         n_layers=self.model_cfg.n_layers,
-    #         n_ctx=self.dataset_cfg.seq_len_max,
-    #         d_vocab=len(self.dataset_cfg.token_arr),
-    #     )
-    #     if self.tokenizer is None and isinstance(self.dataset_cfg, MazeDatasetConfig):
-    #         self.tokenizer = HuggingMazeTokenizer(self.dataset_cfg)
-    #     return HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=self.tokenizer)
+    @cached_property
+    def tokenizer(self) -> PreTrainedTokenizer:
+        return HuggingMazeTokenizer(self.dataset_cfg)
+
+    def create_model(self) -> HookedTransformer:
+        hooked_transformer_cfg: HookedTransformerConfig = HookedTransformerConfig(
+            act_fn=self.model_cfg.act_fn,
+            d_model=self.model_cfg.d_model,
+            d_head=self.model_cfg.d_head,
+            n_layers=self.model_cfg.n_layers,
+            n_ctx=self.dataset_cfg.seq_len_max,
+            d_vocab=len(self.dataset_cfg.token_arr),
+        )
+        return HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=self.tokenizer)
