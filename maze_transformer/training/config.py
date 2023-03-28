@@ -36,11 +36,12 @@ class BaseGPTConfig(SerializableDataclass):
 # ==================================================
 
 
-def _optimizer_save_fn(x: Type[torch.optim.Optimizer]) -> str:
-    x_name: str = x.__name__
-    assert x_name in TORCH_OPTIMIZERS_MAP
-    assert TORCH_OPTIMIZERS_MAP[x_name] == x
-    return x_name
+def _optimizer_save_fn(optim: Type[torch.optim.Optimizer]) -> str:
+    """convert torch optimizer to string, while checking that the conversion is reversible"""
+    optim_name: str = optim.__name__
+    assert optim_name in TORCH_OPTIMIZERS_MAP
+    assert TORCH_OPTIMIZERS_MAP[optim_name] == optim
+    return optim_name
 
 
 @serializable_dataclass(kw_only=True)

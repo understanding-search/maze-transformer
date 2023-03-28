@@ -1,12 +1,12 @@
 format:
-	python -m pycln --all .
-	python -m isort format .
-	python -m black .
+	poetry run python -m pycln --all .
+	poetry run python -m isort format .
+	poetry run python -m black .
 
 check-format:
-	python -m pycln --check --all .
-	python -m isort --check-only .
-	python -m black --check .
+	poetry run python -m pycln --check --all .
+	poetry run python -m isort --check-only .
+	poetry run python -m black --check .
 
 unit:
 	rm -rf .pytest_cache
