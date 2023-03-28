@@ -9,6 +9,7 @@ from muutils.tensor_utils import ATensor, NDArray
 from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
+from maze_transformer.evaluation.plot_maze import MazePlot
 from maze_transformer.generation.latticemaze import (
     SPECIAL_TOKENS,
     CoordArray,
@@ -49,7 +50,7 @@ class MazeTokenizer:
                         node_token_map[tuple(c_e.tolist())],
                         SPECIAL_TOKENS["adjacency_endline"],
                     ]
-                    for c_s, c_e in self.maze.as_adjlist()
+                    for c_s, c_e in self.maze.as_adj_list()
                 ]
             ),
             SPECIAL_TOKENS["adjlist_end"],
@@ -162,4 +163,4 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         ]
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence)
-        return lattice_maze.as_ascii(start=start, end=end)
+        return MazePlot(lattice_maze).as_ascii(start=start, end=end)
