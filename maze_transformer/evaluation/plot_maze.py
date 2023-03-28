@@ -177,10 +177,14 @@ class MazePlot:
 
         else:  # if custom node_values have been passed
             n_blues = int(256 * self.max_node_value)  # for scaling colorbar up to value
-            blues = mpl.colormaps["Blues"].resampled(n_blues) # load blue spectrum
+            blues = mpl.colormaps["Blues"].resampled(n_blues)  # load blue spectrum
             bluecolors = blues(np.linspace(0, 1, n_blues))
-            black = np.full((256, 4), [0, 0, 0, 1]) # define black color "constant spectrum" of same size as blue spectrum
-            blackblues = np.vstack((black, bluecolors)) # stack spectra and define colormap
+            black = np.full(
+                (256, 4), [0, 0, 0, 1]
+            )  # define black color "constant spectrum" of same size as blue spectrum
+            blackblues = np.vstack(
+                (black, bluecolors)
+            )  # stack spectra and define colormap
             cmap = ListedColormap(blackblues)
 
             # Create truncated colorbar that only respects interval [0,1]
