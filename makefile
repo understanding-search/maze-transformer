@@ -10,10 +10,10 @@ check-format:
 
 unit:
 	rm -rf .pytest_cache
-	python -m pytest tests/unit
+	poetry run python -m pytest tests/unit
 
 integration:
 	rm -rf .pytest_cache
-	python -m pytest -s tests/integration
+	poetry run python -m pytest -s tests/integration
 
 test: unit integration
