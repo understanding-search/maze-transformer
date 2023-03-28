@@ -1,5 +1,6 @@
 import random
 from dataclasses import dataclass
+from typing import NamedTuple
 
 import numpy as np
 from muutils.misc import list_split
@@ -113,75 +114,7 @@ class LatticeMaze:
 
     n_connections = property(lambda self: self.connection_list.sum())
 
-    def as_img(self) -> NDArray["x y", bool]:
-        """
-        Plot an image to visualise the maze.
-
-        Returns a matrix of side length 2n + 1 where n is the number of nodes.
-
-        Example:
-          Connection List:
-          DOWN        RIGHT
-          [F, T, T]   [T, T, F]
-          [T, F, T]   [T, F, F]
-          [F, F, F]   [T, F, F]
-
-          Image:
-                                              x x x x x x x
-            N T N T N F       N - N - N       x           x
-            F   T   T             |   |       x x x   x   x
-            N T N F N F -->   N - N   N   --> x       x   x
-            T   F   T         |       |       x   x x x   x
-            N T N F N F       N - N   N       x       x   x
-            F   F   F                         x x x x x x x
-        """
-        # set up the background
-        img: NDArray["x y", bool] = np.zeros(
-            (
-                self.grid_shape[0] * 2 + 1,
-                self.grid_shape[1] * 2 + 1,
-            ),
-            dtype=bool,
-        )
-
-        # fill in nodes
-        img[1::2, 1::2] = True
-
-        # fill in connections
-        # print(f"{img[2:-2:2, 1::2].shape = } {self.connection_list[0, :, :-1].shape = }")
-        img[2:-2:2, 1::2] = self.connection_list[0, :-1, :]
-        img[1::2, 2:-2:2] = self.connection_list[1, :, :-1]
-
-        return img
-
-    def as_ascii(self, start=None, end=None):
-        """
-        Returns an ASCII visualization of the maze.
-        Courtesy of ChatGPT
-        """
-        wall_char = "#"
-        path_char = " "
-
-        # Determine the size of the maze
-        maze = self.as_img()
-        n_rows, n_cols = maze.shape
-        maze_str = ""
-
-        # Iterate through each element of the maze and print the appropriate symbol
-        for i in range(n_rows):
-            for j in range(n_cols):
-                if start is not None and start[0] == i - 1 and start[1] == j - 1:
-                    maze_str += "S"
-                elif end is not None and end[0] == i - 1 and end[1] == j - 1:
-                    maze_str += "E"
-                elif maze[i, j]:
-                    maze_str += path_char
-                else:
-                    maze_str += wall_char
-            maze_str += "\n"  # Start a new line after each row
-        return maze_str
-
-    def as_adjlist(
+    def as_adj_list(
         self, shuffle_d0: bool = True, shuffle_d1: bool = True
     ) -> NDArray["conn start_end coord", np.int8]:
         adjlist: NDArray["conn start_end coord", np.int8] = np.full(
@@ -216,10 +149,6 @@ class LatticeMaze:
             np.random.shuffle(adjlist)
 
         return adjlist
-
-    def points_transform_to_img(self, points: CoordArray) -> CoordArray:
-        """transform points to img coordinates"""
-        return 2 * points + 1
 
     @staticmethod
     def heuristic(a: CoordTup, b: CoordTup) -> float:
@@ -409,3 +338,10 @@ class LatticeMaze:
             adjlist[i, 1] = np.array(coord_str_to_tuple(c_end))
 
         return cls.from_adjlist(adjlist)
+
+
+class SolvedMaze(NamedTuple):
+    """Stores a maze and a solution"""
+
+    maze: LatticeMaze
+    solution: list[CoordTup]
