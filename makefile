@@ -16,6 +16,4 @@ integration:
 	rm -rf .pytest_cache
 	python -m pytest -s tests/integration
 
-test:
-	rm -rf .pytest_cache
-	python -m pytest tests
+test: unit integration

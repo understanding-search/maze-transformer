@@ -1,22 +1,26 @@
 import json
 from pathlib import Path
+from typing import Union
 
-from muutils.logger import Logger
+from transformers import PreTrainedTokenizer
 
 from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDataset
-from maze_transformer.training.training import (
-    TRAIN_SAVE_FILES,
-    get_dataloader,
-    setup_logger,
-    train,
+from maze_transformer.training.training import TRAIN_SAVE_FILES, get_dataloader, train
+from maze_transformer.training.wandb_logger import (
+    WandbJobType,
+    WandbLogger,
+    WandbProject,
 )
 from maze_transformer.utils.utils import get_device
 
 
 def train_model(
-    basepath: str, training_cfg: str = "tiny-v1", model_cfg: str = "tiny-v1"
+    basepath: str,
+    wandb_project: Union[WandbProject, str],
+    training_cfg: str = "tiny-v1",
+    model_cfg: str = "tiny-v1",
 ):
     dataset = MazeDataset.disk_load(basepath, do_config=True, do_tokenized=True)
 
@@ -38,9 +42,23 @@ def train_model(
     output_path: Path = Path(basepath) / output_dir_name
     (output_path / TRAIN_SAVE_FILES.checkpoints).mkdir(parents=True)
 
-    logger: Logger = setup_logger(
-        output_path=output_path,
-        config=cfg,
+    logger = WandbLogger.create(
+        config=cfg.serialize(),
+        project=wandb_project,
+        job_type=WandbJobType.TRAIN_MODEL,
+    )
+
+    logger.progress("Loaded data config, initialized logger")
+
+    logger.summary(
+        dict(
+            logger_cfg={
+                "output_dir": str(output_path),
+                "data_cfg.name": cfg.dataset_cfg.name,
+                "train_cfg.name": cfg.train_cfg.name,
+                "model_cfg.name": cfg.model_cfg.name,
+            },
+        )
     )
 
     dataloader = get_dataloader(dataset, cfg, logger)
