@@ -13,10 +13,11 @@ from torch.utils.data import Dataset
 from maze_transformer.utils.utils import get_device
 
 
-def _dtype_serialization_fn(x: torch.dtype | np.dtype) -> str:
-    x_str: str = str(x)
-    assert x_str in DTYPE_MAP, f"unknown dtype {x}"
-    assert DTYPE_MAP[x_str] == x
+def _dtype_serialization_fn(torch_datatype: torch.dtype | np.dtype) -> str:
+    """convert torch dtype to string, while checking that the conversion is reversible"""
+    x_str: str = str(torch_datatype)
+    assert x_str in DTYPE_MAP, f"unknown dtype {torch_datatype}"
+    assert DTYPE_MAP[x_str] == torch_datatype
     return x_str
 
 

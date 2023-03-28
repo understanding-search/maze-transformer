@@ -27,7 +27,7 @@ from maze_transformer.generation.latticemaze import (
 from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, IndexedArray
 from maze_transformer.training.tokenizer import SPECIAL_TOKENS, maze_to_tokens
 
-_MAZEDATASET_PROPERTIES: list[str] = [
+_MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",
     "token_arr",
     "tokenizer_map",
@@ -38,7 +38,7 @@ _MAZEDATASET_PROPERTIES: list[str] = [
 ]
 
 # TODO: re-add later, depends on a feature coming in muutils 0.3.2
-__MAZEDATASET_PROPERTIES_VALIDATE: list[str] = [
+__MAZEDATASET_PROPERTIES_TO_VALIDATE: list[str] = [
     "token_arr",
     "padding_token_index",
     "tokenizer_map",
@@ -48,7 +48,7 @@ __MAZEDATASET_PROPERTIES_VALIDATE: list[str] = [
 ]
 
 
-@serializable_dataclass(kw_only=True, properties_to_serialize=_MAZEDATASET_PROPERTIES)
+@serializable_dataclass(kw_only=True, properties_to_serialize=_MAZEDATASET_PROPERTIES_TO_SERIALIZE)
 class MazeDatasetConfig(GPTDatasetConfig):
     """maze dataset configuration, including tokenizers"""
 
