@@ -2,8 +2,11 @@ from __future__ import annotations  # for type hinting self as return value
 
 from dataclasses import dataclass
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
 from maze_transformer.generation.latticemaze import CoordArray, LatticeMaze
@@ -25,13 +28,14 @@ class PathFormat:
 
 class MazePlot:
     """Class for displaying mazes and paths"""
+
     DEFAULT_PREDICTED_PATH_COLORS = [
-        "tab:blue",
-        "tab:green",
-        "tab:purple",
         "tab:orange",
         "tab:olive",
-        "tab:cyan",
+        "sienna",
+        "mediumseagreen",
+        "tab:purple",
+        "slategrey",
     ]
 
     def __init__(self, maze: LatticeMaze) -> None:
@@ -46,6 +50,8 @@ class MazePlot:
         self.true_path: PathFormat = None
         self.predicted_paths: list = []
         self.node_values: NDArray(self.maze.grid_shape) = None
+        self.custom_node_value_flag: bool = False
+        self.max_node_value: float = 1
 
     def add_true_path(
         self,
@@ -116,20 +122,24 @@ class MazePlot:
                 self.add_predicted_path(path=path)
         return self
 
-    def add_node_values(
-            self,
-            node_values: NDArray
-    ) -> MazePlot:
-        # Always true warning??
-        # assert(node_values.shape == self.maze.grid_shape,
-        #            'Passed node values have to have the same shape as the maze.')
-            #TODO normalize node values
+    def add_node_values(self, node_values: NDArray) -> MazePlot:
+        assert (
+            node_values.shape == self.maze.grid_shape
+        ), "Please pass node values of the same sape as LatticeMaze.grid_shape"
+        assert np.min(node_values) >= 0, "Please pass non-negative node values only."
+
         self.node_values = node_values
+        self.custom_node_value_flag = (
+            True  # Set flag for choosing cmap while plotting maze
+        )
+        self.max_node_value = np.max(
+            node_values
+        )  # Retrieve Max node value for plotting
         return self
-    
-    def show(self) -> None:
+
+    def show(self, dpi=100) -> None:
         """Plot the maze and paths."""
-        self.fig = plt.figure()
+        self.fig = plt.figure(dpi=dpi)
         self.ax = self.fig.add_subplot(1, 1, 1)
 
         self._plot_maze()
@@ -141,8 +151,8 @@ class MazePlot:
 
         # Plot labels
         tick_arr = np.arange(self.maze.grid_shape[0])
-        self.ax.set_xticks(self.UNIT_LENGTH * (tick_arr + 0.5), tick_arr)
-        self.ax.set_yticks(self.UNIT_LENGTH * (tick_arr + 0.5), tick_arr)
+        self.ax.set_xticks(self.unit_length * (tick_arr + 0.5), tick_arr)
+        self.ax.set_yticks(self.unit_length * (tick_arr + 0.5), tick_arr)
         self.ax.set_xlabel("col")
         self.ax.set_ylabel("row")
 
@@ -151,11 +161,34 @@ class MazePlot:
     def _rowcol_to_coord(self, points: CoordArray) -> NDArray:
         """Transform Points from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
         points = np.array([(x, y) for (y, x) in points])
-        return self.UNIT_LENGTH * (points + 0.5)
+        return self.unit_length * (points + 0.5)
 
     def _plot_maze(self) -> None:
+        """
+        Define Colormap and plot maze.
+        Colormap: x < 0: black
+                  0 <= x <= self.max_node_value:
+                        fade from dark blue to white,
+                        upper bound adaptive to max node value
+        """
         img = self._latticemaze_to_img()
-        self.ax.imshow(img, cmap="gray", vmin=0, vmax=1)
+        if self.custom_node_value_flag is False:
+            self.ax.imshow(img, cmap="gray", vmin=-1, vmax=1)
+
+        else:  # if custom node_values have been passed
+            n_blues = int(256 * self.max_node_value)  # for scaling colorbar up to value
+            blues = mpl.colormaps["Blues"].resampled(n_blues) # load blue spectrum
+            bluecolors = blues(np.linspace(0, 1, n_blues))
+            black = np.full((256, 4), [0, 0, 0, 1]) # define black color "constant spectrum" of same size as blue spectrum
+            blackblues = np.vstack((black, bluecolors)) # stack spectra and define colormap
+            cmap = ListedColormap(blackblues)
+
+            # Create truncated colorbar that only respects interval [0,1]
+            norm = Normalize(vmin=0, vmax=self.max_node_value)
+            scalar_mappable = ScalarMappable(norm=norm, cmap="Blues")
+            self.fig.colorbar(scalar_mappable, ax=self.ax)
+
+            self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=self.max_node_value)
 
     def _latticemaze_to_img(self) -> NDArray["row col", bool]:
         """
@@ -177,7 +210,6 @@ class MazePlot:
 
         Returns a matrix of side length (ul) * n + 1 where n is the number of nodes.
         """
-        
 
         # Set node and connection values
         if self.node_values is None:
@@ -187,7 +219,7 @@ class MazePlot:
             connection_values = self.node_values
 
         # Create background image (all pixels set to -1, walls everywhere)
-        img: NDArray["row col", int] = -np.ones(
+        img: NDArray["row col", float] = -np.ones(
             (
                 self.maze.grid_shape[0] * self.unit_length + 1,
                 self.maze.grid_shape[1] * self.unit_length + 1,
@@ -245,8 +277,20 @@ class MazePlot:
                 label=path_format.label,
             )
         # mark endpoints
-        self.ax.plot([p_transformed[0][0]], [p_transformed[0][1]], "o", color=path_format.color)
-        self.ax.plot([p_transformed[-1][0]], [p_transformed[-1][1]], "x", color=path_format.color)
+        self.ax.plot(
+            [p_transformed[0][0]],
+            [p_transformed[0][1]],
+            "o",
+            color=path_format.color,
+            ms=10,
+        )
+        self.ax.plot(
+            [p_transformed[-1][0]],
+            [p_transformed[-1][1]],
+            "x",
+            color=path_format.color,
+            ms=10,
+        )
 
     def as_ascii(self, start=None, end=None):
         """
@@ -269,9 +313,9 @@ class MazePlot:
                     maze_str += "S"
                 elif end is not None and end[0] == i - 1 and end[1] == j - 1:
                     maze_str += "E"
-                elif maze[i, j]:
-                    maze_str += path_char
-                else:
+                elif maze[i, j] == -1:
                     maze_str += wall_char
+                else:
+                    maze_str += path_char
             maze_str += "\n"  # Start a new line after each row
         return maze_str
