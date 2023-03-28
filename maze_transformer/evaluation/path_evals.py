@@ -16,11 +16,11 @@ def path_as_segments_iter(path: MazePath) -> Iterable[tuple]:
     Iterate over the segments of a path.
     """
     i: int
-    n_s: Coord | CoordTup
-    n_e: Coord | CoordTup
-    for i, n_s in enumerate(path[:-1]):
-        n_e = path[i + 1]
-        yield (n_s, n_e)
+    step_start: Coord | CoordTup
+    step_end: Coord | CoordTup
+    for i, step_start in enumerate(path[:-1]):
+        step_end = path[i + 1]
+        yield step_start, step_end
 
 
 class PathEvals:
@@ -52,10 +52,8 @@ class PathEvals:
             return 0.0
 
         n_adj: int = 0
-        for n_s, n_e in path_as_segments_iter(prediction):
-            # print(f"{n_s = } {n_e = }")
-
-            if (np.abs(n_s - n_e).sum() == 1).all():
+        for step_start, step_end in path_as_segments_iter(prediction):
+            if (np.abs(step_start - step_end).sum() == 1).all():
                 n_adj += 1
 
         return n_adj
@@ -80,8 +78,8 @@ class PathEvals:
             return 0.0
 
         n_connected: int = 0
-        for n_s, n_e in path_as_segments_iter(prediction):
-            if maze.nodes_connected(n_s, n_e):
+        for step_start, step_end in path_as_segments_iter(prediction):
+            if maze.nodes_connected(step_start, step_end):
                 n_connected += 1
 
         return n_connected

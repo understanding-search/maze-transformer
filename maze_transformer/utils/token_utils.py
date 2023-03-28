@@ -7,6 +7,8 @@ def tokens_between(tokens: list[str], start_value: str, end_value: str) -> list[
     start_idx = tokens.index(start_value) + 1
     end_idx = tokens.index(end_value)
 
+    assert start_idx < end_idx, "Start must come before end"
+
     return tokens[start_idx:end_idx]
 
 
@@ -55,12 +57,13 @@ def decode_maze_tokens_to_coords(
         if tk in mazedata_cfg.token_node_map:
             output.append(mazedata_cfg.token_node_map[tk])
         else:
-            if when_noncoord == "skip":
-                continue
-            elif when_noncoord == "include":
-                output.append(tk)
-            elif when_noncoord == "except":
-                raise ValueError(f"token '{tk}' at {idx = } is not a coordinate")
-            else:
-                raise ValueError(f"invalid value for {when_noncoord = }")
+            match when_noncoord:
+                case "skip":
+                    continue
+                case "include":
+                    output.append(tk)
+                case "except":
+                    raise ValueError(f"token '{tk}' at {idx = } is not a coordinate")
+                case _:
+                    raise ValueError(f"invalid value for {when_noncoord = }")
     return output
