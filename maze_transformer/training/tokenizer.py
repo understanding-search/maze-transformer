@@ -96,10 +96,10 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     name_or_path = "maze_tokenizer"
 
     def __init__(
-        self, 
-        cfg: Union["ConfigHolder", "MazeDatasetConfig", None] = None, 
-        token_arr: list[str]|None = None,
-        seq_len_max: int|None = None,
+        self,
+        cfg: Union["ConfigHolder", "MazeDatasetConfig", None] = None,
+        token_arr: list[str] | None = None,
+        seq_len_max: int | None = None,
         **kwargs,
     ) -> None:
         """takes either a cfg, or a token_arr and seq_len_max. also, kwargs are passed to super `PreTrainedTokenizer`"""
@@ -124,7 +124,9 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         self.vocab: dict[str, int] = vocab
 
         self.added_tokens_encoder: dict[str, int] = vocab
-        self.added_tokens_decoder: dict[int, str] = {i: token for token, i in vocab.items()}
+        self.added_tokens_decoder: dict[int, str] = {
+            i: token for token, i in vocab.items()
+        }
 
         self.unique_no_split_tokens = token_arr
         self._create_trie(self.unique_no_split_tokens)

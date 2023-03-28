@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 
 from muutils.logger import Logger
-from transformers import PreTrainedTokenizer
 
 from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder

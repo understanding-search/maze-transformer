@@ -6,11 +6,10 @@ We may want a separate set of tests for different tokenization schemes
 """
 import torch
 from pytest import mark, param
-from transformer_lens import HookedTransformer, HookedTransformerConfig
+from transformer_lens import HookedTransformer
 
 from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import HuggingMazeTokenizer
 from scripts.create_dataset import generate_MazeTokenizer
 
 
@@ -33,7 +32,9 @@ def test_tokenization_encoding():
     # WrappedTokenizer
     # Initialized with a configholder - tokenizer will eventually be a string
     cfg_holder = ConfigHolder(
-        train_cfg=None, dataset_cfg=cfg, model_cfg=None,
+        train_cfg=None,
+        dataset_cfg=cfg,
+        model_cfg=None,
     )
 
     tokenizer_out = cfg_holder.tokenizer(maze_str_tokens)["input_ids"]
@@ -61,7 +62,9 @@ def test_to_ascii():
     # Need to generate a config to extract the token map >.<
     cfg = MazeDatasetConfig(name="testing_maze", grid_n=5, n_mazes=1)
     cfg_holder = ConfigHolder(
-        train_cfg=None, dataset_cfg=cfg, model_cfg=None,
+        train_cfg=None,
+        dataset_cfg=cfg,
+        model_cfg=None,
     )
 
     # Try with string tokens
@@ -88,8 +91,8 @@ def test_tokenizer_inside_hooked_transformer():
     #! Can I initalise this from the config hodler directly by using the nano model cfg
     # refactored on 2023-03-27 15:50 to do just that
     cfg_holder = ConfigHolder(
-        train_cfg=None, 
-        dataset_cfg=cfg, 
+        train_cfg=None,
+        dataset_cfg=cfg,
         model_cfg=BaseGPTConfig(
             name="for test_tokenizer_inside_hooked_transformer",
             act_fn="relu",
@@ -98,7 +101,7 @@ def test_tokenizer_inside_hooked_transformer():
             n_layers=1,
         ),
     )
-    
+
     hktransformer: HookedTransformer = cfg_holder.create_model()
 
     token_ids = hktransformer.to_tokens("".join(maze_str_tokens), prepend_bos=False)
@@ -154,11 +157,16 @@ def test_pad_sequence_param(inp, expected):
     # Initialized with a configholder - tokenizer will eventually be a string
     cfg = MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1)
     cfg_holder = ConfigHolder(
-        train_cfg=None, dataset_cfg=cfg, model_cfg=None,
+        train_cfg=None,
+        dataset_cfg=cfg,
+        model_cfg=None,
     )
 
     # Pad token id is chosen when the tokenizer is initialized
-    expected = [x if x != PAD_PLACEHOLDER else cfg_holder.tokenizer.pad_token_id for x in expected]
+    expected = [
+        x if x != PAD_PLACEHOLDER else cfg_holder.tokenizer.pad_token_id
+        for x in expected
+    ]
 
     # Need to go to string representation to pad
     inp = cfg_holder.tokenizer.decode(inp)

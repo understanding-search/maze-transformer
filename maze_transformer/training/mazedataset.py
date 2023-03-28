@@ -1,8 +1,6 @@
-import inspect
 import json
 import multiprocessing
 import os
-import sys
 from functools import cached_property, partial
 from typing import Callable
 
@@ -12,12 +10,11 @@ from muutils.json_serialize import (
     JSONitem,
     json_serialize,
     serializable_dataclass,
-    SerializableDataclass,
     serializable_field,
 )
 from muutils.misc import freeze
 from muutils.statcounter import StatCounter
-from muutils.tensor_utils import DTYPE_MAP, ATensor, NDArray
+from muutils.tensor_utils import ATensor, NDArray
 from tqdm import tqdm
 
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
@@ -44,7 +41,7 @@ __MAZEDATASET_PROPERTIES_VALIDATE: list[str] = [
     "token_node_map",
     "n_tokens",
 ]
-        
+
 
 @serializable_dataclass(kw_only=True, properties_to_serialize=_MAZEDATASET_PROPERTIES)
 class MazeDatasetConfig(GPTDatasetConfig):

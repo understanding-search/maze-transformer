@@ -1,21 +1,20 @@
 from __future__ import annotations
-from functools import cached_property
 
-from typing import Any, Dict, Type
+from functools import cached_property
+from typing import Any, Type
 
 import torch
 from muutils.json_serialize import (
-    serializable_dataclass,
-    SerializableDataclass,
-    serializable_field,
     JSONitem,
+    SerializableDataclass,
+    serializable_dataclass,
+    serializable_field,
 )
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.training.dataset import GPTDatasetConfig
 from maze_transformer.training.mazedataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import HuggingMazeTokenizer
 
@@ -167,7 +166,7 @@ class ConfigHolder(SerializableDataclass):
     train_cfg: TrainConfig
     dataset_cfg: MazeDatasetConfig
     model_cfg: BaseGPTConfig
-    pretrainedtokenizer_kwargs: dict[str, JSONitem]|None = serializable_field(
+    pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
         default_factory=lambda: None,
     )
 

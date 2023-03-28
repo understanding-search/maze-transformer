@@ -3,8 +3,8 @@ from functools import cached_property
 import numpy as np
 import torch
 from muutils.json_serialize import (
-    serializable_dataclass,
     SerializableDataclass,
+    serializable_dataclass,
     serializable_field,
 )
 from muutils.tensor_utils import DTYPE_MAP, ATensor
