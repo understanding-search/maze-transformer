@@ -180,8 +180,9 @@ class ConfigHolder(SerializableDataclass):
         else:
             return HuggingMazeTokenizer(self.dataset_cfg)
 
-    def create_model(self) -> HookedTransformer:
-        hooked_transformer_cfg: HookedTransformerConfig = HookedTransformerConfig(
+    @cached_property
+    def hooked_transformer_cfg(self) -> HookedTransformerConfig:
+        return HookedTransformerConfig(
             act_fn=self.model_cfg.act_fn,
             d_model=self.model_cfg.d_model,
             d_head=self.model_cfg.d_head,
@@ -189,20 +190,30 @@ class ConfigHolder(SerializableDataclass):
             n_ctx=self.dataset_cfg.seq_len_max,
             d_vocab=len(self.dataset_cfg.token_arr),
         )
-        return HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=self.tokenizer)
+
+    def create_model(self) -> HookedTransformer:
+        return HookedTransformer(
+            cfg=self.hooked_transformer_cfg,
+            tokenizer=self.tokenizer,
+        )
 
     def create_model_zanj(self) -> ZanjHookedTransformer:
         return ZanjHookedTransformer(self)
 
 @set_config_class(ConfigHolder)
-class ZanjHookedTransformer(HookedTransformer, ConfiguredModel):
-    """A hooked transformer that is configured by a ConfigHolder"""
+class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
+    """A hooked transformer that is configured by a ConfigHolder
+    
+    the inheritance order is critical here -- super() does not call parent, but calls the next class in the MRO
+    So, we need ConfiguredModel to take the ConfigHolder and pass kwargs to HookedTransformer
+    """
 
     def __init__(self, cfg_holder: ConfigHolder) -> None:
-        # Call the super constructors
-        super(HookedTransformer, self).__init__(
-            cfg=cfg_holder.model_cfg,
+        super().__init__(
+            # for ConfiguredModel
+            zanj_model_config=cfg_holder,
+            # for HookedTransformer
+            cfg=cfg_holder.hooked_transformer_cfg,
             tokenizer=cfg_holder.tokenizer,
         )
-        super(ConfiguredModel, self).__init__(config=cfg_holder)
         

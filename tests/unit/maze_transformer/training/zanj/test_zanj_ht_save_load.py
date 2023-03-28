@@ -17,9 +17,9 @@ config: ConfigHolder = ConfigHolder(
     dataset_cfg=MazeDatasetConfig(name="test_cfg_save-data", grid_n=5, n_mazes=10),
     model_cfg=BaseGPTConfig(
         name="test_cfg_save-model",
-        act_fn="dummy-act-fn",
-        d_model=500,
-        d_head=60,
+        act_fn="relu", # need an actual function here since HookedTransformer will complain otherwise
+        d_model=128,
+        d_head=64,
         n_layers=4,
     ),
 )
@@ -29,10 +29,10 @@ model_c: ZanjHookedTransformer = config.create_model_zanj()
 
 def test_configs_correct():
     assert model.config == config
-    assert model.cfg == config.model_cfg
+    assert model.cfg == config.hooked_transformer_cfg
 
     assert model_c.config == config
-    assert model_c.cfg == config.model_cfg
+    assert model_c.cfg == config.hooked_transformer_cfg
 
 
 def test_model_save():
