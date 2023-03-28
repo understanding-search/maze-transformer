@@ -11,6 +11,7 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
+from muutils.zanj.torchutil import ConfiguredModel, set_config_class
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
@@ -188,3 +189,19 @@ class ConfigHolder(SerializableDataclass):
             d_vocab=len(self.dataset_cfg.token_arr),
         )
         return HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=self.tokenizer)
+
+    def create_model_zanj(self) -> ZanjHookedTransformer:
+        return ZanjHookedTransformer(self)
+
+@set_config_class(ConfigHolder)
+class ZanjHookedTransformer(HookedTransformer, ConfiguredModel):
+    """A hooked transformer that is configured by a ConfigHolder"""
+
+    def __init__(self, cfg_holder: ConfigHolder) -> None:
+        # Call the super constructors
+        super(HookedTransformer, self).__init__(
+            cfg=cfg_holder.model_cfg,
+            tokenizer=cfg_holder.tokenizer,
+        )
+        super(ConfiguredModel, self).__init__(config=cfg_holder)
+        
