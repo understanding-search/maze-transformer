@@ -1,5 +1,6 @@
 import random
 from dataclasses import dataclass
+from typing import NamedTuple
 
 import numpy as np
 from muutils.misc import list_split
@@ -337,3 +338,10 @@ class LatticeMaze:
             adjlist[i, 1] = np.array(coord_str_to_tuple(c_end))
 
         return cls.from_adjlist(adjlist)
+
+
+class SolvedMaze(NamedTuple):
+    """Stores a maze and a solution"""
+
+    maze: LatticeMaze
+    solution: list[CoordTup]
