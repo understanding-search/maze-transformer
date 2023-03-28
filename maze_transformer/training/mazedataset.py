@@ -48,7 +48,9 @@ __MAZEDATASET_PROPERTIES_TO_VALIDATE: list[str] = [
 ]
 
 
-@serializable_dataclass(kw_only=True, properties_to_serialize=_MAZEDATASET_PROPERTIES_TO_SERIALIZE)
+@serializable_dataclass(
+    kw_only=True, properties_to_serialize=_MAZEDATASET_PROPERTIES_TO_SERIALIZE
+)
 class MazeDatasetConfig(GPTDatasetConfig):
     """maze dataset configuration, including tokenizers"""
 
