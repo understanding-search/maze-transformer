@@ -52,6 +52,7 @@ class MazePlot:
         self.node_values: NDArray(self.maze.grid_shape) = None
         self.custom_node_value_flag: bool = False
         self.max_node_value: float = 1
+        self.node_color_map: str = "Blues"
 
     def add_true_path(
         self,
@@ -122,7 +123,7 @@ class MazePlot:
                 self.add_predicted_path(path=path)
         return self
 
-    def add_node_values(self, node_values: NDArray) -> MazePlot:
+    def add_node_values(self, node_values: NDArray, color_map: str = "Blues") -> MazePlot:
         assert (
             node_values.shape == self.maze.grid_shape
         ), "Please pass node values of the same sape as LatticeMaze.grid_shape"
@@ -135,6 +136,7 @@ class MazePlot:
         self.max_node_value = np.max(
             node_values
         )  # Retrieve Max node value for plotting
+        self.node_color_map = color_map
         return self
 
     def show(self, dpi=100) -> None:
@@ -176,20 +178,20 @@ class MazePlot:
             self.ax.imshow(img, cmap="gray", vmin=-1, vmax=1)
 
         else:  # if custom node_values have been passed
-            n_blues = int(256 * self.max_node_value)  # for scaling colorbar up to value
-            blues = mpl.colormaps["Blues"].resampled(n_blues)  # load blue spectrum
-            bluecolors = blues(np.linspace(0, 1, n_blues))
+            n_shades = int(256 * self.max_node_value)  # for scaling colorbar up to value
+            resampled = mpl.colormaps[self.node_color_map].resampled(n_shades)  # load blue spectrum
+            colors = resampled(np.linspace(0, 1, n_shades))
             black = np.full(
                 (256, 4), [0, 0, 0, 1]
             )  # define black color "constant spectrum" of same size as blue spectrum
             blackblues = np.vstack(
-                (black, bluecolors)
+                (black, colors)
             )  # stack spectra and define colormap
             cmap = ListedColormap(blackblues)
 
             # Create truncated colorbar that only respects interval [0,1]
             norm = Normalize(vmin=0, vmax=self.max_node_value)
-            scalar_mappable = ScalarMappable(norm=norm, cmap="Blues")
+            scalar_mappable = ScalarMappable(norm=norm, cmap=self.node_color_map)
             self.fig.colorbar(scalar_mappable, ax=self.ax)
 
             self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=self.max_node_value)
