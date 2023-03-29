@@ -21,7 +21,7 @@ def test_load_custom_values():
 
 
 def test_load_invalid_data():
-    with pytest.raises(TypeError):
+    with pytest.raises(AssertionError):
         BaseGPTConfig.load("not a dict")
 
 
@@ -32,6 +32,7 @@ def test_load_missing_fields():
         "d_model": 1,
         "d_head": 1,
         "n_layers": 1,
+        "__format__": "BaseGPTConfig(SerializableDataclass)",
     }
     config = BaseGPTConfig.load(serialized)
     assert config == _custom_base_gpt_config()
@@ -56,4 +57,5 @@ def _custom_serialized_config():
         "d_model": 1,
         "d_head": 1,
         "n_layers": 1,
+        "__format__": "BaseGPTConfig(SerializableDataclass)",
     }
