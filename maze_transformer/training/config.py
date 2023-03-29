@@ -216,4 +216,24 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
             cfg=cfg_holder.hooked_transformer_cfg,
             tokenizer=cfg_holder.tokenizer,
         )
-        
+    
+    
+    def _load_state_dict_wrapper(self, state_dict: dict[str, Any], **kwargs) -> None:
+        """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict"""
+        if len(kwargs) > 0:
+            raise ValueError(f"kwargs not supported! {kwargs = }")
+        self.load_and_process_state_dict(
+            state_dict,
+            fold_ln=False,
+            center_writing_weights=True,
+            center_unembed=True,
+            refactor_factored_attn_matrices=True,
+        )
+        # We're folding layernorm, but not using HookedTransformer.from_pretrained
+        # This means when torch.load_state_dict is invoked by transformer_lens, it
+        # will complain about the fact that we deleted layernorm from the state_dict
+        # NOTE temporary fix until https://github.com/neelnanda-io/TransformerLens/issues/219 is resolved
+
+        self.process_weights_(fold_ln=True)
+        self.setup()  # Re-attach layernorm hooks by calling setup
+        self.eval()
