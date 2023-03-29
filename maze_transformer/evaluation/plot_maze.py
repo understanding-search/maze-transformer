@@ -123,7 +123,9 @@ class MazePlot:
                 self.add_predicted_path(path=path)
         return self
 
-    def add_node_values(self, node_values: NDArray, color_map: str = "Blues") -> MazePlot:
+    def add_node_values(
+        self, node_values: NDArray, color_map: str = "Blues"
+    ) -> MazePlot:
         assert (
             node_values.shape == self.maze.grid_shape
         ), "Please pass node values of the same sape as LatticeMaze.grid_shape"
@@ -178,15 +180,17 @@ class MazePlot:
             self.ax.imshow(img, cmap="gray", vmin=-1, vmax=1)
 
         else:  # if custom node_values have been passed
-            n_shades = int(256 * self.max_node_value)  # for scaling colorbar up to value
-            resampled = mpl.colormaps[self.node_color_map].resampled(n_shades)  # load blue spectrum
+            n_shades = int(
+                256 * self.max_node_value
+            )  # for scaling colorbar up to value
+            resampled = mpl.colormaps[self.node_color_map].resampled(
+                n_shades
+            )  # load blue spectrum
             colors = resampled(np.linspace(0, 1, n_shades))
             black = np.full(
                 (256, 4), [0, 0, 0, 1]
             )  # define black color "constant spectrum" of same size as blue spectrum
-            blackblues = np.vstack(
-                (black, colors)
-            )  # stack spectra and define colormap
+            blackblues = np.vstack((black, colors))  # stack spectra and define colormap
             cmap = ListedColormap(blackblues)
 
             # Create truncated colorbar that only respects interval [0,1]
