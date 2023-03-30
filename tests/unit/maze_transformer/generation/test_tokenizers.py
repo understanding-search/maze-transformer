@@ -27,8 +27,8 @@ def test_tokenization_encoding():
     maze_str_tokens = maze_to_tokens(maze, solution, node_token_map)
 
     # Manual Tokenization
-    token_to_idx = {token: i for i, token in enumerate(cfg.token_arr)}
-    maze_tokens = [token_to_idx[token] for token in maze_str_tokens]
+    token_to_index = {token: i for i, token in enumerate(cfg.token_arr)}
+    maze_tokens = [token_to_index[token] for token in maze_str_tokens]
 
     # WrappedTokenizer
     # Initialized with a configholder - tokenizer will eventually be a string
