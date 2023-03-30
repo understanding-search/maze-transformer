@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import torch
+
 from muutils.zanj import ZANJ
 
 from maze_transformer.training.config import (
@@ -52,7 +54,14 @@ def test_model_save():
     assert model_load.config == config
     # check state dicts
     assert model.state_dict().keys() == model_load.state_dict().keys()
+    keys_failed: list[str] = list()
     for k, v in model.state_dict().items():
         v_load = model_load.state_dict()[k]
-        assert (v == v_load).all(), f"key {k} does not match:\n{v}\n{v_load}"
+        if not (v == v_load).all():
+        # if not torch.allclose(v, v_load):
+            keys_failed.append(k)
+            print(f"failed {k}")
+        else:
+            print(f"passed {k}")
+    assert len(keys_failed) == 0, f"{len(keys_failed)} / {len(model.state_dict())} state dict elements don't match: {keys_failed}"
 

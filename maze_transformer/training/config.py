@@ -227,9 +227,10 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
         
         note that `fold_ln` is False by default
         """
-        fold_ln: bool = False
         if "fold_ln" in kwargs:
             fold_ln = kwargs.pop("fold_ln")
+        else:
+            fold_ln = False
 
         if len(kwargs) > 0:
             raise ValueError(f"kwargs not supported! {kwargs = }")
