@@ -1,10 +1,9 @@
-import inspect
 import json
 import multiprocessing
 import os
+import warnings
 from functools import cached_property, partial
 from typing import Callable
-import warnings
 
 import numpy as np
 import torch
@@ -50,16 +49,21 @@ __MAZEDATASET_PROPERTIES_TO_VALIDATE: list[str] = [
     "n_tokens",
 ]
 
-def _load_maze_ctor(maze_ctor_serialized: str|dict) -> Callable:
+
+def _load_maze_ctor(maze_ctor_serialized: str | dict) -> Callable:
     if isinstance(maze_ctor_serialized, dict):
         # this is both the new and old version of the serialization
         maze_ctor_serialized = GENERATORS_MAP[maze_ctor_serialized["__name__"]]
     elif isinstance(maze_ctor_serialized, str):
         # this is a version I switched to for a while but now we are switching back
-        warnings.warn(f"you are loading an old model/config!!! this should not be happening, please report to miv@knc.ai")
+        warnings.warn(
+            f"you are loading an old model/config!!! this should not be happening, please report to miv@knc.ai"
+        )
         maze_ctor_serialized = GENERATORS_MAP[maze_ctor_serialized]
     else:
-        raise ValueError(f"maze_ctor_serialized is of type {type(maze_ctor_serialized)}, expected str or dict")
+        raise ValueError(
+            f"maze_ctor_serialized is of type {type(maze_ctor_serialized)}, expected str or dict"
+        )
 
 
 @serializable_dataclass(
