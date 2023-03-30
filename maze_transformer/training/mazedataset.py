@@ -1,8 +1,10 @@
+import inspect
 import json
 import multiprocessing
 import os
 from functools import cached_property, partial
 from typing import Callable
+import warnings
 
 import numpy as np
 import torch
@@ -12,6 +14,7 @@ from muutils.json_serialize import (
     serializable_dataclass,
     serializable_field,
 )
+from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import freeze
 from muutils.statcounter import StatCounter
 from muutils.tensor_utils import ATensor, NDArray
@@ -47,6 +50,17 @@ __MAZEDATASET_PROPERTIES_TO_VALIDATE: list[str] = [
     "n_tokens",
 ]
 
+def _load_maze_ctor(maze_ctor_serialized: str|dict) -> Callable:
+    if isinstance(maze_ctor_serialized, dict):
+        # this is both the new and old version of the serialization
+        maze_ctor_serialized = GENERATORS_MAP[maze_ctor_serialized["__name__"]]
+    elif isinstance(maze_ctor_serialized, str):
+        # this is a version I switched to for a while but now we are switching back
+        warnings.warn(f"you are loading an old model/config!!! this should not be happening, please report to miv@knc.ai")
+        maze_ctor_serialized = GENERATORS_MAP[maze_ctor_serialized]
+    else:
+        raise ValueError(f"maze_ctor_serialized is of type {type(maze_ctor_serialized)}, expected str or dict")
+
 
 @serializable_dataclass(
     kw_only=True, properties_to_serialize=_MAZEDATASET_PROPERTIES_TO_SERIALIZE
@@ -58,8 +72,13 @@ class MazeDatasetConfig(GPTDatasetConfig):
     n_mazes: int
     maze_ctor: Callable = serializable_field(
         default_factory=lambda: LatticeMazeGenerators.gen_dfs,
-        serialization_fn=lambda x: x.__name__,
-        loading_fn=lambda data: GENERATORS_MAP[data["maze_ctor"]],
+        serialization_fn=lambda gen_func: {
+            "__name__": gen_func.__name__,
+            "__module__": gen_func.__module__,
+            "__doc__": string_as_lines(gen_func.__doc__),
+            "source_code": safe_getsource(gen_func),
+        },
+        loading_fn=lambda data: _load_maze_ctor(data["maze_ctor"]),
     )
 
     # paths_per_maze: int = 5,
