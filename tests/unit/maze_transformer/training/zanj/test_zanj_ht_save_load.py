@@ -51,5 +51,8 @@ def test_model_save():
     assert isinstance(model_load.config, ConfigHolder)
     assert model_load.config == config
     # check state dicts
+    assert model.state_dict().keys() == model_load.state_dict().keys()
     for k, v in model.state_dict().items():
-        assert (v == model_load.state_dict()[k]).all()
+        v_load = model_load.state_dict()[k]
+        assert (v == v_load).all(), f"key {k} does not match:\n{v}\n{v_load}"
+
