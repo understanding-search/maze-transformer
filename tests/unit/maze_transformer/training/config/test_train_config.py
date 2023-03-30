@@ -46,12 +46,11 @@ def _custom_serialized_config() -> Dict[Any, Any]:
         "dataloader_cfg": {"num_workers": 8, "drop_last": False},
         "print_loss_interval": 500,
         "checkpoint_interval": 1000,
-        "__format__": "TrainConfig(SerializableDataclass)",
     }
 
 
 def test_load_invalid_data():
-    with pytest.raises(AssertionError):
+    with pytest.raises(TypeError):
         TrainConfig.load("not a dictionary")
 
 

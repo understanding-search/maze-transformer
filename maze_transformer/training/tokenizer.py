@@ -78,45 +78,28 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     name_or_path = "maze_tokenizer"
 
     def __init__(
-        self,
-        cfg: Union["ConfigHolder", "MazeDatasetConfig", None] = None,
-        token_arr: list[str] | None = None,
-        seq_len_max: int | None = None,
-        **kwargs,
+        self, cfg: Union["ConfigHolder", "MazeDatasetConfig"], **kwargs
     ) -> None:
-        """takes either a cfg, or a token_arr and seq_len_max. also, kwargs are passed to super `PreTrainedTokenizer`"""
+        # Avoid isinstance() because of circular import
+        if type(cfg).__name__ == "ConfigHolder":
+            cfg = cfg.dataset_cfg
 
-        if cfg is None:
-            assert token_arr is not None
-            assert seq_len_max is not None
-        else:
-            assert token_arr is None
-            assert seq_len_max is None
-            # Avoid isinstance() because of circular import
-            if type(cfg).__name__ == "ConfigHolder":
-                cfg = cfg.dataset_cfg
-
-            seq_len_max = cfg.seq_len_max
-            token_arr = cfg.token_arr
-
-        super().__init__(max_len=seq_len_max, **kwargs)
+        super().__init__(max_len=cfg.seq_len_max, **kwargs)
         # We are having to do evil things here
-        vocab: dict[str, int] = {token: i for i, token in enumerate(token_arr)}
+        vocab = {token: i for i, token in enumerate(cfg.token_arr)}
         vocab[self.unk_token] = len(vocab)
-        self.vocab: dict[str, int] = vocab
+        self.vocab = vocab
 
-        self.added_tokens_encoder: dict[str, int] = vocab
-        self.added_tokens_decoder: dict[int, str] = {
-            i: token for token, i in vocab.items()
-        }
+        self.added_tokens_encoder = vocab
+        self.added_tokens_decoder = {i: token for token, i in vocab.items()}
 
-        self.unique_no_split_tokens = token_arr
+        self.unique_no_split_tokens = cfg.token_arr
         self._create_trie(self.unique_no_split_tokens)
 
         # IDs specified during construction
-        self.bos_token_id: int = self.added_tokens_encoder[self.bos_token]
-        self.eos_token_id: int = self.added_tokens_encoder[self.eos_token]
-        self.pad_token_id: int = self.added_tokens_encoder[self.pad_token]
+        self.bos_token_id = self.added_tokens_encoder[self.bos_token]
+        self.eos_token_id = self.added_tokens_encoder[self.eos_token]
+        self.pad_token_id = self.added_tokens_encoder[self.pad_token]
 
     def __call__(self, text, **kwargs) -> BatchEncoding:
         """

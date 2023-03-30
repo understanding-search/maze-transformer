@@ -61,4 +61,5 @@ def _create_top_level_config() -> ConfigHolder:
         train_cfg=train_cfg,
         model_cfg=model_cfg,
         dataset_cfg=dataset_cfg,
+        tokenizer=None,
     )
