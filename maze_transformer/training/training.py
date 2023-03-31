@@ -37,8 +37,7 @@ def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
 ) -> DataLoader:
     length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
-    logger.progress({"dataset_seq_len_stats_summary": length_stats.summary()})
-    logger.summary(
+    logger.progress(
         {"dataset_seq_len_stats": length_stats.serialize(typecast=lambda x: str(x))}
     )
 
