@@ -64,7 +64,7 @@ def train_model(
         )
     )
 
-    dataloader = get_dataloader(dataset, cfg, wandb_client)
+    dataloader = get_dataloader(dataset, cfg)
     device = get_device()
 
     train(dataloader, cfg, wandb_client, output_path, device)
