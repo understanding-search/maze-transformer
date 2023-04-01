@@ -18,7 +18,8 @@ from maze_transformer.generation.latticemaze import (
 
 if TYPE_CHECKING:
     from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig
-# pylint: disable=unused-import
+
+# pylint: disable=unused-import, abstract-method
 
 
 def maze_to_tokens(
@@ -59,6 +60,7 @@ def maze_to_tokens(
 
 
 class HuggingMazeTokenizer(PreTrainedTokenizer):
+    """extension of PreTrainedTokenizer for mazes"""
     vocab: dict[str, int]  # map of token_ids to strings
 
     bos_token: str = SPECIAL_TOKENS["path_start"]

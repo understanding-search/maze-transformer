@@ -32,6 +32,8 @@ def test_load_missing_fields():
         "d_model": 1,
         "d_head": 1,
         "n_layers": 1,
+        "fold_layernorm": True,
+        "recover_exact_state_dict": False,
         "__format__": "BaseGPTConfig(SerializableDataclass)",
     }
     config = BaseGPTConfig.load(serialized)
@@ -57,5 +59,7 @@ def _custom_serialized_config():
         "d_model": 1,
         "d_head": 1,
         "n_layers": 1,
+        "fold_layernorm": True,
+        "recover_exact_state_dict": False,
         "__format__": "BaseGPTConfig(SerializableDataclass)",
     }

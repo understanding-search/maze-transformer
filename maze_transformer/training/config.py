@@ -32,6 +32,8 @@ class BaseGPTConfig(SerializableDataclass):
     d_head: int
     n_layers: int
 
+    fold_layernorm: bool = serializable_field(default=True)
+    recover_exact_state_dict: bool = serializable_field(default=False)
 
 # ==================================================
 
@@ -221,31 +223,29 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
     def _load_state_dict_wrapper(
             self, 
             state_dict: dict[str, Any], 
-            **kwargs,
         ) -> None:
-        """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict
-        
-        note that `fold_ln` is False by default
-        """
-        if "fold_ln" in kwargs:
-            fold_ln = kwargs.pop("fold_ln")
-        else:
-            fold_ln = False
+        """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict"""
 
-        if len(kwargs) > 0:
-            raise ValueError(f"kwargs not supported! {kwargs = }")
+        recover_exact: bool = self.zanj_model_config.model_cfg.recover_exact_state_dict
+        fold_ln: bool = not self.zanj_model_config.model_cfg.fold_layernorm
         self.load_and_process_state_dict(
             state_dict,
             fold_ln=False,
-            center_writing_weights=True,
-            center_unembed=True,
-            refactor_factored_attn_matrices=True,
+            center_writing_weights=not recover_exact,
+            center_unembed=not recover_exact,
+            refactor_factored_attn_matrices=not recover_exact,
         )
         # We're folding layernorm, but not using HookedTransformer.from_pretrained
         # This means when torch.load_state_dict is invoked by transformer_lens, it
         # will complain about the fact that we deleted layernorm from the state_dict
         # NOTE temporary fix until https://github.com/neelnanda-io/TransformerLens/issues/219 is resolved
 
-        self.process_weights_(fold_ln=fold_ln)
+        self.process_weights_(
+            fold_ln=fold_ln,
+            center_writing_weights = not recover_exact,
+            center_unembed = not recover_exact,
+            refactor_factored_attn_matrices = False,
+            move_state_dict_to_device = not recover_exact,
+        )
         self.setup()  # Re-attach layernorm hooks by calling setup
         self.eval()
