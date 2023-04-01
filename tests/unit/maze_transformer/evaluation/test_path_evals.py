@@ -1,7 +1,7 @@
 import numpy as np
 
 from maze_transformer.evaluation.path_evals import PathEvals
-from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.lattice_maze import LatticeMaze
 from maze_transformer.generation.utils import bool_array_from_string
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.generation.latticemaze import Coord
+from maze_transformer.generation.lattice_maze import Coord
 
 
 def test_gen_dfs_square():

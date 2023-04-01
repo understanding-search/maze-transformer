@@ -1,6 +1,6 @@
 from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.training.mazedataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.tokenizer import maze_to_tokens
 
 

@@ -4,7 +4,7 @@ import numpy as np
 from jaxtyping import Int
 
 from maze_transformer.generation.constants import Coord, CoordTup
-from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.lattice_maze import LatticeMaze
 from maze_transformer.utils.utils import register_method
 
 # pylint: disable=unused-argument
