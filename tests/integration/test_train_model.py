@@ -1,6 +1,6 @@
 import pytest
 
-from maze_transformer.training.wandb_logger import WandbProject
+from maze_transformer.training.wandb_client import WandbProject
 from scripts.create_dataset import create_dataset
 from scripts.train_model import train_model
 

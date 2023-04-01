@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Union
@@ -20,20 +19,15 @@ class WandbJobType(Enum):
     TRAIN_MODEL = "train-model"
 
 
-class WandbLogger:
+class WandbClient:
     def __init__(self, run: Run):
         self._run: Run = run
 
     @classmethod
     def create(
         cls, config: Dict, project: Union[WandbProject, str], job_type: WandbJobType
-    ) -> WandbLogger:
-        logging.basicConfig(
-            stream=sys.stdout,
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)s %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
+    ) -> WandbClient:
+        logging.info(f"{config =}")
 
         run = wandb.init(
             config=config,
@@ -41,9 +35,7 @@ class WandbLogger:
             job_type=job_type.value,
         )
 
-        logger = WandbLogger(run)
-        logger.progress(f"{config =}")
-        return logger
+        return WandbClient(run)
 
     def upload_model(self, model_path: Path, aliases=None) -> None:
         artifact = wandb.Artifact(name=wandb.run.id, type="model")
@@ -60,7 +52,3 @@ class WandbLogger:
 
     def summary(self, data: Dict[str, Any]) -> None:
         self._run.summary.update(data)
-
-    @staticmethod
-    def progress(message: str) -> None:
-        logging.info(message)

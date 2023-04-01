@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from typing import Union
 
@@ -6,9 +7,9 @@ from maze_transformer.generation.latticemaze import SPECIAL_TOKENS
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDataset
 from maze_transformer.training.training import TRAIN_SAVE_FILES, get_dataloader, train
-from maze_transformer.training.wandb_logger import (
+from maze_transformer.training.wandb_client import (
+    WandbClient,
     WandbJobType,
-    WandbLogger,
     WandbProject,
 )
 from maze_transformer.utils.utils import get_device
@@ -40,15 +41,15 @@ def train_model(
     output_path: Path = Path(basepath) / output_dir_name
     (output_path / TRAIN_SAVE_FILES.checkpoints).mkdir(parents=True)
 
-    logger = WandbLogger.create(
+    wandb_client = WandbClient.create(
         config=cfg.serialize(),
         project=wandb_project,
         job_type=WandbJobType.TRAIN_MODEL,
     )
 
-    logger.progress("Loaded data config, initialized logger")
+    logging.info("Loaded data config, initialized wandb_client")
 
-    logger.summary(
+    wandb_client.summary(
         dict(
             logger_cfg={
                 "output_dir": str(output_path),
@@ -59,10 +60,10 @@ def train_model(
         )
     )
 
-    dataloader = get_dataloader(dataset, cfg, logger)
+    dataloader = get_dataloader(dataset, cfg)
     device = get_device()
 
-    train(dataloader, cfg, logger, output_path, device)
+    train(dataloader, cfg, wandb_client, output_path, device)
 
 
 if __name__ == "__main__":
