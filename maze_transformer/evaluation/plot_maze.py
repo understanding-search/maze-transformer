@@ -180,25 +180,22 @@ class MazePlot:
             self.ax.imshow(img, cmap="gray", vmin=-1, vmax=1)
 
         else:  # if custom node_values have been passed
-            n_shades = int(
-                256 * self.max_node_value
-            )  # for scaling colorbar up to value
-            resampled = mpl.colormaps[self.node_color_map].resampled(
-                n_shades
-            )  # load blue spectrum
-            colors = resampled(np.linspace(0, 1, n_shades))
+            resampled = mpl.colormaps[self.node_color_map].resampled(256)  # load colormap
+            colors = resampled(np.linspace(0, 1, 256))
             black = np.full(
                 (256, 4), [0, 0, 0, 1]
-            )  # define black color "constant spectrum" of same size as blue spectrum
-            blackblues = np.vstack((black, colors))  # stack spectra and define colormap
-            cmap = ListedColormap(blackblues)
+            )  # define black color "constant spectrum" of same size as colormap
+            stacked_colors = np.vstack((black, colors))  # stack spectra and define colormap
+            cmap = ListedColormap(stacked_colors)
 
             # Create truncated colorbar that only respects interval [0,1]
+            ticks = np.linspace(0, self.max_node_value, 3)
             norm = Normalize(vmin=0, vmax=self.max_node_value)
             scalar_mappable = ScalarMappable(norm=norm, cmap=self.node_color_map)
-            self.fig.colorbar(scalar_mappable, ax=self.ax)
+            cbar = self.fig.colorbar(scalar_mappable, ax=self.ax, ticks=ticks)
+            cbar.ax.set_yticklabels(np.round(ticks,2))
 
-            self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=self.max_node_value)
+            self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
 
     def _latticemaze_to_img(self) -> NDArray["row col", bool]:
         """
@@ -223,10 +220,12 @@ class MazePlot:
 
         # Set node and connection values
         if self.node_values is None:
-            self.node_values = np.ones(self.maze.grid_shape)
-            connection_values = np.ones(self.maze.grid_shape) * 0.93
+            scaled_node_values = np.ones(self.maze.grid_shape)
+            connection_values = scaled_node_values * 0.93
         else:
-            connection_values = self.node_values
+            # Normalizing node colors to match color_map running in (-1, 1) (defined in ._plot_maze()).
+            scaled_node_values = self.node_values / self.max_node_value
+            connection_values = scaled_node_values
 
         # Create background image (all pixels set to -1, walls everywhere)
         img: NDArray["row col", float] = -np.ones(
@@ -244,7 +243,7 @@ class MazePlot:
                 img[
                     row * self.unit_length + 1 : (row + 1) * self.unit_length,
                     col * self.unit_length + 1 : (col + 1) * self.unit_length,
-                ] = self.node_values[row, col]
+                ] = scaled_node_values[row, col]
 
                 # Down connection
                 if self.maze.connection_list[0, row, col]:
