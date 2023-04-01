@@ -227,7 +227,7 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
         """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict"""
 
         recover_exact: bool = self.zanj_model_config.model_cfg.recover_exact_state_dict
-        fold_ln: bool = not self.zanj_model_config.model_cfg.fold_layernorm
+        fold_ln: bool = self.zanj_model_config.model_cfg.fold_layernorm
         self.load_and_process_state_dict(
             state_dict,
             fold_ln=False,
