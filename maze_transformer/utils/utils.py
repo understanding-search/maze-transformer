@@ -1,10 +1,19 @@
+import logging
 import os
 import random
+import sys
 
 import numpy as np
 import torch
 
 DEFAULT_SEED = 42
+
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 def get_device():
