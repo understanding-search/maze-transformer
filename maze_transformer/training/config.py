@@ -32,8 +32,8 @@ class BaseGPTConfig(SerializableDataclass):
     d_head: int
     n_layers: int
 
-    fold_layernorm: bool = serializable_field(default=True)
-    recover_exact_state_dict: bool = serializable_field(default=False)
+    are_layernorms_folded: bool = serializable_field(default=False)
+    are_weights_processed: bool = serializable_field(default=False)
 
 # ==================================================
 
@@ -223,11 +223,22 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
     def _load_state_dict_wrapper(
             self, 
             state_dict: dict[str, Any], 
+            **kwargs,
         ) -> None:
         """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict"""
 
-        recover_exact: bool = self.zanj_model_config.model_cfg.recover_exact_state_dict
-        fold_ln: bool = self.zanj_model_config.model_cfg.fold_layernorm
+        recover_exact: bool = kwargs.get("recover_exact", False)
+        fold_ln: bool = kwargs.get("fold_ln", False)
+
+        if self.zanj_model_config.model_cfg.are_layernorms_folded and fold_ln:
+            raise ValueError("Cannot fold layernorms twice! the saved model already has layernorms folded")
+
+        if recover_exact and fold_ln:
+            raise ValueError("Can't recover exact weights if the layernorm is to be folded!")
+        
+        self.zanj_model_config.model_cfg.are_layernorms_folded = fold_ln
+        self.zanj_model_config.model_cfg.are_weights_processed = not recover_exact
+
         self.load_and_process_state_dict(
             state_dict,
             fold_ln=False,
