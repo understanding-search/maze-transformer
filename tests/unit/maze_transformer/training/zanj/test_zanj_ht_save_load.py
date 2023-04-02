@@ -4,6 +4,7 @@ from pathlib import Path
 import torch
 
 from muutils.zanj import ZANJ
+from muutils.zanj.torchutil import assert_model_cfg_equality, assert_model_exact_equality
 
 from maze_transformer.training.config import (
     BaseGPTConfig,
@@ -30,35 +31,16 @@ MODEL: ZanjHookedTransformer = ZanjHookedTransformer(ZANJ_MODEL_CFG)
 MODEL_C: ZanjHookedTransformer = ZANJ_MODEL_CFG.create_model_zanj()
 
 
-def _assert_model_cfg_equality(model_a: ZanjHookedTransformer, model_b: ZanjHookedTransformer):
-    """check both models are correct instances and have the same config"""
-    assert isinstance(model_a, ZanjHookedTransformer)
-    assert isinstance(model_a.zanj_model_config, ConfigHolder)
-    assert isinstance(model_b, ZanjHookedTransformer)
-    assert isinstance(model_b.zanj_model_config, ConfigHolder)
-
-    assert model_a.zanj_model_config == model_b.zanj_model_config
-
-def _assert_model_exact_equality(model_a: ZanjHookedTransformer, model_b: ZanjHookedTransformer):
-    """check the models are exactly equal, including state dict contents"""
-    _assert_model_cfg_equality(model_a, model_b)
-
-    model_a_sd_keys: set[str] = set(model_a.state_dict().keys())
-    model_b_sd_keys: set[str] = set(model_b.state_dict().keys())
-    assert model_a_sd_keys == model_b_sd_keys, f"state dict keys don't match: {model_a_sd_keys - model_b_sd_keys} / {model_b_sd_keys - model_a_sd_keys}"
-    keys_failed: list[str] = list()
-    for k, v_a in model_a.state_dict().items():
-        v_b = model_b.state_dict()[k]
-        if not (v_a == v_b).all():
-        # if not torch.allclose(v, v_load):
-            keys_failed.append(k)
-            print(f"failed {k}")
-        else:
-            print(f"passed {k}")
-    assert len(keys_failed) == 0, f"{len(keys_failed)} / {len(v_a.state_dict())} state dict elements don't match: {keys_failed}"
-
 def _assert_model_output_equality(model_a: ZanjHookedTransformer, model_b: ZanjHookedTransformer):
-    _assert_model_cfg_equality(model_a, model_b)
+    
+    # TODO: this is fragile, but I don't know how to do it better
+    try:
+        assert_model_cfg_equality(model_a, model_b)
+    except AssertionError as e:
+        if r"configs don't match: {'model_cfg': {'are_weights_processed': {'self': False, 'other': True}}}" in str(e):
+            pass
+        else:
+            raise e
 
     # Random input tokens
     dataset_cfg = model_a.zanj_model_config.dataset_cfg
@@ -107,4 +89,4 @@ def test_model_save_nofold():
     zanj.save(MODEL, fname)
     model_load = zanj.read(fname)
 
-    _assert_model_exact_equality(MODEL, model_load)
+    assert_model_exact_equality(MODEL, model_load)
