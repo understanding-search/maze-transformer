@@ -9,7 +9,7 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
-from maze_transformer.generation.latticemaze import CoordArray, LatticeMaze
+from maze_transformer.generation.latticemaze import Coord, CoordArray, LatticeMaze
 
 
 @dataclass
@@ -53,6 +53,8 @@ class MazePlot:
         self.custom_node_value_flag: bool = False
         self.max_node_value: float = 1
         self.node_color_map: str = "Blues"
+        self.target_token_coord: Coord = None
+        self.preceeding_tokens_coords: CoordArray = None
 
     def add_true_path(
         self,
@@ -124,7 +126,11 @@ class MazePlot:
         return self
 
     def add_node_values(
-        self, node_values: NDArray, color_map: str = "Blues"
+        self,
+        node_values: NDArray,
+        color_map: str = "Blues",
+        target_token_coord: Coord = None,
+        preceeding_tokens_coords: CoordArray = None,
     ) -> MazePlot:
         assert (
             node_values.shape == self.maze.grid_shape
@@ -135,13 +141,15 @@ class MazePlot:
         self.custom_node_value_flag = (
             True  # Set flag for choosing cmap while plotting maze
         )
-        self.max_node_value = np.max(
-            node_values
-        )  # Retrieve Max node value for plotting
+        self.max_node_value = (
+            np.max(node_values) + 1e-10
+        )  # Retrieve Max node value for plotting, +1e-10 to avoid division by zero
         self.node_color_map = color_map
+        self.target_token_coord = target_token_coord
+        self.preceeding_tokens_coords = preceeding_tokens_coords
         return self
 
-    def show(self, dpi=100) -> None:
+    def show(self, dpi=100, title="") -> None:
         """Plot the maze and paths."""
         self.fig = plt.figure(dpi=dpi)
         self.ax = self.fig.add_subplot(1, 1, 1)
@@ -159,13 +167,14 @@ class MazePlot:
         self.ax.set_yticks(self.unit_length * (tick_arr + 0.5), tick_arr)
         self.ax.set_xlabel("col")
         self.ax.set_ylabel("row")
+        self.fig.suptitle(title)
 
         plt.show()
 
-    def _rowcol_to_coord(self, points: CoordArray) -> NDArray:
-        """Transform Points from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
-        points = np.array([(x, y) for (y, x) in points])
-        return self.unit_length * (points + 0.5)
+    def _rowcol_to_coord(self, point: Coord) -> NDArray:
+        """Transform Point from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
+        point = np.array([point[1], point[0]])
+        return self.unit_length * (point + 0.5)
 
     def _plot_maze(self) -> None:
         """
@@ -176,16 +185,42 @@ class MazePlot:
                         upper bound adaptive to max node value
         """
         img = self._latticemaze_to_img()
+
+        if self.target_token_coord is not None:
+            x, y = self._rowcol_to_coord(self.target_token_coord)
+            self.ax.plot(
+                x,
+                y,
+                "*",
+                color="black",
+                ms=20,
+            )
+
+        if self.preceeding_tokens_coords is not None:
+            for coord in self.preceeding_tokens_coords:
+                x, y = self._rowcol_to_coord(coord)
+                self.ax.plot(
+                    x,
+                    y,
+                    "+",
+                    color="black",
+                    ms=12,
+            )
+
         if self.custom_node_value_flag is False:
             self.ax.imshow(img, cmap="gray", vmin=-1, vmax=1)
 
         else:  # if custom node_values have been passed
-            resampled = mpl.colormaps[self.node_color_map].resampled(256)  # load colormap
+            resampled = mpl.colormaps[self.node_color_map].resampled(
+                256
+            )  # load colormap
             colors = resampled(np.linspace(0, 1, 256))
             black = np.full(
                 (256, 4), [0, 0, 0, 1]
             )  # define black color "constant spectrum" of same size as colormap
-            stacked_colors = np.vstack((black, colors))  # stack spectra and define colormap
+            stacked_colors = np.vstack(
+                (black, colors)
+            )  # stack spectra and define colormap
             cmap = ListedColormap(stacked_colors)
 
             # Create truncated colorbar that only respects interval [0,1]
@@ -193,7 +228,7 @@ class MazePlot:
             norm = Normalize(vmin=0, vmax=self.max_node_value)
             scalar_mappable = ScalarMappable(norm=norm, cmap=self.node_color_map)
             cbar = self.fig.colorbar(scalar_mappable, ax=self.ax, ticks=ticks)
-            cbar.ax.set_yticklabels(np.round(ticks,2))
+            cbar.ax.set_yticklabels(np.round(ticks, 2))
 
             self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
 
@@ -262,7 +297,9 @@ class MazePlot:
         return img
 
     def _plot_path(self, path_format: PathFormat) -> None:
-        p_transformed = self._rowcol_to_coord(path_format.path)
+        p_transformed = np.array(
+            [self._rowcol_to_coord(coord) for coord in path_format.path]
+        )
         if path_format.quiver_kwargs is not None:
             x: NDArray = p_transformed[:, 0]
             y: NDArray = p_transformed[:, 1]
