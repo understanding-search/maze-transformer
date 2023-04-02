@@ -32,11 +32,6 @@ def generate_solve_plot(
     MazePlot._plot_path(maze, path, show=True)
 
 
-def test_wilson_generation():
-    maze = LatticeMazeGenerators.gen_wilson(np.array([2, 2]))
-    print(maze)
-
-
 if __name__ == "__main__":
     import fire
 

@@ -1,10 +1,7 @@
 import math
-from typing import List, Tuple
 
 import numpy as np
 from muutils.tensor_utils import NDArray
-
-from generation.latticemaze import Coord, LatticeMaze
 
 
 def bool_array_from_string(
@@ -45,28 +42,3 @@ def bool_array_from_string(
 
     bools = [True if symbol == true_symbol else False for symbol in stripped]
     return np.array(bools).reshape(*shape)
-
-
-def inside(p: Coord, width: int, height: int) -> bool:
-    x, y = p
-    return 0 <= x < width and 0 <= y < height
-
-
-def neighbor(current: Coord, direction: int, maze: LatticeMaze) -> Coord:
-    x, y = current
-
-    if direction == 0:
-        x -= 1  # Left
-    elif direction == 1:
-        x += 1  # Right
-    elif direction == 2:
-        y -= 1  # Up
-    elif direction == 3:
-        y += 1  # Down
-    else:
-        return None
-
-    # neighbor_x, neighbor_y = maze.connection_list[:][x][y]
-
-    return maze.connection_list[:][x][y] if 0 <= x < maze.length and 0 <= y < maze[x].length else None
-

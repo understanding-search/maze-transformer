@@ -24,3 +24,8 @@ def test_gen_dfs_with_solution():
 
     assert maze.connection_list.shape == (2, 3, 3)
     assert len(solution[0]) == 2
+
+
+def test_wilson_generation():
+    maze = LatticeMazeGenerators.gen_wilson(np.array([2, 2]))
+    assert maze.connection_list.shape == (2, 2, 2)
