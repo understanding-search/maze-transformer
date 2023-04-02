@@ -29,11 +29,8 @@ def coord_str_to_tuple(coord_str: str) -> CoordTup:
 
 @dataclass(frozen=True, kw_only=True)
 class LatticeMaze:
-    """lattice maze (nodes on a lattice, connections only to neighboring nodes)"""
+    """lattice maze (nodes on a lattice, connections only to neighboring nodes)
 
-    lattice_dim: int = 2
-
-    """
     Connection List represents which nodes (N) are connected in each direction.
 
     First and second elements represent rightward and downward connections,
@@ -66,12 +63,15 @@ class LatticeMaze:
     Note: the bottom row connections going down, and the
     right-hand connections going right, will always be False.
     """
+
     connection_list: NDArray["lattice_dim x y", bool]
     generation_meta: dict | None = None
 
     grid_shape = property(lambda self: self.connection_list.shape[1:])
 
     n_connections = property(lambda self: self.connection_list.sum())
+
+    lattice_dim: int = 2
 
     def as_adj_list(
         self, shuffle_d0: bool = True, shuffle_d1: bool = True

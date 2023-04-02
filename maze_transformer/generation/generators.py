@@ -2,9 +2,14 @@ import random
 from typing import Any, Callable
 
 import numpy as np
+from generation.utils import neighbor
 
-from maze_transformer.generation.constants import NEIGHBORS_MASK, Coord
-from maze_transformer.generation.latticemaze import LatticeMaze, SolvedMaze
+from maze_transformer.generation.latticemaze import (
+    NEIGHBORS_MASK,
+    Coord,
+    LatticeMaze,
+    SolvedMaze,
+)
 
 
 class LatticeMazeGenerators:
@@ -102,7 +107,74 @@ class LatticeMazeGenerators:
 
         return SolvedMaze(maze, solution)
 
+    @staticmethod
+    def gen_wilson(
+            grid_shape: Coord,
+    ) -> LatticeMaze:
+        """generate a lattice maze using Wilson's algorithm
+        https://en.wikipedia.org/wiki/Maze_generation_algorithm#Wilson's_algorithm"""
+
+        height, width = grid_shape
+
+        # Contrary to its name, a connection list only ever contains two elements: one boolean matrix indicating all the
+        # downwards connections in the maze, and one boolean matrix for all the rightwards connections.
+        connection_list: np.ndarray = np.zeros(
+            (2, height, width), dtype=bool
+        )
+
+        connected = np.zeros(grid_shape, dtype=bool)
+        direction_matrix = np.zeros(grid_shape)
+        connected[0][0] = True
+
+
+        nodes_left: int = height * width
+        while nodes_left > 0:
+            current: Coord = connection_list[:][random.randint(0, height - 1)][random.randint(0, width - 1)]
+            start: Coord = current
+
+            # random walk through the maze until a connected cell is found
+            while not connected[current[0]][current[1]]:
+                # find a valid neighboring cell by checking in a random direction then rotating clockwise
+                direction: int = random.randint(0, 4)
+                next_cell: Coord = neighbor(current, direction, connection_list)
+
+                while next_cell is None:
+                    direction += 1
+                    if direction > 3:
+                        direction = 0
+                    next_cell = neighbor(current, direction, connection_list)
+
+                # keep track of the random path
+                direction_matrix[current[0]][current[1]] = direction
+                # move to the neighboring cell
+                current = next_cell
+
+            direction_matrix[current[0]][current[1]] = 4
+
+            # Backtrack and retrace our path, connecting cells as we go
+            current = start
+            while not connected[current[0]][current[1]]:
+                direction = direction_matrix[current[0]][current[1]]
+                connected[current[0]][current[1]] = True
+                nodes_left -= 1
+
+                next_cell = neighbor(current, direction, connection_list)
+                # add edge
+                connection_list[direction][current[0]][current[1]] = True
+
+                current = next_cell
+
+        return LatticeMaze(
+            connection_list=connection_list,
+            generation_meta=dict(
+                func_name="gen_wilson",
+                grid_shape=grid_shape,
+            ),
+        )
+
+
 
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
     "gen_dfs": LatticeMazeGenerators.gen_dfs,
+    "gen_wilson": LatticeMazeGenerators.gen_wilson
 }

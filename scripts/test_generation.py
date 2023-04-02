@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from maze_transformer.evaluation.plot_maze import plot_path
+from maze_transformer.evaluation.plot_maze import MazePlot
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.latticemaze import LatticeMaze
 
@@ -29,7 +29,12 @@ def generate_solve_plot(
 
     print(f"solving time: {time.time() - solution_start}")
 
-    plot_path(maze, path, show=True)
+    MazePlot._plot_path(maze, path, show=True)
+
+
+def test_wilson_generation():
+    maze = LatticeMazeGenerators.gen_wilson(np.array([2, 2]))
+    print(maze)
 
 
 if __name__ == "__main__":
