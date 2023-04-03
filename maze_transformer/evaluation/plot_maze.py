@@ -228,7 +228,7 @@ class MazePlot:
             norm = Normalize(vmin=0, vmax=self.max_node_value)
             scalar_mappable = ScalarMappable(norm=norm, cmap=self.node_color_map)
             cbar = self.fig.colorbar(scalar_mappable, ax=self.ax, ticks=ticks)
-            cbar.ax.set_yticklabels(np.round(ticks, 2))
+            cbar.ax.set_yticklabels(np.round(ticks, 4))
 
             self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
 
