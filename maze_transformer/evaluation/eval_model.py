@@ -101,7 +101,7 @@ def decode_maze_tokens_to_coords(
 ) -> list[str] | list[tuple[int, int]]:
     """given a list of tokens, decode the coordinate-tokens to a list of coordinates, leaving other tokens as-is"""
     output: list[str] | list[tuple[int, int]] = list()
-    for idx, tk in enumerate(tokens):
+    for i, tk in enumerate(tokens):
         if tk in mazedata_cfg.token_node_map:
             output.append(mazedata_cfg.token_node_map[tk])
         else:
@@ -170,8 +170,8 @@ def predict_maze_path(
 
     # decode the tokens
     predicted_and_context_tokens = model.to_str_tokens(predictions)
-    pac_path_start_idx: int = predicted_and_context_tokens.index(path_start_token) + 1
-    predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_idx:]
+    pac_path_start_index: int = predicted_and_context_tokens.index(path_start_token) + 1
+    predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_index:]
 
     if verbose:
         print(
