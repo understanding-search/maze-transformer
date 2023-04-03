@@ -21,18 +21,18 @@ check-format: clean
 	poetry run python -m isort --check-only .
 	poetry run python -m black --check .
 
-unit: clean
+unit:
 	rm -rf .pytest_cache
 	poetry run python -m pytest tests/unit
 
-integration: clean
+integration:
 	rm -rf .pytest_cache
 	poetry run python -m pytest -s tests/integration
 
 convert_notebooks:
 	python tests/helpers/convert_ipynb_to_script.py notebooks/ --output_dir $(CONVERTED_NOTEBOOKS_TEMP_DIR) --disable_plots
 
-test_notebooks: clean convert_notebooks
+test_notebooks: convert_notebooks
 	@echo "Testing notebooks in $(CONVERTED_NOTEBOOKS_TEMP_DIR)"
 	@for file in $(CONVERTED_NOTEBOOKS_TEMP_DIR)/*.py; do \
 		echo "  Running $$file"; \
@@ -47,7 +47,7 @@ test_notebooks: clean convert_notebooks
 		fi; \
 	done
 
-test: unit integration
+test: clean unit integration test_notebooks
 
 .PHONY: clean
 clean:
