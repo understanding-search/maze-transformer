@@ -264,7 +264,12 @@ class LatticeMaze:
     @classmethod
     def from_tokens(cls, tokens: list[str]) -> "LatticeMaze":
         """create a LatticeMaze from a list of tokens"""
-        adjlist_tokens = get_adjlist_tokens(tokens)
+        if tokens[0] == SPECIAL_TOKENS["adjlist_start"]:
+            adjlist_tokens = get_adjlist_tokens(tokens)
+        else:
+            # If we're not getting a "complete" tokenized maze, assume it's a list of coord tokens already
+            adjlist_tokens = tokens
+
         edges: list[str] = list_split(
             adjlist_tokens,
             SPECIAL_TOKENS["adjacency_endline"],
