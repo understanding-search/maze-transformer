@@ -9,10 +9,11 @@ check-format:
 	poetry run python -m black --check .
 
 unit:
+	rm -rf .pytest_cache
 	poetry run python -m pytest tests/unit
 
 integration:
+	rm -rf .pytest_cache
 	poetry run python -m pytest -s tests/integration
 
-test:
-	poetry run python -m pytest tests
+test: unit integration

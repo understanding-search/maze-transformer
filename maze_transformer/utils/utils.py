@@ -2,6 +2,7 @@ import os
 import random
 from itertools import islice
 from pathlib import Path
+from typing import Any, Callable, TypeVar
 
 import numpy as np
 import torch
@@ -57,3 +58,16 @@ def get_checkpoint_paths_for_run(run_path: Path) -> list[tuple[int, Path]]:
             Path(run_path).glob("checkpoints/model.iter_*.pt")
         )
     ]
+
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def register_method(method_dict: dict[str, Callable[..., Any]]) -> Callable[[F], F]:
+    """Decorator to add a method to the method_dict"""
+
+    def decorator(method: F) -> F:
+        method_dict[method.__name__] = method
+        return method
+
+    return decorator

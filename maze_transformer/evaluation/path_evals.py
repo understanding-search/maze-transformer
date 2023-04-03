@@ -1,14 +1,24 @@
-from typing import Callable, Iterable, TypeAlias
+from typing import Iterable, Optional, Protocol, TypeAlias
 
 import numpy as np
-from muutils.tensor_utils import NDArray
+from jaxtyping import Int
 
 from maze_transformer.generation.constants import Coord, CoordTup
 from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.utils.utils import register_method
 
 # pylint: disable=unused-argument
-MazePath: TypeAlias = NDArray["node x_y_pos", int]
-PathEvalFunction = Callable[[LatticeMaze, MazePath, MazePath], float]
+MazePath: TypeAlias = Int[np.ndarray, "node x_y_pos"]
+
+
+class PathEvalFunction(Protocol):
+    def __call__(
+        self,
+        maze: Optional[LatticeMaze] = None,
+        solution: Optional[MazePath] = None,
+        prediction: Optional[MazePath] = None,
+    ) -> float:
+        ...
 
 
 def path_as_segments_iter(path: MazePath) -> Iterable[tuple]:
@@ -16,20 +26,21 @@ def path_as_segments_iter(path: MazePath) -> Iterable[tuple]:
     Iterate over the segments of a path.
     """
     i: int
-    n_s: Coord | CoordTup
-    n_e: Coord | CoordTup
-    for i, n_s in enumerate(path[:-1]):
-        n_e = path[i + 1]
-        yield (n_s, n_e)
+    step_start: Coord | CoordTup
+    step_end: Coord | CoordTup
+    for i, step_start in enumerate(path[:-1]):
+        step_end = path[i + 1]
+        yield step_start, step_end
 
 
 class PathEvals:
-    """array path based eval functions. first path is always the "ground truth" path"""
+    """array path based eval functions"""
 
+    evals: dict[str, PathEvalFunction] = {}
+
+    @register_method(evals)
     @staticmethod
-    def node_overlap(
-        maze: LatticeMaze, solution: MazePath, prediction: MazePath, /
-    ) -> float:
+    def node_overlap(solution: MazePath, prediction: MazePath, **_) -> float:
         """number of shared nodes (any order) / total number of (unique) nodes"""
         if len(prediction) <= 1:
             return 0.0
@@ -43,67 +54,47 @@ class PathEvals:
                 n_shared += 1
         return n_shared / len(solution_set)
 
+    @register_method(evals)
     @staticmethod
-    def num_connections_adjacent_lattice(
-        maze: LatticeMaze, solution: MazePath, prediction: MazePath, /
-    ) -> float:
+    def num_connections_adjacent_lattice(prediction: MazePath, **_) -> float:
         """number of the connections in prediction which actually connect nodes that are adjacent on the lattice, ignoring if they are adjacent on the maze"""
         if len(prediction) <= 1:
             return 0.0
 
         n_adj: int = 0
-        for n_s, n_e in path_as_segments_iter(prediction):
-            # print(f"{n_s = } {n_e = }")
-
-            if (np.abs(n_s - n_e).sum() == 1).all():
+        for step_start, step_end in path_as_segments_iter(prediction):
+            if (np.abs(step_start - step_end).sum() == 1).all():
                 n_adj += 1
 
         return n_adj
 
+    @register_method(evals)
     @staticmethod
-    def fraction_connections_adjacent_lattice(
-        maze: LatticeMaze, solution: MazePath, prediction: MazePath, /
-    ) -> float:
+    def fraction_connections_adjacent_lattice(prediction: MazePath, **_) -> float:
         """fraction of the connections in prediction which actually connect nodes that are adjacent on the lattice, ignoring if they are adjacent on the maze"""
 
-        return PathEvals.num_connections_adjacent_lattice(
-            maze, solution, prediction
-        ) / len(prediction)
+        return PathEvals.num_connections_adjacent_lattice(prediction) / len(prediction)
 
+    @register_method(evals)
     @staticmethod
-    def num_connections_adjacent(
-        maze: LatticeMaze, solution: MazePath, prediction: MazePath, /
-    ) -> float:
+    def num_connections_adjacent(maze: LatticeMaze, prediction: MazePath, **_) -> float:
         """number of connections in prediction which are are valid paths on the maze"""
 
         if len(prediction) <= 1:
             return 0.0
 
         n_connected: int = 0
-        for n_s, n_e in path_as_segments_iter(prediction):
-            if maze.nodes_connected(n_s, n_e):
+        for step_start, step_end in path_as_segments_iter(prediction):
+            if maze.nodes_connected(step_start, step_end):
                 n_connected += 1
 
         return n_connected
 
+    @register_method(evals)
     @staticmethod
     def fraction_connections_adjacent(
-        maze: LatticeMaze, solution: MazePath, prediction: MazePath, /
+        maze: LatticeMaze, prediction: MazePath, **_
     ) -> float:
         """fraction of connections in prediction which are are valid paths on the maze"""
 
-        return PathEvals.num_connections_adjacent(maze, solution, prediction) / len(
-            prediction
-        )
-
-    @classmethod
-    def all_functions(cls) -> dict[str, PathEvalFunction]:
-        excluded = ["all_functions"]
-
-        return {
-            **{
-                name: func
-                for name, func in cls.__dict__.items()
-                if not name.startswith("_") and name not in excluded
-            }
-        }
+        return PathEvals.num_connections_adjacent(maze, prediction) / len(prediction)
