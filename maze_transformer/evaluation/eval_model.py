@@ -143,7 +143,7 @@ def evaluate_model(
 ) -> dict[str, StatCounter]:
     """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function."""
     if not eval_functions:
-        eval_functions = PathEvals.all_functions()
+        eval_functions = PathEvals.evals
 
     score_counters: dict[str, StatCounter] = {
         name: StatCounter() for name in eval_functions.keys()
@@ -160,11 +160,16 @@ def evaluate_model(
             data_cfg=dataset.cfg,
             model=model,
             max_new_tokens=max_new_tokens,
+            verbose=verbose,
         )
 
         for name, func in eval_functions.items():
             score_counters[name].update(
-                func(maze, np.array(solution), np.array(prediction))
+                func(
+                    maze=maze,
+                    solution=np.array(solution),
+                    prediction=np.array(prediction),
+                )
                 for maze, solution, prediction in zip(mazes, solutions, predictions)
             )
 

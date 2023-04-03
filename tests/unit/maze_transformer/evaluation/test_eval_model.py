@@ -126,7 +126,7 @@ def test_evaluate_model(temp_dir):
 
     dataset = MazeDataset.disk_load(path_base=base_path, do_config=True, do_tokens=True)
 
-    path_evals = PathEvals.all_functions()
+    path_evals = PathEvals.evals
     eval_names = [name for name in path_evals.keys()]
     scores = evaluate_model(dataset=dataset, model=model)
 
