@@ -116,7 +116,7 @@ class MazePlot:
                 self.add_predicted_path(path=path)
         return self
 
-    def show(self) -> None:
+    def plot(self) -> None:
         """Plot the maze and paths."""
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(1, 1, 1)
@@ -135,6 +135,9 @@ class MazePlot:
         self.ax.set_xlabel("col")
         self.ax.set_ylabel("row")
 
+    def show(self) -> None:
+        """Show the plot. DONT USE THIS IN NOTEBOOKS WHICH NEED TO BE TESTED IN CI!!!"""
+        self.plot()
         plt.show()
 
     def _rowcol_to_coord(self, points: CoordArray) -> NDArray:

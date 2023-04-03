@@ -8,14 +8,14 @@ import warnings
 DISABLE_PLOTS: dict[str, list[str]] = {
     "matplotlib": ["""
 # ------------------------------------------------------------
-# Disable plots, done during processing by `convert_ipynb_to_script.py`
-# matplolib
+# Disable matplotlib plots, done during processing by `convert_ipynb_to_script.py`
 import matplotlib.pyplot as plt
 plt.show = lambda: None
 # ------------------------------------------------------------
 """],
     "circuitsvis": ["""
 # ------------------------------------------------------------
+# Disable circuitsvis plots, done during processing by `convert_ipynb_to_script.py`
 from circuitsvis.utils.convert_props import PythonProperty, convert_props
 from circuitsvis.utils.render import RenderedHTML, render, render_cdn, render_local
 
@@ -73,7 +73,7 @@ def disable_plots_in_script(script_lines: list[str]) -> list[str]:
             warnings.warn("could not find where matplotlib is used, plot disabling might not work!")
 
         # insert the cursed things
-        script_lines_new = script_lines[:mpl_last_import_index + 1] + DISABLE_PLOTS["matplotlib"] + script_lines[mpl_last_import_index + 1:]
+        script_lines_new = script_lines_new[:mpl_last_import_index + 1] + DISABLE_PLOTS["matplotlib"] + script_lines_new[mpl_last_import_index + 1:]
         result_str_TEMP = '\n\n'.join(script_lines_new)
 
     if "circuitsvis" in result_str_TEMP:
@@ -101,7 +101,7 @@ def disable_plots_in_script(script_lines: list[str]) -> list[str]:
             warnings.warn("could not find where circuitsvis is used, plot disabling might not work!")
 
         # insert the cursed things
-        script_lines_new = script_lines[:cirv_last_import_index + 1] + DISABLE_PLOTS["circuitsvis"] + script_lines[cirv_last_import_index + 1:]
+        script_lines_new = script_lines_new[:cirv_last_import_index + 1] + DISABLE_PLOTS["circuitsvis"] + script_lines_new[cirv_last_import_index + 1:]
         result_str_TEMP = '\n\n'.join(script_lines_new)
 
     return script_lines_new
