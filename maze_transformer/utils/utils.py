@@ -1,5 +1,6 @@
 import os
 import random
+from typing import Any, Callable, TypeVar
 
 import numpy as np
 import torch
@@ -34,3 +35,16 @@ def set_reproducibility(seed=DEFAULT_SEED):
     # Ensure reproducibility for concurrent CUDA streams
     # see https://docs.nvidia.com/cuda/cublas/index.html#cublasApi_reproducibility.
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def register_method(method_dict: dict[str, Callable[..., Any]]) -> Callable[[F], F]:
+    """Decorator to add a method to the method_dict"""
+
+    def decorator(method: F) -> F:
+        method_dict[method.__name__] = method
+        return method
+
+    return decorator
