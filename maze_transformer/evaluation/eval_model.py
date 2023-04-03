@@ -1,16 +1,25 @@
 import json
 from pathlib import Path
+from typing import cast
 
+import numpy as np
 import torch
+from muutils.statcounter import StatCounter
+from muutils.tensor_utils import ATensor
 from transformer_lens import HookedTransformer
 
-from maze_transformer.evaluation.path_evals import MazePath
+from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.latticemaze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder
-from maze_transformer.training.mazedataset import MazeDatasetConfig
+from maze_transformer.training.mazedataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.training import TRAIN_SAVE_FILES
-from maze_transformer.utils.token_utils import decode_maze_tokens_to_coords
+from maze_transformer.utils.token_utils import (
+    decode_maze_tokens_to_coords,
+    get_path_tokens,
+    get_tokens_up_to_path_start,
+)
+from maze_transformer.utils.utils import chunks
 
 # pylint: disable=protected-access
 
@@ -87,89 +96,81 @@ def load_model_with_configs(
     return model, config_holder
 
 
-def predict_maze_path(
-    tokens: list[str],
+def predict_maze_paths(
+    tokens_batch: list[list[str]],
     data_cfg: MazeDatasetConfig,
     model: HookedTransformer,
-    include_start_coord: bool = True,
-    n_tokens_pred: int = 8,
+    # Note: The start coord is included in the model input, so max_new_tokens is how many tokens can be predicted AFTER the start. This function returns the full paths, including start coord, so in general the max returned path length is max_new_tokens + 1
+    max_new_tokens: int = 8,
     verbose: bool = False,
-) -> tuple[LatticeMaze, MazePath, MazePath]:
-    """given tokens from a dataset, predict the next tokens with the model, decode both true and predicted to paths
+) -> list[list[tuple[int, int]]]:
+    indices_batch: list[ATensor] = []
+    for tokens in tokens_batch:
+        maze = get_tokens_up_to_path_start(tokens)
+        indices = torch.tensor(
+            [data_cfg.tokenizer_map[t] for t in maze], dtype=torch.long
+        )
+        indices_batch.append(indices)
 
-    ### Parameters:
-     - `tokens : list[str]`
-       raw tokens from dataset, containing both maze and true path
-     - `data_cfg : MazeDatasetConfig`
-       config for the dataset
-     - `model : HookedTransformer`
-       model to use for prediction
-     - `n_tokens_pred : int`
-       number of tokens to predict
-     - `**generate_kwargs`
-       additional keyword arguments to pass to `model.generate`
-
-    ### Returns:
-     - `tuple[MazePath, MazePath]`
-       ( path_true, path_predicted )
-    """
-
-    # split the tokens into maze (prompt) and path
-    path_start_token: str = SPECIAL_TOKENS["path_start"]
-    path_start_index: int = tokens.index(path_start_token) + 1
-    maze_tokens: list[str] = tokens[:path_start_index]
-    path_true_tokens: list[str] = tokens[path_start_index:]
-
-    if include_start_coord:
-        # add the first coordinate to `maze_tokens`
-        maze_tokens.append(path_true_tokens[0])
-
-    # encode + pad the maze tokens
-    maze_arr_nopad = model.to_tokens(" ".join(maze_tokens), prepend_bos=False)
-
-    if verbose:
-        print("Generating Model Completions")
-    #! NOTE verbose flag here will require latest clone of TrasformerLens from github
-    # have the model predict some tokens
-    predictions = model.generate(
-        maze_arr_nopad,
-        eos_token_id=model.tokenizer.eos_token_id,
+    prediction_batch = model.generate(
+        torch.stack(indices_batch),
+        eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
         stop_at_eos=True,
-        max_new_tokens=n_tokens_pred,
+        max_new_tokens=max_new_tokens,
         verbose=verbose,
     )
 
-    # decode the tokens
-    predicted_and_context_tokens = model.to_str_tokens(predictions)
-    pac_path_start_index: int = predicted_and_context_tokens.index(path_start_token) + 1
-    predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_index:]
+    paths: list[list[tuple[int, int]]] = []
+    for preds in prediction_batch:
+        pred_tokens: list[str] = [data_cfg.token_arr[t] for t in preds]
+        path_tokens = get_path_tokens(pred_tokens)
+        path_coords = decode_maze_tokens_to_coords(
+            path_tokens, mazedata_cfg=data_cfg, when_noncoord="skip"
+        )
+        # This is the correct type when using "skip"
+        paths.append(cast(list[tuple[int, int]], path_coords))
 
-    if verbose:
-        print(
-            f"{maze_tokens = }\n{path_true_tokens = }\n{predicted_and_context_tokens = }\n{predicted_tokens = }"
+    return paths
+
+
+def evaluate_model(
+    model: HookedTransformer,
+    dataset: MazeDataset,
+    eval_functions: dict[str, PathEvalFunction] | None = None,
+    max_new_tokens: int = 8,
+    batch_size: int = 64,
+    verbose: bool = False,
+) -> dict[str, StatCounter]:
+    """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function."""
+    if not eval_functions:
+        eval_functions = PathEvals.evals
+
+    score_counters: dict[str, StatCounter] = {
+        name: StatCounter() for name in eval_functions.keys()
+    }
+
+    for batch in chunks(dataset.mazes_tokens, batch_size):
+        # TODO: This won't be needed after #124, then we can call mazes_objs instead
+        # https://github.com/orgs/AISC-understanding-search/projects/1/views/1?pane=issue&itemId=23879308
+        solved_mazes = [SolvedMaze.from_tokens(tokens, dataset.cfg) for tokens in batch]
+        mazes, solutions = zip(*solved_mazes)
+
+        predictions = predict_maze_paths(
+            tokens_batch=batch,
+            data_cfg=dataset.cfg,
+            model=model,
+            max_new_tokens=max_new_tokens,
+            verbose=verbose,
         )
 
-    # convert tokens to coordinates
-    path_true = decode_maze_tokens_to_coords(
-        path_true_tokens,
-        mazedata_cfg=data_cfg,
-        when_noncoord="skip",
-    )
+        for name, func in eval_functions.items():
+            score_counters[name].update(
+                func(
+                    maze=maze,
+                    solution=np.array(solution),
+                    prediction=np.array(prediction),
+                )
+                for maze, solution, prediction in zip(mazes, solutions, predictions)
+            )
 
-    path_predicted = decode_maze_tokens_to_coords(
-        predicted_tokens,
-        mazedata_cfg=data_cfg,
-        when_noncoord="skip",
-    )
-
-    # remove start and end tokens from maze_tokens
-    maze_tokens = maze_tokens[
-        maze_tokens.index(SPECIAL_TOKENS["adjlist_start"])
-        + 1 : maze_tokens.index(SPECIAL_TOKENS["adjlist_end"])
-    ]
-
-    return (
-        LatticeMaze.from_tokens(maze_tokens),
-        path_true,
-        path_predicted,
-    )
+    return score_counters
