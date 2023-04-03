@@ -1,23 +1,46 @@
-from dataclasses import dataclass, field
 from functools import cached_property
 
 import numpy as np
 import torch
-from muutils.tensor_utils import ATensor
+from muutils.json_serialize import (
+    SerializableDataclass,
+    serializable_dataclass,
+    serializable_field,
+)
+from muutils.tensor_utils import DTYPE_MAP, ATensor
 from torch.utils.data import Dataset
 
 from maze_transformer.utils.utils import get_device
 
 
-@dataclass(kw_only=True)
-class GPTDatasetConfig:
+def _dtype_serialization_fn(datatype: torch.dtype | np.dtype) -> str:
+    """convert torch dtype to string, while checking that the conversion is reversible"""
+    x_str: str = str(datatype)
+    assert x_str in DTYPE_MAP, f"unknown dtype {datatype}"
+    assert DTYPE_MAP[x_str] == datatype
+    return x_str
+
+
+@serializable_dataclass(
+    kw_only=True,
+    properties_to_serialize=["token_arr", "padding_token_index", "tokenizer_map"],
+)
+class GPTDatasetConfig(SerializableDataclass):
     """base config class"""
 
     name: str
-    device: torch.device = field(default_factory=lambda: torch.device(get_device()))
-    dtype: torch.dtype | np.dtype = field(default_factory=lambda: torch.int16)
-    seq_len_min: int = 1
-    seq_len_max: int = 512
+    device: torch.device = serializable_field(
+        default_factory=lambda: torch.device(get_device()),
+        serialization_fn=lambda x: str(x),
+        loading_fn=lambda data: torch.device(data["device"]),
+    )
+    dtype: torch.dtype | np.dtype = serializable_field(
+        default_factory=lambda: torch.int16,
+        serialization_fn=_dtype_serialization_fn,
+        loading_fn=lambda data: DTYPE_MAP[data["dtype"]],
+    )
+    seq_len_min: int = serializable_field(default=1)
+    seq_len_max: int = serializable_field(default=512)
 
     @cached_property
     def token_arr(self) -> list[str]:
@@ -45,16 +68,9 @@ class GPTDatasetConfig:
             device="cpu",
         )
 
-    def serialize(self) -> dict:
-        raise NotImplementedError()
 
-    @classmethod
-    def load(cls, data: dict) -> "DatasetConfig":
-        raise NotImplementedError()
-
-
-@dataclass(kw_only=True)
-class IndexedArray:
+@serializable_dataclass(kw_only=True)
+class IndexedArray(SerializableDataclass):
     """Contains a tensor made by concatenating a list of tensors, and a second tensor indicating the starting indices
     of the original tensors in the first one. Mainly for getting __getitem__ to work nicely with datasets
 
@@ -62,8 +78,8 @@ class IndexedArray:
     indices: tensor indicating the starting index in arr of each original array: [1, 2], [3, 4] -> [0, 2]
     """
 
-    arr: ATensor
-    indices: ATensor
+    arr: torch.Tensor
+    indices: torch.Tensor
 
     def get_len(self, i: int) -> int:
         if i + 1 < len(self.indices):
@@ -71,7 +87,7 @@ class IndexedArray:
 
         return self.arr.size(0) - self.indices[i]
 
-    def get_all_lengths(self) -> ATensor:
+    def get_all_lengths(self) -> torch.Tensor:
         return torch.cat(
             [
                 self.indices[1:] - self.indices[:-1],
