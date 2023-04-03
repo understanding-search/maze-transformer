@@ -8,31 +8,42 @@ default: help
 
 .PHONY: lint
 lint: clean
+	@echo "run linting: mypy"
 	python -m mypy --config-file pyproject.toml muutils/
 	python -m mypy --config-file pyproject.toml tests/
 
+.PHONY: format
 format: clean
+	@echo "run formatting: pycln, isort, and black"
 	poetry run python -m pycln --all .
 	poetry run python -m isort format .
 	poetry run python -m black .
 
+.PHONY: check-format
 check-format: clean
+	@echo "check formatting"
 	poetry run python -m pycln --check --all .
 	poetry run python -m isort --check-only .
 	poetry run python -m black --check .
 
+.PHONY: unit
 unit:
-	rm -rf .pytest_cache
+	@echo "run unit tests"
 	poetry run python -m pytest tests/unit
 
+.PHONY: integration
 integration:
-	rm -rf .pytest_cache
+	@echo "run integration tests"
 	poetry run python -m pytest -s tests/integration
 
+.PHONY: convert_notebooks
 convert_notebooks:
+	@echo "convert notebooks in $(NOTEBOOKS_DIR) using tests/helpers/convert_ipynb_to_script.py"
 	python tests/helpers/convert_ipynb_to_script.py notebooks/ --output_dir $(CONVERTED_NOTEBOOKS_TEMP_DIR) --disable_plots
 
+.PHONY: test_notebooks
 test_notebooks: convert_notebooks
+	@echo "test notebooks in $(NOTEBOOKS_DIR)"
 	@echo "Testing notebooks in $(CONVERTED_NOTEBOOKS_TEMP_DIR)"
 	@for file in $(CONVERTED_NOTEBOOKS_TEMP_DIR)/*.py; do \
 		echo "  Running $$file"; \
@@ -47,7 +58,9 @@ test_notebooks: convert_notebooks
 		fi; \
 	done
 
+.PHONY: test
 test: clean unit integration test_notebooks
+	@echo "run all testts: unit, integration, and notebooks"
 
 .PHONY: clean
 clean:
@@ -68,4 +81,4 @@ clean:
 help:
 	@echo -n "# list make targets"
 	@echo ":"
-	@cat Makefile | sed -n '/^\.PHONY: / h; /\(^\t@*echo\|^\t:\)/ {H; x; /PHONY/ s/.PHONY: \(.*\)\n.*"\(.*\)"/    make \1\t\2/p; d; x}'| sort -k2,2 |expand -t 25
+	@cat Makefile | sed -n '/^\.PHONY: / h; /\(^\t@*echo\|^\t:\)/ {H; x; /PHONY/ s/.PHONY: \(.*\)\n.*"\(.*\)"/    make \1\t\2/p; d; x}'| sort -k2,2 |expand -t 30
