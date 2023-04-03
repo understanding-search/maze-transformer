@@ -205,7 +205,7 @@ class MazePlot:
                     "+",
                     color="black",
                     ms=12,
-            )
+                )
 
         if self.custom_node_value_flag is False:
             self.ax.imshow(img, cmap="gray", vmin=-1, vmax=1)
