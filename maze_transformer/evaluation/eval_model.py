@@ -1,25 +1,18 @@
 import json
-import typing
 from pathlib import Path
 
 import torch
-from muutils.tensor_utils import NDArray
 from transformer_lens import HookedTransformer
 
-from maze_transformer.generation.latticemaze import (
-    SPECIAL_TOKENS,
-    CoordTup,
-    LatticeMaze,
-)
+from maze_transformer.evaluation.path_evals import MazePath
+from maze_transformer.generation.constants import SPECIAL_TOKENS
+from maze_transformer.generation.latticemaze import LatticeMaze
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.mazedataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS
 from maze_transformer.training.training import TRAIN_SAVE_FILES
+from maze_transformer.utils.token_utils import decode_maze_tokens_to_coords
 
 # pylint: disable=protected-access
-
-MazePath = list[CoordTup]
-ArrMazePath = NDArray["node x_y_pos", int]
 
 
 def find_config(folder: Path) -> Path | tuple[Path, Path] | None:
@@ -92,28 +85,6 @@ def load_model_with_configs(
     model.eval()
 
     return model, config_holder
-
-
-def decode_maze_tokens_to_coords(
-    tokens: list[str],
-    mazedata_cfg: MazeDatasetConfig,
-    when_noncoord: typing.Literal["except", "skip", "include"] = "skip",
-) -> list[str] | list[tuple[int, int]]:
-    """given a list of tokens, decode the coordinate-tokens to a list of coordinates, leaving other tokens as-is"""
-    output: list[str] | list[tuple[int, int]] = list()
-    for i, tk in enumerate(tokens):
-        if tk in mazedata_cfg.token_node_map:
-            output.append(mazedata_cfg.token_node_map[tk])
-        else:
-            if when_noncoord == "skip":
-                continue
-            elif when_noncoord == "include":
-                output.append(tk)
-            elif when_noncoord == "except":
-                raise ValueError(f"token '{tk}' at {i = } is not a coordinate")
-            else:
-                raise ValueError(f"invalid value for {when_noncoord = }")
-    return output
 
 
 def predict_maze_path(
