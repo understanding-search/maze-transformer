@@ -1,12 +1,12 @@
 from __future__ import annotations  # for type hinting self as return value
 
-from dataclasses import dataclass
 from copy import deepcopy
+from dataclasses import dataclass
 
-from jaxtyping import Float, Int
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from jaxtyping import Float
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
@@ -14,6 +14,7 @@ from muutils.tensor_utils import NDArray
 from maze_transformer.generation.latticemaze import Coord, CoordArray, LatticeMaze
 
 MAX_NODE_VALUE_EPSILON: float = 1e-10
+
 
 @dataclass(kw_only=True)
 class PathFormat:
@@ -26,16 +27,19 @@ class PathFormat:
     quiver_kwargs: dict | None = None
 
     def combine(self, other: PathFormat) -> PathFormat:
-        """combine with other PathFormat object, overwriting attributes with non-None values. 
-        
+        """combine with other PathFormat object, overwriting attributes with non-None values.
+
         returns a modified copy of self.
         """
         output: PathFormat = deepcopy(self)
-        for key, value in other.__dict__.items():            
+        for key, value in other.__dict__.items():
             if key == "path":
-                raise ValueError(f"Cannot overwrite path attribute! {self = }, {other = }")
+                raise ValueError(
+                    f"Cannot overwrite path attribute! {self = }, {other = }"
+                )
             if value is not None:
                 setattr(self, key, value)
+
 
 # styled path
 @dataclass
@@ -43,28 +47,28 @@ class StyledPath(PathFormat):
     path: CoordArray
 
 
-
 DEFAULT_FORMATS: dict[str, PathFormat] = {
     "true": PathFormat(
-        label = "true path",
-        fmt = "--",
-        color = "red",
-        line_width = 2.5,
-        quiver_kwargs = None,
+        label="true path",
+        fmt="--",
+        color="red",
+        line_width=2.5,
+        quiver_kwargs=None,
     ),
     "predicted": PathFormat(
-        label = None,
-        fmt = ":",
-        color = None,
-        line_width = 2,
-        quiver_kwargs = {"width": 0.015},
+        label=None,
+        fmt=":",
+        color=None,
+        line_width=2,
+        quiver_kwargs={"width": 0.015},
     ),
 }
 
+
 def process_path_input(
-    path: CoordArray|StyledPath,
+    path: CoordArray | StyledPath,
     _default_key: str,
-    path_fmt: PathFormat|None = None,
+    path_fmt: PathFormat | None = None,
     **kwargs,
 ) -> StyledPath:
     styled_path: StyledPath
@@ -120,8 +124,8 @@ class MazePlot:
 
     def add_true_path(
         self,
-        path: CoordArray|StyledPath,
-        path_fmt: PathFormat|None = None,
+        path: CoordArray | StyledPath,
+        path_fmt: PathFormat | None = None,
         **kwargs,
     ) -> MazePlot:
         self.true_path = process_path_input(
@@ -133,11 +137,10 @@ class MazePlot:
 
         return self
 
-
     def add_predicted_path(
         self,
-        path: CoordArray|StyledPath,
-        path_fmt: PathFormat|None = None,
+        path: CoordArray | StyledPath,
+        path_fmt: PathFormat | None = None,
         **kwargs,
     ) -> MazePlot:
         """
@@ -150,19 +153,21 @@ class MazePlot:
             path_fmt=path_fmt,
             **kwargs,
         )
-        
+
         # set default label and color if not specified
         if styled_path.label is None:
             styled_path.label = f"predicted path {len(self.predicted_paths) + 1}"
 
         if styled_path.color is None:
-            color_num: int = len(self.predicted_paths) % len(self.DEFAULT_PREDICTED_PATH_COLORS)
+            color_num: int = len(self.predicted_paths) % len(
+                self.DEFAULT_PREDICTED_PATH_COLORS
+            )
             styled_path.color = self.DEFAULT_PREDICTED_PATH_COLORS[color_num]
 
         self.predicted_paths.append(styled_path)
         return self
 
-    def add_multiple_paths(self, path_list: list[CoordArray|StyledPath]):
+    def add_multiple_paths(self, path_list: list[CoordArray | StyledPath]):
         """
         Function for adding multiple paths to MazePlot at once. This can be done in two ways:
         1. Passing a list of
@@ -193,7 +198,7 @@ class MazePlot:
         self.preceding_tokens_coords = preceeding_tokens_coords
         return self
 
-    def plot(self, dpi:int = 100, title:str = "") -> MazePlot:
+    def plot(self, dpi: int = 100, title: str = "") -> MazePlot:
         """Plot the maze and paths."""
         self.fig = plt.figure(dpi=dpi)
         self.ax = self.fig.add_subplot(1, 1, 1)
@@ -215,7 +220,7 @@ class MazePlot:
 
         return self
 
-    def show(self, dpi:int = 100, title:str = "") -> None:
+    def show(self, dpi: int = 100, title: str = "") -> None:
         """Plot the maze and paths and show the plot."""
         self.plot(dpi=dpi, title=title)
         plt.show()
