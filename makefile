@@ -1,4 +1,7 @@
 CONVERTED_NOTEBOOKS_TEMP_DIR := tests/_temp/notebooks
+NOTEBOOKS_DIR := notebooks
+ROOT_RELATIVE_TO_NOTEBOOKS := $(shell realpath --relative-to=$(NOTEBOOKS_DIR) .)
+
 
 .PHONY: default
 default: help
@@ -35,7 +38,7 @@ test_notebooks: clean convert_notebooks
 		echo "  Running $$file"; \
 		output_file=$${file%.py}__CI-output.txt; \
 		echo "  Output in $$output_file"; \
-		poetry run python $$file > $$output_file 2>&1; \
+		(cd $(NOTEBOOKS_DIR) && poetry run python $(ROOT_RELATIVE_TO_NOTEBOOKS)/$$file > $(ROOT_RELATIVE_TO_NOTEBOOKS)/$$output_file 2>&1); \
 		if [ $$? -ne 0 ]; then \
 			echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
 			echo "Error in $$file :"; \
