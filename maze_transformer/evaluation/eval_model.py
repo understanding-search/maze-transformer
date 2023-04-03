@@ -44,6 +44,8 @@ def load_model_with_configs(
 ) -> tuple[HookedTransformer, ConfigHolder]:
     """
     Load a model and associated config files from a path.
+
+    # TODO: replace this whole thing with a single zanj.read(fname) call
     """
     # load the configs
     # check for the filenames, go up a dir if they don't exist
@@ -59,7 +61,7 @@ def load_model_with_configs(
     # load the configs
     with open(config_path, "r") as f:
         combined_json = json.load(f)
-        config_holder = ConfigHolder.load(combined_json)
+    config_holder = ConfigHolder.load(combined_json)
 
     if verbose:
         print(f"Loaded config\n{config_holder}\n" + ("-" * 40))
@@ -139,8 +141,8 @@ def predict_maze_path(
 
     # decode the tokens
     predicted_and_context_tokens = model.to_str_tokens(predictions)
-    pac_path_start_idx: int = predicted_and_context_tokens.index(path_start_token) + 1
-    predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_idx:]
+    pac_path_start_index: int = predicted_and_context_tokens.index(path_start_token) + 1
+    predicted_tokens: list[str] = predicted_and_context_tokens[pac_path_start_index:]
 
     if verbose:
         print(

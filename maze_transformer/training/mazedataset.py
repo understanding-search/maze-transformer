@@ -1,18 +1,22 @@
-import inspect
 import json
 import multiprocessing
 import os
-import sys
-from dataclasses import dataclass
+import warnings
 from functools import cached_property, partial
 from typing import Callable
 
 import numpy as np
 import torch
-from muutils.json_serialize import JSONitem, json_serialize
+from muutils.json_serialize import (
+    JSONitem,
+    json_serialize,
+    serializable_dataclass,
+    serializable_field,
+)
+from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import freeze
 from muutils.statcounter import StatCounter
-from muutils.tensor_utils import DTYPE_MAP, ATensor, NDArray
+from muutils.tensor_utils import ATensor, NDArray
 from tqdm import tqdm
 
 from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordArray, CoordTup
@@ -21,17 +25,68 @@ from maze_transformer.generation.latticemaze import LatticeMaze, SolvedMaze
 from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, IndexedArray
 from maze_transformer.training.tokenizer import maze_to_tokens
 
+_MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
+    "padding_token_index",
+    "token_arr",
+    "tokenizer_map",
+    "grid_shape",
+    # "node_token_map", # doesn't work by default due to keys being tuples
+    "token_node_map",
+    "n_tokens",
+]
 
-@dataclass(kw_only=True)
+# TODO: re-add later, depends on a feature coming in muutils 0.3.2
+__MAZEDATASET_PROPERTIES_TO_VALIDATE: list[str] = [
+    "token_arr",
+    "padding_token_index",
+    "tokenizer_map",
+    "grid_shape",
+    "token_node_map",
+    "n_tokens",
+]
+
+
+def _load_maze_ctor(maze_ctor_serialized: str | dict) -> Callable:
+    if isinstance(maze_ctor_serialized, dict):
+        # this is both the new and old version of the serialization
+        return GENERATORS_MAP[maze_ctor_serialized["__name__"]]
+    elif isinstance(maze_ctor_serialized, str):
+        # this is a version I switched to for a while but now we are switching back
+        warnings.warn(
+            f"you are loading an old model/config!!! this should not be happening, please report to miv@knc.ai"
+        )
+        return GENERATORS_MAP[maze_ctor_serialized]
+    else:
+        raise ValueError(
+            f"maze_ctor_serialized is of type {type(maze_ctor_serialized)}, expected str or dict"
+        )
+
+
+@serializable_dataclass(
+    kw_only=True, properties_to_serialize=_MAZEDATASET_PROPERTIES_TO_SERIALIZE
+)
 class MazeDatasetConfig(GPTDatasetConfig):
     """maze dataset configuration, including tokenizers"""
 
     grid_n: int
     n_mazes: int
-    grid_shape = property(lambda self: (self.grid_n, self.grid_n))
-    maze_ctor: Callable = LatticeMazeGenerators.gen_dfs
+    maze_ctor: Callable = serializable_field(
+        default_factory=lambda: LatticeMazeGenerators.gen_dfs,
+        serialization_fn=lambda gen_func: {
+            "__name__": gen_func.__name__,
+            "__module__": gen_func.__module__,
+            "__doc__": string_as_lines(gen_func.__doc__),
+            "source_code": safe_getsource(gen_func),
+        },
+        loading_fn=lambda data: _load_maze_ctor(data["maze_ctor"]),
+    )
+
     # paths_per_maze: int = 5,
     # p_min_tgt_dist: float = 0.2,
+
+    @property
+    def grid_shape(self) -> tuple[int, int]:
+        return (self.grid_n, self.grid_n)
 
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:
@@ -58,68 +113,6 @@ class MazeDatasetConfig(GPTDatasetConfig):
     @cached_property
     def padding_token_index(self) -> str:
         return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
-
-    def serialize(self) -> JSONitem:
-        maze_ctor: dict = {"__name__": self.maze_ctor.__name__}
-        try:
-            maze_ctor["code_hash"] = hash(inspect.getsource(self.maze_ctor))
-            maze_ctor["sourcefile"] = inspect.getsourcefile(self.maze_ctor)
-        except (TypeError, OSError) as e:
-            maze_ctor["code_hash"] = None
-            maze_ctor["sourcefile"] = None
-            maze_ctor["__exception__"] = str(e)
-
-        return dict(
-            name=self.name,
-            grid_n=self.grid_n,
-            n_mazes=self.n_mazes,
-            grid_shape=self.grid_shape,
-            maze_ctor=maze_ctor,
-            device=str(self.device),
-            dtype=str(self.dtype),
-            n_tokens=self.n_tokens,
-            node_token_map=json_serialize(self.node_token_map),
-            token_arr=json_serialize(self.token_arr),
-            tokenizer_map=json_serialize(self.tokenizer_map),
-        )
-
-    @classmethod
-    def load(cls, data: JSONitem) -> "MazeDatasetConfig":
-        output = cls(  # pylint: disable=unexpected-keyword-arg
-            name=data["name"],
-            grid_n=data["grid_n"],
-            n_mazes=data["n_mazes"],
-            maze_ctor=GENERATORS_MAP[data["maze_ctor"]["__name__"]],
-            device=torch.device(data["device"]),
-            dtype=DTYPE_MAP[data["dtype"]],
-        )
-
-        # validate
-        assert tuple(output.grid_shape) == tuple(
-            data["grid_shape"]
-        ), f"{output.grid_shape = } {data['grid_shape'] = }"
-        assert (
-            json_serialize(output.node_token_map) == data["node_token_map"]
-        ), f"\n{output.node_token_map = }\n\n{data['node_token_map'] = }"
-        assert output.token_arr == data["token_arr"]
-        assert output.tokenizer_map == data["tokenizer_map"]
-
-        assert output.maze_ctor.__name__ == data["maze_ctor"]["__name__"]
-
-        assert output.n_tokens == data["n_tokens"]
-        if hash(inspect.getsource(output.maze_ctor)) != data["maze_ctor"]["code_hash"]:
-            print(
-                f"WARNING: code hash mismatch for maze_ctor {output.maze_ctor.__name__}",
-                file=sys.stderr,
-            )
-
-        if inspect.getsourcefile(output.maze_ctor) != data["maze_ctor"]["sourcefile"]:
-            print(
-                f"WARNING: sourcefile mismatch for maze_ctor {output.maze_ctor.__name__}",
-                file=sys.stderr,
-            )
-
-        return output
 
 
 class MazeDataset(GPTDataset):

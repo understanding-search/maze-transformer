@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Union
 
 from transformers import PreTrainedTokenizer
-
 from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.mazedataset import MazeDataset
@@ -24,17 +23,15 @@ def train_model(
 ):
     dataset = MazeDataset.disk_load(basepath, do_config=True, do_tokenized=True)
 
-    tokenizer = PreTrainedTokenizer(
-        bos_token=SPECIAL_TOKENS["padding"],
-        eos_token=SPECIAL_TOKENS["padding"],
-        pad_token=SPECIAL_TOKENS["padding"],
-    )
-
     cfg: ConfigHolder = ConfigHolder(
         dataset_cfg=dataset.cfg,
         model_cfg=GPT_CONFIGS[model_cfg],
         train_cfg=TRAINING_CONFIGS[training_cfg],
-        tokenizer=tokenizer,
+        pretrainedtokenizer_kwargs=dict(
+            bos_token=SPECIAL_TOKENS["padding"],
+            eos_token=SPECIAL_TOKENS["padding"],
+            pad_token=SPECIAL_TOKENS["padding"],
+        ),
     )
 
     with open(Path(basepath) / TRAIN_SAVE_FILES.config_holder, "w") as f:
