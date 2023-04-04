@@ -199,6 +199,7 @@ def process_file(
     disable_plots: bool = False,
     filter_out_lines: str | typing.Sequence[str] = ("%", "!"),
 ):
+    print(f"\tProcessing {in_file}...", file=sys.stderr)
     assert os.path.exists(in_file), f"File {in_file} does not exist."
     assert os.path.isfile(in_file), f"Path {in_file} is not a file."
     assert in_file.endswith(".ipynb"), f"File {in_file} is not a Jupyter Notebook."
@@ -258,6 +259,7 @@ def process_dir(
     assert filenames, f"Directory {input_dir} does not contain any Jupyter Notebooks."
 
     for fname in filenames:
+        print(f"\tConverting {fname}...", file=sys.stderr)
         in_file: str = os.path.join(input_dir, fname)
         out_file: str = os.path.join(output_dir, fname.replace(".ipynb", ".py"))
 
