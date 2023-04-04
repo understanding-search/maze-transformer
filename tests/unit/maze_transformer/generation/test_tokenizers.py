@@ -72,7 +72,6 @@ def test_to_ascii():
     assert (
         cfg_holder.tokenizer.to_ascii(maze_str_tokens).splitlines() == target
     ), "ASCII encoding from string tokens failed"
-
     # And with token ids
     token_ids = cfg_holder.tokenizer.encode(maze_str_tokens)
     assert (

@@ -45,3 +45,8 @@ ignore_missing_imports = true
 [tool.isort]
 profile = "black"
 known_third_party = "wandb"
+
+[tool.pyright]
+exclude = [".venv"]
+venvPath = "."
+venv = ".venv"

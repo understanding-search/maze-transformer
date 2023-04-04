@@ -9,12 +9,8 @@ from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
 from maze_transformer.evaluation.plot_maze import MazePlot
-from maze_transformer.generation.latticemaze import (
-    SPECIAL_TOKENS,
-    Coord,
-    CoordTup,
-    LatticeMaze,
-)
+from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
+from maze_transformer.generation.latticemaze import LatticeMaze
 
 if TYPE_CHECKING:
     from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig
@@ -154,11 +150,6 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             assert sequence.ndim == 1, f"Expected 1D sequence, got {sequence.ndim}D"
             sequence = sequence[sequence != self.pad_token_id]
             str_sequence = self.batch_decode(sequence)
-
-        # Filter out the adjacency list
-        str_sequence = str_sequence[
-            1 : str_sequence.index(SPECIAL_TOKENS["adjlist_end"])
-        ]
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence)
         return MazePlot(lattice_maze).as_ascii(start=start, end=end)

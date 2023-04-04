@@ -19,15 +19,11 @@ from muutils.statcounter import StatCounter
 from muutils.tensor_utils import ATensor, NDArray
 from tqdm import tqdm
 
+from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordArray, CoordTup
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
-from maze_transformer.generation.latticemaze import (
-    CoordArray,
-    CoordTup,
-    LatticeMaze,
-    SolvedMaze,
-)
+from maze_transformer.generation.latticemaze import LatticeMaze, SolvedMaze
 from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, IndexedArray
-from maze_transformer.training.tokenizer import SPECIAL_TOKENS, maze_to_tokens
+from maze_transformer.training.tokenizer import maze_to_tokens
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",
