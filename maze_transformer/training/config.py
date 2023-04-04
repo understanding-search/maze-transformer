@@ -88,6 +88,13 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         n_layers=4,
     ),
     BaseGPTConfig(
+        name="tuned-v1",
+        act_fn="gelu",
+        d_model=384,
+        d_head=64,
+        n_layers=6,
+    ),
+    BaseGPTConfig(
         name="gpt2-small",
         act_fn="gelu",
         d_model=384,  # half of gpt2-small
@@ -148,6 +155,20 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
         ),
         print_loss_interval=50,
         checkpoint_interval=10000,
+    ),
+    TrainConfig(
+        name="sweep-v1",
+        optimizer=torch.optim.AdamW,
+        optimizer_kwargs=dict(lr=0.0001),
+        batch_size=64,
+        dataloader_cfg=dict(
+            shuffle=True,
+            num_workers=8,
+            persistent_workers=True,
+            drop_last=True,
+        ),
+        print_loss_interval=1000,
+        checkpoint_interval=5000,
     ),
 ]
 
