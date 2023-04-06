@@ -35,6 +35,7 @@ class BaseGPTConfig(SerializableDataclass):
     are_layernorms_folded: bool = serializable_field(default=False)
     are_weights_processed: bool = serializable_field(default=False)
 
+
 # ==================================================
 
 
@@ -223,10 +224,11 @@ class ConfigHolder(SerializableDataclass):
     def create_model_zanj(self) -> ZanjHookedTransformer:
         return ZanjHookedTransformer(self)
 
+
 @set_config_class(ConfigHolder)
 class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
     """A hooked transformer that is configured by a ConfigHolder
-    
+
     the inheritance order is critical here -- super() does not call parent, but calls the next class in the MRO
     So, we need ConfiguredModel to take the ConfigHolder and pass kwargs to HookedTransformer
     """
@@ -239,24 +241,27 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
             cfg=cfg_holder.hooked_transformer_cfg,
             tokenizer=cfg_holder.tokenizer,
         )
-    
-    
+
     def _load_state_dict_wrapper(
-            self, 
-            state_dict: dict[str, Any], 
-            **kwargs,
-        ) -> None:
+        self,
+        state_dict: dict[str, Any],
+        **kwargs,
+    ) -> None:
         """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict"""
 
         recover_exact: bool = kwargs.get("recover_exact", False)
         fold_ln: bool = kwargs.get("fold_ln", True)
 
         if self.zanj_model_config.model_cfg.are_layernorms_folded and fold_ln:
-            raise ValueError("Cannot fold layernorms twice! the saved model already has layernorms folded")
+            raise ValueError(
+                "Cannot fold layernorms twice! the saved model already has layernorms folded"
+            )
 
         if recover_exact and fold_ln:
-            raise ValueError("Can't recover exact weights if the layernorm is to be folded!")
-        
+            raise ValueError(
+                "Can't recover exact weights if the layernorm is to be folded!"
+            )
+
         self.zanj_model_config.model_cfg.are_layernorms_folded = fold_ln
         self.zanj_model_config.model_cfg.are_weights_processed = not recover_exact
 
@@ -274,10 +279,10 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
 
         self.process_weights_(
             fold_ln=fold_ln,
-            center_writing_weights = not recover_exact,
-            center_unembed = not recover_exact,
-            refactor_factored_attn_matrices = False,
-            move_state_dict_to_device = not recover_exact,
+            center_writing_weights=not recover_exact,
+            center_unembed=not recover_exact,
+            refactor_factored_attn_matrices=False,
+            move_state_dict_to_device=not recover_exact,
         )
         self.setup()  # Re-attach layernorm hooks by calling setup
         self.eval()

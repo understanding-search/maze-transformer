@@ -32,8 +32,11 @@ class TRAIN_SAVE_FILES:
     model_checkpt: Callable[[int], str] = lambda iteration: f"model.iter_{iteration}.pt"
     model_final: str = "model.final.pt"
 
-    model_checkpt_zanj: Callable[[int], str] = lambda iteration: f"model.iter_{iteration}.zanj"
+    model_checkpt_zanj: Callable[
+        [int], str
+    ] = lambda iteration: f"model.iter_{iteration}.zanj"
     model_final_zanj: str = "model.final.zanj"
+
 
 def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger

@@ -57,6 +57,7 @@ def maze_to_tokens(
 
 class HuggingMazeTokenizer(PreTrainedTokenizer):
     """extension of PreTrainedTokenizer for mazes"""
+
     vocab: dict[str, int]  # map of token_ids to strings
 
     bos_token: str = SPECIAL_TOKENS["path_start"]
