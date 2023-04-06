@@ -12,7 +12,7 @@ torch = "^1.13.1"
 transformer-lens = { git = "https://github.com/neelnanda-io/TransformerLens.git" }
 matplotlib = "^3.7.0"
 fire = "^0.5.0"
-muutils = "^0.3.3"
+muutils = "^0.3.6"
 plotly = "^5.13.1"
 circuitsvis = "^1.39.1"
 jupyter = "^1.0.0"
@@ -45,3 +45,8 @@ ignore_missing_imports = true
 [tool.isort]
 profile = "black"
 known_third_party = "wandb"
+
+[tool.pyright]
+exclude = [".venv"]
+venvPath = "."
+venv = ".venv"

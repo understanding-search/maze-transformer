@@ -1,5 +1,8 @@
 import os
 import random
+from itertools import islice
+from pathlib import Path
+from typing import Any, Callable, TypeVar
 
 import numpy as np
 import torch
@@ -34,3 +37,37 @@ def set_reproducibility(seed=DEFAULT_SEED):
     # Ensure reproducibility for concurrent CUDA streams
     # see https://docs.nvidia.com/cuda/cublas/index.html#cublasApi_reproducibility.
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+
+
+def chunks(it, chunk_size):
+    """Yield successive chunks from an iterator."""
+    # https://stackoverflow.com/a/61435714
+    iterator = iter(it)
+    while chunk := list(islice(iterator, chunk_size)):
+        yield chunk
+
+
+def get_checkpoint_paths_for_run(run_path: Path) -> list[tuple[int, Path]]:
+    assert (
+        run_path.is_dir()
+    ), f"Model path {run_path} is not a directory (expect run directory, not model files)"
+
+    return [
+        (int(checkpoint_path.stem.split("_")[-1].split(".")[0]), checkpoint_path)
+        for checkpoint_path in sorted(
+            Path(run_path).glob("checkpoints/model.iter_*.pt")
+        )
+    ]
+
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def register_method(method_dict: dict[str, Callable[..., Any]]) -> Callable[[F], F]:
+    """Decorator to add a method to the method_dict"""
+
+    def decorator(method: F) -> F:
+        method_dict[method.__name__] = method
+        return method
+
+    return decorator

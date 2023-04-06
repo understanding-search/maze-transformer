@@ -1,64 +1,23 @@
 import random
 from dataclasses import dataclass
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 import numpy as np
 from muutils.misc import list_split
 from muutils.tensor_utils import NDArray
 
-# @dataclass(frozen=True, kw_only=True)
-# class Maze:
-# 	"""generalized maze class"""
-# 	n_nodes: int
-
-SPECIAL_TOKENS: dict[str, str] = dict(
-    adjlist_start="<ADJLIST_START>",
-    adjlist_end="<ADJLIST_END>",
-    target_start="<TARGET_START>",
-    target_end="<TARGET_END>",
-    origin_start="<ORIGIN_START>",
-    origin_end="<ORIGIN_END>",
-    path_start="<PATH_START>",
-    path_end="<PATH_END>",
-    connector="<-->",
-    adjacency_endline=";",
-    padding="<PADDING>",
+from maze_transformer.generation.constants import (
+    NEIGHBORS_MASK,
+    SPECIAL_TOKENS,
+    Coord,
+    CoordArray,
+    CoordTup,
 )
-
-DIRECTIONS_MAP: NDArray["direction axes", int] = np.array(
-    [
-        [0, 1],  # down
-        [0, -1],  # up
-        [1, 1],  # right
-        [1, -1],  # left
-    ]
+from maze_transformer.utils.token_utils import (
+    decode_maze_tokens_to_coords,
+    get_adjlist_tokens,
+    get_path_tokens,
 )
-
-
-NEIGHBORS_MASK: NDArray["coord point", int] = np.array(
-    [
-        [0, 1],  # down
-        [0, -1],  # up
-        [1, 0],  # right
-        [-1, 0],  # left
-    ]
-)
-
-# print(NEIGHBORS_MASK, NEIGHBORS_MASK.dtype, NEIGHBORS_MASK.shape)
-
-Coord = NDArray["x y", np.int8]
-CoordTup = tuple[int, int]
-CoordArray = NDArray["coords", np.int8]
-
-# def get_neighbors_2d(c: Coord, maze_shape: tuple[int, int]) -> list[tuple[int, int]]:
-# 	"""get the neighbors of a given coordinate"""
-# 	neighbors: list[tuple[int, int]] = np.array(c) + NEIGHBORS_MASK
-
-# 	return [
-# 		[x, y]
-# 		for x, y in neighbors
-# 		if (0 <= x < maze_shape[0]) and (0 <= y < maze_shape[1])
-# 	]
 
 
 def coord_str_to_tuple(coord_str: str) -> CoordTup:
@@ -303,15 +262,23 @@ class LatticeMaze:
         )
 
     @classmethod
-    def from_tokens(cls, maze_tokens: list[str]) -> "LatticeMaze":
+    def from_tokens(cls, tokens: list[str]) -> "LatticeMaze":
         """create a LatticeMaze from a list of tokens"""
+        if tokens[0] == SPECIAL_TOKENS["adjlist_start"]:
+            adjlist_tokens = get_adjlist_tokens(tokens)
+        else:
+            # If we're not getting a "complete" tokenized maze, assume it's a list of coord tokens already
+            adjlist_tokens = tokens
 
         edges: list[str] = list_split(
-            maze_tokens,
+            adjlist_tokens,
             SPECIAL_TOKENS["adjacency_endline"],
         )
 
         coordinates: list[tuple[str, str]] = list()
+        # what we're doing here:
+        # for each edge, convert to a coord tuple and add it to the list
+        # check that for each edge we have a connector, and a single token on each side
         for e in edges:
             # skip last endline
             if len(e) != 0:
@@ -345,3 +312,11 @@ class SolvedMaze(NamedTuple):
 
     maze: LatticeMaze
     solution: list[CoordTup]
+
+    @classmethod
+    def from_tokens(cls, tokens: list[str], data_cfg) -> "SolvedMaze":
+        maze = LatticeMaze.from_tokens(tokens)
+        path_tokens = get_path_tokens(tokens)
+        solution = decode_maze_tokens_to_coords(path_tokens, data_cfg)
+
+        return cls(maze, cast(list[CoordTup], solution))
