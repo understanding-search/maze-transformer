@@ -9,7 +9,7 @@ default: help
 .PHONY: lint
 lint: clean
 	@echo "run linting: mypy"
-	python -m mypy --config-file pyproject.toml muutils/
+	python -m mypy --config-file pyproject.toml maze_transformer/
 	python -m mypy --config-file pyproject.toml tests/
 
 .PHONY: format
