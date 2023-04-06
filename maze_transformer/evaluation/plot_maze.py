@@ -1,124 +1,206 @@
 from __future__ import annotations  # for type hinting self as return value
 
+from copy import deepcopy
 from dataclasses import dataclass
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from jaxtyping import Float
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
-from maze_transformer.generation.latticemaze import CoordArray, LatticeMaze
+from maze_transformer.generation.latticemaze import Coord, CoordArray, LatticeMaze
+
+MAX_NODE_VALUE_EPSILON: float = 1e-10
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PathFormat:
-    """formatting options for path plot
-    (path_true, "true", "-", "red")
-    """
+    """formatting options for path plot"""
 
-    path: CoordArray
     label: str | None = None
     fmt: str | None = None
     color: str | None = None
     line_width: float | None = None
-    quiver_kwargs: dict | None = (None,)
+    quiver_kwargs: dict | None = None
+
+    def combine(self, other: PathFormat) -> PathFormat:
+        """combine with other PathFormat object, overwriting attributes with non-None values.
+
+        returns a modified copy of self.
+        """
+        output: PathFormat = deepcopy(self)
+        for key, value in other.__dict__.items():
+            if key == "path":
+                raise ValueError(
+                    f"Cannot overwrite path attribute! {self = }, {other = }"
+                )
+            if value is not None:
+                setattr(self, key, value)
+
+
+# styled path
+@dataclass
+class StyledPath(PathFormat):
+    path: CoordArray
+
+
+DEFAULT_FORMATS: dict[str, PathFormat] = {
+    "true": PathFormat(
+        label="true path",
+        fmt="--",
+        color="red",
+        line_width=2.5,
+        quiver_kwargs=None,
+    ),
+    "predicted": PathFormat(
+        label=None,
+        fmt=":",
+        color=None,
+        line_width=2,
+        quiver_kwargs={"width": 0.015},
+    ),
+}
+
+
+def process_path_input(
+    path: CoordArray | StyledPath,
+    _default_key: str,
+    path_fmt: PathFormat | None = None,
+    **kwargs,
+) -> StyledPath:
+    styled_path: StyledPath
+    if isinstance(path, StyledPath):
+        styled_path = path
+    elif isinstance(path, CoordArray):
+        styled_path = StyledPath(path=path)
+        # add default formatting
+        styled_path = styled_path.combine(DEFAULT_FORMATS[_default_key])
+    else:
+        raise TypeError(f"Expected CoordArray or StyledPath, got {type(path)}: {path}")
+
+    # add formatting from path_fmt
+    if path_fmt is not None:
+        styled_path = styled_path.combine(path_fmt)
+
+    # add formatting from kwargs
+    for key, value in kwargs.items():
+        setattr(styled_path, key, value)
+
+    return styled_path
 
 
 class MazePlot:
-    """Class for displaying mazes and paths
+    """Class for displaying mazes and paths"""
 
-    UNIT_LENGTH: Set ratio between node size and wall thickness in image.
-    Wall thickness is fixed to 1px
-    A "unit" consists of a single node and the right and lower connection/wall.
-    Example: ul = 14 yields 13:1 ratio between node size and wall thickness
-    """
-
-    UNIT_LENGTH = 14
-    DEFAULT_PREDICTED_PATH_COLORS = [
-        "tab:blue",
-        "tab:green",
-        "tab:purple",
+    DEFAULT_PREDICTED_PATH_COLORS: list[str] = [
         "tab:orange",
         "tab:olive",
-        "tab:cyan",
+        "sienna",
+        "mediumseagreen",
+        "tab:purple",
+        "slategrey",
     ]
 
     def __init__(self, maze: LatticeMaze) -> None:
+        """
+        UNIT_LENGTH: Set ratio between node size and wall thickness in image.
+        Wall thickness is fixed to 1px
+        A "unit" consists of a single node and the right and lower connection/wall.
+        Example: ul = 14 yields 13:1 ratio between node size and wall thickness
+        """
+        self.unit_length: int = 14
         self.maze: LatticeMaze = maze
-        self.true_path: PathFormat = None
-        self.predicted_paths: list = []
+        self.true_path: StyledPath = None
+        self.predicted_paths: list[StyledPath] = []
+        self.node_values: Float[np.ndarray, "grid_n grid_n"] = None
+        self.custom_node_value_flag: bool = False
+        self.max_node_value: float = 1
+        self.node_color_map: str = "Blues"
+        self.target_token_coord: Coord = None
+        self.preceding_tokens_coords: CoordArray = None
 
     def add_true_path(
         self,
-        path: CoordArray,
-        label: str = "true path",
-        fmt: str = "--",
-        color: str = "red",
-        line_width: float = 2.5,
-        quiver_kwargs: dict | None = None,
+        path: CoordArray | StyledPath,
+        path_fmt: PathFormat | None = None,
+        **kwargs,
     ) -> MazePlot:
-        """
-        Recieve true path and formatting preferences from input and save as dict in true_path variable.
-        """
-        self.true_path = PathFormat(
+        self.true_path = process_path_input(
             path=path,
-            label=label,
-            fmt=fmt,
-            color=color,
-            line_width=line_width,
-            quiver_kwargs=quiver_kwargs,
+            _default_key="true",
+            path_fmt=path_fmt,
+            **kwargs,
         )
+
         return self
 
     def add_predicted_path(
         self,
-        path: CoordArray,
-        label: str | None = None,
-        fmt: str = ":",
-        color: str | None = None,
-        line_width: float = 2,
-        quiver_kwargs: dict | None = {"width": 0.015},
+        path: CoordArray | StyledPath,
+        path_fmt: PathFormat | None = None,
+        **kwargs,
     ) -> MazePlot:
         """
         Recieve predicted path and formatting preferences from input and save in predicted_path list.
         Default formatting depends on nuber of paths already saved in predicted path list.
         """
-        if label is None:
-            label = "predicted path {path_num}".format(
-                path_num=len(self.predicted_paths) + 1
-            )
-        if color is None:
-            color_num = len(self.predicted_paths) % len(
+        styled_path: StyledPath = process_path_input(
+            path=path,
+            _default_key="predicted",
+            path_fmt=path_fmt,
+            **kwargs,
+        )
+
+        # set default label and color if not specified
+        if styled_path.label is None:
+            styled_path.label = f"predicted path {len(self.predicted_paths) + 1}"
+
+        if styled_path.color is None:
+            color_num: int = len(self.predicted_paths) % len(
                 self.DEFAULT_PREDICTED_PATH_COLORS
             )
-            color = self.DEFAULT_PREDICTED_PATH_COLORS[color_num]
+            styled_path.color = self.DEFAULT_PREDICTED_PATH_COLORS[color_num]
 
-        self.predicted_paths.append(
-            PathFormat(
-                path=path,
-                label=label,
-                fmt=fmt,
-                color=color,
-                line_width=line_width,
-                quiver_kwargs=quiver_kwargs,
-            )
-        )
+        self.predicted_paths.append(styled_path)
         return self
 
-    def add_multiple_paths(self, path_list: list):
+    def add_multiple_paths(self, path_list: list[CoordArray | StyledPath]):
         """
         Function for adding multiple paths to MazePlot at once. This can be done in two ways:
         1. Passing a list of
         """
         for path in path_list:
-            if type(path) == PathFormat:
-                self.predicted_paths.append(path)
-            else:
-                self.add_predicted_path(path=path)
+            self.add_predicted_path(path)
         return self
 
-    def plot(self) -> None:
+    def add_node_values(
+        self,
+        node_values: Float[np.ndarray, "grid_n grid_n"],
+        color_map: str = "Blues",
+        target_token_coord: Coord = None,
+        preceeding_tokens_coords: CoordArray = None,
+    ) -> MazePlot:
+        assert (
+            node_values.shape == self.maze.grid_shape
+        ), "Please pass node values of the same sape as LatticeMaze.grid_shape"
+        assert np.min(node_values) >= 0, "Please pass non-negative node values only."
+
+        self.node_values = node_values
+        # Set flag for choosing cmap while plotting maze
+        self.custom_node_value_flag = True
+        # Retrieve Max node value for plotting, +1e-10 to avoid division by zero
+        self.max_node_value = np.max(node_values) + MAX_NODE_VALUE_EPSILON
+        self.node_color_map = color_map
+        self.target_token_coord = target_token_coord
+        self.preceding_tokens_coords = preceeding_tokens_coords
+        return self
+
+    def plot(self, dpi: int = 100, title: str = "") -> MazePlot:
         """Plot the maze and paths."""
-        self.fig = plt.figure()
+        self.fig = plt.figure(dpi=dpi)
         self.ax = self.fig.add_subplot(1, 1, 1)
 
         self._plot_maze()
@@ -130,54 +212,114 @@ class MazePlot:
 
         # Plot labels
         tick_arr = np.arange(self.maze.grid_shape[0])
-        self.ax.set_xticks(self.UNIT_LENGTH * (tick_arr + 0.5), tick_arr)
-        self.ax.set_yticks(self.UNIT_LENGTH * (tick_arr + 0.5), tick_arr)
+        self.ax.set_xticks(self.unit_length * (tick_arr + 0.5), tick_arr)
+        self.ax.set_yticks(self.unit_length * (tick_arr + 0.5), tick_arr)
         self.ax.set_xlabel("col")
         self.ax.set_ylabel("row")
+        self.fig.suptitle(title)
 
-    def show(self) -> None:
-        """Show the plot. DONT USE THIS IN NOTEBOOKS WHICH NEED TO BE TESTED IN CI!!!"""
-        self.plot()
+    def show(self, dpi: int = 100, title: str = "") -> None:
+        """Plot the maze and paths and show the plot. DONT USE THIS IN NOTEBOOKS WHICH NEED TO BE TESTED IN CI!!!"""
+        self.plot(dpi=dpi, title=title)
         plt.show()
+        return self
 
-    def _rowcol_to_coord(self, points: CoordArray) -> NDArray:
-        """Transform Points from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
-        points = np.array([(x, y) for (y, x) in points])
-        return self.UNIT_LENGTH * (points + 0.5)
+    def _rowcol_to_coord(self, point: Coord) -> NDArray:
+        """Transform Point from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
+        point = np.array([point[1], point[0]])
+        return self.unit_length * (point + 0.5)
 
     def _plot_maze(self) -> None:
+        """
+        Define Colormap and plot maze.
+        Colormap: x < 0: black
+                  0 <= x <= self.max_node_value:
+                        fade from dark blue to white,
+                        upper bound adaptive to max node value
+        """
         img = self._latticemaze_to_img()
-        self.ax.imshow(img, cmap="gray", vmin=0, vmax=1)
 
-    def _latticemaze_to_img(
-        self, unit_length: int = UNIT_LENGTH
-    ) -> NDArray["row col", bool]:
+        if self.target_token_coord is not None:
+            x, y = self._rowcol_to_coord(self.target_token_coord)
+            self.ax.plot(
+                x,
+                y,
+                "*",
+                color="black",
+                ms=20,
+            )
+
+        if self.preceding_tokens_coords is not None:
+            for coord in self.preceding_tokens_coords:
+                x, y = self._rowcol_to_coord(coord)
+                self.ax.plot(
+                    x,
+                    y,
+                    "+",
+                    color="black",
+                    ms=12,
+                )
+
+        if self.custom_node_value_flag is False:
+            self.ax.imshow(img, cmap="gray", vmin=-1, vmax=1)
+
+        else:  # if custom node_values have been passed
+            resampled = mpl.colormaps[self.node_color_map].resampled(
+                256
+            )  # load colormap
+            colors = resampled(np.linspace(0, 1, 256))
+            black = np.full(
+                (256, 4), [0, 0, 0, 1]
+            )  # define black color "constant spectrum" of same size as colormap
+            stacked_colors = np.vstack(
+                (black, colors)
+            )  # stack spectra and define colormap
+            cmap = ListedColormap(stacked_colors)
+
+            # Create truncated colorbar that only respects interval [0,1]
+            ticks = np.linspace(0, self.max_node_value, 3)
+            norm = Normalize(vmin=0, vmax=self.max_node_value)
+            scalar_mappable = ScalarMappable(norm=norm, cmap=self.node_color_map)
+            cbar = self.fig.colorbar(scalar_mappable, ax=self.ax, ticks=ticks)
+            cbar.ax.set_yticklabels(np.round(ticks, 4))
+
+            self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
+
+    def _latticemaze_to_img(self) -> NDArray["row col", bool]:
         """
         Build an image to visualise the maze.
         Each "unit" consists of a node and the right and lower adjacent wall/connection. Its area is ul * ul.
-        - Nodes are displayed as white squares of area: (ul-1) * (ul-1)
-        - Walls are displayed as black recktangles of area: 1 * (ul-1)
-        - Connections are displayed as light grey or white rectangles of area: 1 * (ul-1); color is depending on show_connections argument
+        - Nodes have area: (ul-1) * (ul-1) and value 1 by default
+            - take node_value if passed via .add_node_values()
+        - Walls have area: 1 * (ul-1) and value -1
+        - Connections have area: 1 * (ul-1); color and value 0.93 by default
+            - take node_value if passed via .add_node_values()
 
         Axes definition:
-        (0,0)     y, col
+        (0,0)     col
         ----|----------->
-        x,  |
+            |
         row |
             |
             v
 
         Returns a matrix of side length (ul) * n + 1 where n is the number of nodes.
         """
-        # Set color of connections (using plt.imshow(cmap='grey))
-        node_color = 1
-        connection_color = node_color * 0.93
 
-        # Set up the background (walls everywhere)
-        img: NDArray["row col", int] = np.zeros(
+        # Set node and connection values
+        if self.node_values is None:
+            scaled_node_values = np.ones(self.maze.grid_shape)
+            connection_values = scaled_node_values * 0.93
+        else:
+            # Normalizing node colors to match color_map running in (-1, 1) (defined in ._plot_maze()).
+            scaled_node_values = self.node_values / self.max_node_value
+            connection_values = scaled_node_values
+
+        # Create background image (all pixels set to -1, walls everywhere)
+        img: NDArray["row col", float] = -np.ones(
             (
-                self.maze.grid_shape[0] * unit_length + 1,
-                self.maze.grid_shape[1] * unit_length + 1,
+                self.maze.grid_shape[0] * self.unit_length + 1,
+                self.maze.grid_shape[1] * self.unit_length + 1,
             ),
             dtype=float,
         )
@@ -187,28 +329,30 @@ class MazePlot:
             for col in range(self.maze.grid_shape[1]):
                 # Draw node
                 img[
-                    row * unit_length + 1 : (row + 1) * unit_length,
-                    col * unit_length + 1 : (col + 1) * unit_length,
-                ] = node_color
+                    row * self.unit_length + 1 : (row + 1) * self.unit_length,
+                    col * self.unit_length + 1 : (col + 1) * self.unit_length,
+                ] = scaled_node_values[row, col]
 
                 # Down connection
                 if self.maze.connection_list[0, row, col]:
                     img[
-                        (row + 1) * unit_length,
-                        col * unit_length + 1 : (col + 1) * unit_length,
-                    ] = connection_color
+                        (row + 1) * self.unit_length,
+                        col * self.unit_length + 1 : (col + 1) * self.unit_length,
+                    ] = connection_values[row, col]
 
                 # Right connection
                 if self.maze.connection_list[1, row, col]:
                     img[
-                        row * unit_length + 1 : (row + 1) * unit_length,
-                        (col + 1) * unit_length,
-                    ] = connection_color
+                        row * self.unit_length + 1 : (row + 1) * self.unit_length,
+                        (col + 1) * self.unit_length,
+                    ] = connection_values[row, col]
 
         return img
 
     def _plot_path(self, path_format: PathFormat) -> None:
-        p_transformed = self._rowcol_to_coord(path_format.path)
+        p_transformed = np.array(
+            [self._rowcol_to_coord(coord) for coord in path_format.path]
+        )
         if path_format.quiver_kwargs is not None:
             x: NDArray = p_transformed[:, 0]
             y: NDArray = p_transformed[:, 1]
@@ -233,10 +377,18 @@ class MazePlot:
             )
         # mark endpoints
         self.ax.plot(
-            p_transformed[0][0], p_transformed[0][1], "o", color=path_format.color
+            [p_transformed[0][0]],
+            [p_transformed[0][1]],
+            "o",
+            color=path_format.color,
+            ms=10,
         )
         self.ax.plot(
-            p_transformed[-1][0], p_transformed[-1][1], "x", color=path_format.color
+            [p_transformed[-1][0]],
+            [p_transformed[-1][1]],
+            "x",
+            color=path_format.color,
+            ms=10,
         )
 
     def as_ascii(self, start=None, end=None):
@@ -246,9 +398,10 @@ class MazePlot:
         """
         wall_char = "#"
         path_char = " "
+        self.unit_length = 2
 
         # Determine the size of the maze
-        maze = self._latticemaze_to_img(unit_length=2)
+        maze = self._latticemaze_to_img()
         n_rows, n_cols = maze.shape
         maze_str = ""
 
@@ -259,9 +412,9 @@ class MazePlot:
                     maze_str += "S"
                 elif end is not None and end[0] == i - 1 and end[1] == j - 1:
                     maze_str += "E"
-                elif maze[i, j]:
-                    maze_str += path_char
-                else:
+                elif maze[i, j] == -1:
                     maze_str += wall_char
+                else:
+                    maze_str += path_char
             maze_str += "\n"  # Start a new line after each row
         return maze_str
