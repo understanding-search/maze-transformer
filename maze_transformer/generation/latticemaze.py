@@ -3,7 +3,9 @@ from dataclasses import dataclass
 from typing import NamedTuple, cast
 
 import numpy as np
+from jaxtyping import Float, Int, Bool, Shaped
 from muutils.misc import list_split
+from muutils.json_serialize.serializable_dataclass import SerializableDataclass, serializable_dataclass, serializable_field
 from muutils.tensor_utils import NDArray
 
 from maze_transformer.generation.constants import (
@@ -19,6 +21,7 @@ from maze_transformer.utils.token_utils import (
     get_path_tokens,
 )
 
+RGB = tuple[int, int, int]
 
 def coord_str_to_tuple(coord_str: str) -> CoordTup:
     """convert a coordinate string to a tuple"""
@@ -27,11 +30,11 @@ def coord_str_to_tuple(coord_str: str) -> CoordTup:
     return tuple(int(x) for x in stripped.split(","))
 
 
-@dataclass(frozen=True, kw_only=True)
-class LatticeMaze:
+@serializable_dataclass(frozen=True, kw_only=True)
+class LatticeMaze(SerializableDataclass):
     """lattice maze (nodes on a lattice, connections only to neighboring nodes)"""
 
-    lattice_dim: int = 2
+    lattice_dim: int = serializable_field(default=2)
 
     """
     Connection List represents which nodes (N) are connected in each direction.
@@ -66,8 +69,8 @@ class LatticeMaze:
     Note: the bottom row connections going down, and the
     right-hand connections going right, will always be False.
     """
-    connection_list: NDArray["lattice_dim x y", bool]
-    generation_meta: dict | None = None
+    connection_list: Bool[np.ndarray, "lattice_dim x y"]
+    generation_meta: dict | None = serializable_field(default=None)
 
     grid_shape = property(lambda self: self.connection_list.shape[1:])
 
@@ -305,6 +308,200 @@ class LatticeMaze:
             adjlist[i, 1] = np.array(coord_str_to_tuple(c_end))
 
         return cls.from_adjlist(adjlist)
+
+    def _as_pixels(self) -> Bool[np.ndarray, "x y"]:
+        assert self.lattice_dim == 2, "only 2D mazes are supported"
+        # Create an empty pixel grid with walls
+        pixel_grid: Int[np.ndarray, "x y"] = np.full(
+            (self.grid_shape[0] * 2 + 1, self.grid_shape[1] * 2 + 1), 
+            False,
+            dtype=np.bool_,
+        )
+
+        # Set white nodes
+        pixel_grid[1::2, 1::2] = True
+
+        # Set white connections (downward)
+        for i, row in enumerate(self.connection_list[0]):
+            for j, connected in enumerate(row):
+                if connected:
+                    pixel_grid[i * 2 + 2, j * 2 + 1] = True
+
+        # Set white connections (rightward)
+        for i, row in enumerate(self.connection_list[1]):
+            for j, connected in enumerate(row):
+                if connected:
+                    pixel_grid[i * 2 + 1, j * 2 + 2] = True
+
+        return pixel_grid
+
+    def as_pixels(self) -> Bool[np.ndarray, "x y"]:
+        """return a pixel grid of the maze"""
+        return self._as_pixels()
+
+    def _as_ascii_grid(
+            self, 
+            char_wall: str = "#", char_open: str = " ",
+        ) -> Shaped[np.ndarray, "x y"]:
+        # Get the pixel grid using to_pixels().
+        pixel_grid: Bool[np.ndarray, "x y"] = self._as_pixels()
+
+        # Replace pixel values with ASCII characters.
+        ascii_grid: Shaped[np.ndarray, "x y"] = np.full(pixel_grid.shape, char_wall, dtype=str)
+        ascii_grid[pixel_grid == True] = char_open
+
+        return ascii_grid
+    
+    def as_ascii(
+            self, 
+            char_wall: str = "#", char_open: str = " ",
+        ) -> str:
+        """return an ASCII grid of the maze"""
+        ascii_grid: Shaped[np.ndarray, "x y"] = self._as_ascii_grid(char_wall, char_open)
+        return "\n".join("".join(row) for row in ascii_grid)
+
+    @classmethod
+    def _from_pixel_grid(cls, pixel_grid: Bool[np.ndarray, "x y"]) -> tuple[Bool[np.ndarray, "lattice_dim x y"], tuple[int, int]]:
+        grid_shape = (pixel_grid.shape[0] // 2, pixel_grid.shape[1] // 2)
+        connection_list = np.zeros((2, *grid_shape), dtype=np.bool_)
+
+        # Extract downward connections
+        connection_list[0] = pixel_grid[2::2, 1::2]
+
+        # Extract rightward connections
+        connection_list[1] = pixel_grid[1::2, 2::2]
+
+        return connection_list, grid_shape
+
+    @classmethod
+    def from_pixels(cls, pixel_grid: Bool[np.ndarray, "x y"]) -> "LatticeMaze":
+        connection_list, grid_shape = cls._from_pixel_grid(pixel_grid)
+        output: LatticeMaze = cls(connection_list=connection_list)
+        assert output.grid_shape == grid_shape
+        return output
+
+    @classmethod
+    def from_ascii(cls, ascii_str: str, char_wall: str = "#", char_open: str = " ") -> "LatticeMaze":
+        lines: list[list[str]] = ascii_str.strip().split("\n")
+        ascii_grid = np.array([list(line) for line in lines], dtype=str)
+        pixel_grid = (ascii_grid == char_open)
+        return cls.from_pixels(pixel_grid)
+
+@serializable_dataclass(frozen=True, kw_only=True)
+class TargetedLatticeMaze(LatticeMaze):
+    start_pos: Coord
+    end_pos: Coord
+
+    def __post_init__(self) -> None:
+        # make things numpy arrays (very jank)
+        self.__dict__["start_pos"] = np.array(self.start_pos)
+        self.__dict__["end_pos"] = np.array(self.end_pos)
+        # check that start and end are in bounds
+        if self.start_pos[0] >= self.grid_shape[0] or self.start_pos[1] >= self.grid_shape[1]:
+            raise ValueError(f"start_pos {self.start_pos} is out of bounds for grid shape {self.grid_shape}")
+        if self.end_pos[0] >= self.grid_shape[0] or self.end_pos[1] >= self.grid_shape[1]:
+            raise ValueError(f"end_pos {self.end_pos} is out of bounds for grid shape {self.grid_shape}")
+
+    @classmethod
+    def from_lattice_maze(
+        cls,
+        lattice_maze: LatticeMaze,
+        start_pos: Coord,
+        end_pos: Coord,
+    ) -> "TargetedLatticeMaze":
+        return cls(
+            connection_list=lattice_maze.connection_list,
+            start_pos=start_pos,
+            end_pos=end_pos,
+        )
+    
+    def as_pixels(
+        self,
+        wall_color: RGB = (0, 0, 0),
+        open_color: RGB = (255, 255, 255),
+        start_color: RGB = (0, 255, 0),
+        end_color: RGB = (255, 0, 0),
+    ) -> Int[np.ndarray, "x y rgb"]:
+
+        # convert original bool pixel grid to RGB
+        pixel_grid_bw: Bool[np.ndarray, "x y"] = self._as_pixels()
+        pixel_grid: Int[np.ndarray, "x y rgb"] = np.full(
+            (*pixel_grid_bw.shape, 3), wall_color, dtype=np.uint8
+        )
+        pixel_grid[pixel_grid_bw == True] = open_color
+
+        # set start and end
+        pixel_grid[self.start_pos[0]*2+1, self.start_pos[1]*2+1] = start_color
+        pixel_grid[self.end_pos[0]*2+1, self.end_pos[1]*2+1] = end_color
+
+        return pixel_grid
+
+    def as_ascii(
+        self,
+        char_wall: str = "#",
+        char_open: str = " ",
+        char_start: str = "S",
+        char_end: str = "E",
+    ) -> str:
+        """return an ASCII grid of the maze"""
+        ascii_grid: Shaped[np.ndarray, "x y"] = self._as_ascii_grid(char_wall, char_open)
+
+        # Set start and end positions
+        ascii_grid[self.start_pos[0]*2+1, self.start_pos[1]*2+1] = char_start
+        ascii_grid[self.end_pos[0]*2+1, self.end_pos[1]*2+1] = char_end
+
+        return "\n".join("".join(row) for row in ascii_grid)
+
+        
+    @classmethod
+    def _from_pixel_grid_with_positions(
+        cls,
+        pixel_grid: Int[np.ndarray, "x y rgb"],
+        start_color: RGB = (0, 255, 0),
+        end_color: RGB = (255, 0, 0),
+    ) -> tuple[Bool[np.ndarray, "lattice_dim x y"], tuple[int, int], Coord, Coord]:
+        # Convert RGB pixel grid to Bool pixel grid
+        pixel_grid_bw = np.all(pixel_grid == (255, 255, 255), axis=-1)
+        
+        connection_list, grid_shape = cls._from_pixel_grid(pixel_grid_bw)
+
+        # Find start and end positions in the pixel grid
+        start_pos = np.argwhere(np.all(pixel_grid == start_color, axis=-1))
+        end_pos = np.argwhere(np.all(pixel_grid == end_color, axis=-1))
+
+        if start_pos.size == 0 or end_pos.size == 0:
+            raise ValueError("Start and/or end positions not found in the pixel grid")
+
+        start_pos = tuple((start_pos[0] - 1) // 2)
+        end_pos = tuple((end_pos[0] - 1) // 2)
+
+        return connection_list, grid_shape, start_pos, end_pos
+
+
+    @classmethod
+    def from_pixels(cls, pixel_grid: Int[np.ndarray, "x y rgb"]) -> "TargetedLatticeMaze":
+        connection_list, grid_shape, start_pos, end_pos = cls._from_pixel_grid_with_positions(pixel_grid)
+        return cls(connection_list=connection_list, start_pos=start_pos, end_pos=end_pos)
+
+    @classmethod
+    def from_ascii(
+        cls,
+        ascii_str: str,
+        char_wall: str = "#",
+        char_open: str = " ",
+        char_start: str = "S",
+        char_end: str = "E",
+    ) -> "TargetedLatticeMaze":
+        lines = ascii_str.strip().split("\n")
+        ascii_grid = np.array([list(line) for line in lines], dtype=str)
+        pixel_grid = np.full((*ascii_grid.shape, 3), (0, 0, 0), dtype=np.uint8)
+
+        pixel_grid[ascii_grid == char_wall] = (0, 0, 0)
+        pixel_grid[ascii_grid == char_open] = (255, 255, 255)
+        pixel_grid[ascii_grid == char_start] = (0, 255, 0)
+        pixel_grid[ascii_grid == char_end] = (255, 0, 0)
+
+        return cls.from_pixels(pixel_grid)
 
 
 class SolvedMaze(NamedTuple):

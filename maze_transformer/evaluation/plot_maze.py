@@ -6,12 +6,12 @@ from dataclasses import dataclass
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from jaxtyping import Float
+from jaxtyping import Float, Bool
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
-from maze_transformer.generation.constants import Coord, CoordArray, CoordList
+from maze_transformer.generation.constants import Coord, CoordArray, CoordList, CoordTup
 from maze_transformer.generation.latticemaze import LatticeMaze
 
 MAX_NODE_VALUE_EPSILON: float = 1e-10
@@ -294,7 +294,10 @@ class MazePlot:
 
             self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
 
-    def _latticemaze_to_img(self) -> NDArray["row col", bool]:
+    def _latticemaze_to_img(
+            self, 
+            connection_val_scale: float = 0.93,
+        ) -> Bool[np.ndarray, "row col"]:
         """
         Build an image to visualise the maze.
         Each "unit" consists of a node and the right and lower adjacent wall/connection. Its area is ul * ul.
@@ -318,7 +321,7 @@ class MazePlot:
         # Set node and connection values
         if self.node_values is None:
             scaled_node_values = np.ones(self.maze.grid_shape)
-            connection_values = scaled_node_values * 0.93
+            connection_values = scaled_node_values * connection_val_scale
         else:
             # Normalizing node colors to match color_map running in (-1, 1) (defined in ._plot_maze()).
             scaled_node_values = self.node_values / self.max_node_value
@@ -403,30 +406,45 @@ class MazePlot:
             ms=10,
         )
 
-    def as_ascii(self, start=None, end=None):
+    def as_ascii(
+            self, 
+            start: CoordTup = None, end: CoordTup = None,
+            char_wall: str = "#", char_open: str = " ",
+            char_start: str = "S", char_end: str = "E",
+        ):
         """
         Returns an ASCII visualization of the maze.
         Courtesy of ChatGPT
         """
-        wall_char = "#"
-        path_char = " "
+        old_unit_length_temp: float = self.unit_length
         self.unit_length = 2
 
         # Determine the size of the maze
-        maze = self._latticemaze_to_img()
-        n_rows, n_cols = maze.shape
-        maze_str = ""
+        maze: Bool[np.ndarray, "x y"] = self._latticemaze_to_img()
+        n_rows: int = maze.shape[0]
+        n_cols: int = maze.shape[1]
+        maze_str: str = ""
 
         # Iterate through each element of the maze and print the appropriate symbol
         for i in range(n_rows):
             for j in range(n_cols):
-                if start is not None and start[0] == i - 1 and start[1] == j - 1:
-                    maze_str += "S"
-                elif end is not None and end[0] == i - 1 and end[1] == j - 1:
-                    maze_str += "E"
+                if (
+                    start is not None 
+                    and start[0] == i - 1 
+                    and start[1] == j - 1
+                ):
+                    maze_str += char_start
+                elif (
+                    end is not None 
+                    and end[0] == i - 1 
+                    and end[1] == j - 1
+                ):
+                    maze_str += char_end
                 elif maze[i, j] == -1:
-                    maze_str += wall_char
+                    maze_str += char_wall
                 else:
-                    maze_str += path_char
+                    maze_str += char_open
             maze_str += "\n"  # Start a new line after each row
+
+        self.unit_length = old_unit_length_temp
         return maze_str
