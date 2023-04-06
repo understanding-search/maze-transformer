@@ -1,6 +1,6 @@
-import typing
+from typing import Any, Iterable, Literal
 
-from maze_transformer.generation.constants import SPECIAL_TOKENS
+from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
 
 
 def tokens_between(tokens: list[str], start_value: str, end_value: str) -> list[str]:
@@ -46,24 +46,40 @@ def get_tokens_up_to_path_start(
         return tokens[:path_start_idx]
 
 
-def decode_maze_tokens_to_coords(
-    tokens: list[str],
-    mazedata_cfg,  # TODO: cannot type this right now because importing MazeDatasetConfig causes a circular import
-    when_noncoord: typing.Literal["except", "skip", "include"] = "skip",
-) -> list[str | tuple[int, int]]:
-    """given a list of tokens, decode the coordinate-tokens to a list of coordinates, leaving other tokens as-is"""
-    output: list[str | tuple[int, int]] = list()
-    for idx, tk in enumerate(tokens):
-        if tk in mazedata_cfg.token_node_map:
-            output.append(mazedata_cfg.token_node_map[tk])
+def apply_mapping(
+    iter: Iterable[Any],
+    mapping: dict[Any, Any],
+    when_missing: Literal["except", "skip", "include"] = "skip",
+) -> list[Any]:
+    """Given a list and a mapping, apply the mapping to the list"""
+    output = list()
+    for item in iter:
+        if item in mapping:
+            output.append(mapping[item])
         else:
-            match when_noncoord:
+            match when_missing:
                 case "skip":
                     continue
                 case "include":
-                    output.append(tk)
+                    output.append(item)
                 case "except":
-                    raise ValueError(f"token '{tk}' at {idx = } is not a coordinate")
+                    raise ValueError(f"item {item} is missing from mapping {mapping}")
                 case _:
-                    raise ValueError(f"invalid value for {when_noncoord = }")
+                    raise ValueError(f"invalid value for {when_missing = }")
     return output
+
+
+def tokens_to_coords(
+    tokens: list[str],
+    mazedata_cfg,  # TODO: cannot type this right now because importing MazeDatasetConfig causes a circular import
+    when_noncoord: Literal["except", "skip", "include"] = "skip",
+) -> list[str | CoordTup]:
+    return apply_mapping(tokens, mazedata_cfg.token_node_map, when_noncoord)
+
+
+def coords_to_tokens(
+    coords: list[str | CoordTup],
+    mazedata_cfg,  # TODO: cannot type this right now because importing MazeDatasetConfig causes a circular import
+    when_noncoord: Literal["except", "skip", "include"] = "skip",
+) -> list[str]:
+    return apply_mapping(coords, mazedata_cfg.node_token_map, when_noncoord)
