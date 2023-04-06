@@ -51,3 +51,6 @@ jobs:
 
       - name: Integration tests
         run: make integration
+      
+      - name: Notebook tests
+        run: make test_notebooks
