@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 
 from muutils.zanj import ZANJ
-from muutils.zanj.torchutil import assert_model_cfg_equality, assert_model_exact_equality
+from muutils.zanj.torchutil import assert_model_cfg_equality, assert_model_exact_equality, ConfigMismatchException
 
 from maze_transformer.training.config import (
     BaseGPTConfig,
@@ -33,11 +33,13 @@ MODEL_C: ZanjHookedTransformer = ZANJ_MODEL_CFG.create_model_zanj()
 
 def _assert_model_output_equality(model_a: ZanjHookedTransformer, model_b: ZanjHookedTransformer):
     
-    # TODO: this is fragile, but I don't know how to do it better
     try:
         assert_model_cfg_equality(model_a, model_b)
-    except AssertionError as e:
-        if r"configs don't match: {'model_cfg': {'are_weights_processed': {'self': False, 'other': True}}}" in str(e):
+    except ConfigMismatchException as e:
+        if (
+            e.diff == {'model_cfg': {'are_weights_processed': {'self': False, 'other': True}}}
+            or e.diff == {'model_cfg': {'are_layernorms_folded': {'self': False, 'other': True}, 'are_weights_processed': {'self': False, 'other': True}}}
+        ):
             pass
         else:
             raise e

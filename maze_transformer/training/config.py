@@ -228,7 +228,7 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
         """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict"""
 
         recover_exact: bool = kwargs.get("recover_exact", False)
-        fold_ln: bool = kwargs.get("fold_ln", False)
+        fold_ln: bool = kwargs.get("fold_ln", True)
 
         if self.zanj_model_config.model_cfg.are_layernorms_folded and fold_ln:
             raise ValueError("Cannot fold layernorms twice! the saved model already has layernorms folded")
