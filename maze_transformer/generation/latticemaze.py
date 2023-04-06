@@ -12,6 +12,7 @@ from maze_transformer.generation.constants import (
     Coord,
     CoordArray,
     CoordTup,
+    CoordList,
 )
 from maze_transformer.utils.token_utils import (
     decode_maze_tokens_to_coords,
