@@ -81,7 +81,7 @@ def process_path_input(
     styled_path: StyledPath
     if isinstance(path, StyledPath):
         styled_path = path
-    elif isinstance(path, CoordArray):
+    elif isinstance(path, np.ndarray):
         styled_path = StyledPath(path=path)
         # add default formatting
         styled_path = styled_path.combine(DEFAULT_FORMATS[_default_key])
