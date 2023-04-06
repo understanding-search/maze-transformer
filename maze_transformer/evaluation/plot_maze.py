@@ -11,7 +11,12 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
-from maze_transformer.generation.latticemaze import Coord, CoordArray, LatticeMaze, CoordList
+from maze_transformer.generation.latticemaze import (
+    Coord,
+    CoordArray,
+    CoordList,
+    LatticeMaze,
+)
 
 MAX_NODE_VALUE_EPSILON: float = 1e-10
 
@@ -39,7 +44,7 @@ class PathFormat:
                 )
             if value is not None:
                 setattr(output, key, value)
-        
+
         return output
 
 
@@ -85,7 +90,9 @@ def process_path_input(
         # add default formatting
         styled_path = styled_path.combine(DEFAULT_FORMATS[_default_key])
     else:
-        raise TypeError(f"Expected CoordList, CoordArray or StyledPath, got {type(path)}: {path}")
+        raise TypeError(
+            f"Expected CoordList, CoordArray or StyledPath, got {type(path)}: {path}"
+        )
 
     # add formatting from path_fmt
     if path_fmt is not None:
@@ -377,7 +384,7 @@ class MazePlot:
             x: NDArray = p_transformed[:, 0]
             y: NDArray = p_transformed[:, 1]
             self.ax.plot(
-                x, 
+                x,
                 y,
                 path_format.fmt,
                 lw=path_format.line_width,
