@@ -89,7 +89,9 @@ class PathEvals:
         """fraction of connections in prediction which are are valid paths on the maze"""
 
         num_connections: float = len(prediction) - 1.0
-        return PathEvals.num_connections_adjacent(maze, prediction) / max(num_connections, 1.0)
+        return PathEvals.num_connections_adjacent(maze, prediction) / max(
+            num_connections, 1.0
+        )
 
     @register_method(evals)
     @staticmethod
