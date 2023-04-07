@@ -66,8 +66,10 @@ def test_fraction_connections_adjacent():
     maze = LatticeMaze(connection_list=connection_list)
     # first pair is not connected, 2nd pair is
     prediction = np.array([(0, 0), (1, 0), (1, 1)])
+    short_prediction = np.array([(0, 0)])
 
     assert PathEvals.fraction_connections_adjacent(maze, prediction) == 0.5
+    assert PathEvals.fraction_connections_adjacent(maze, short_prediction) == 0.0
 
 
 def test_exact_path_predicted():
