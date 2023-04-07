@@ -250,7 +250,7 @@ def process_dir(
     assert os.path.isdir(input_dir), f"Path {input_dir} is not a directory."
 
     if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+        os.makedirs(output_dir, exist_ok=True)
 
     filenames: list[str] = [
         fname for fname in os.listdir(input_dir) if fname.endswith(".ipynb")
