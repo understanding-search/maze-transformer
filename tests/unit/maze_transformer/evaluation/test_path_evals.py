@@ -73,7 +73,7 @@ def test_fraction_connections_adjacent():
 def test_exact_path_predicted():
     solution = np.array([(0, 0), (0, 1), (1, 1)])
     good_prediction = solution
-    bad_prediction = np.array([(0, 0), (1, 1), (0, 1)])
+    bad_prediction = np.array([(0, 0), (1, 1)])
 
     assert PathEvals.exact_path_predicted(solution, good_prediction) == 1.0
     assert PathEvals.exact_path_predicted(solution, bad_prediction) == 0.0

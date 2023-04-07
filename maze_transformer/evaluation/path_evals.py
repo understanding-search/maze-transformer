@@ -56,7 +56,7 @@ class PathEvals:
     @staticmethod
     def num_connections_adjacent_lattice(prediction: MazePath, **_) -> float:
         """number of the connections in prediction which actually connect nodes that are adjacent on the lattice, ignoring if they are adjacent on the maze"""
-        n_adj = 0.0
+        n_adj: float = 0.0
         for step_start, step_end in path_as_segments_iter(prediction):
             if is_adjacent(step_start, step_end):
                 n_adj += 1
@@ -74,7 +74,7 @@ class PathEvals:
     @staticmethod
     def num_connections_adjacent(maze: LatticeMaze, prediction: MazePath, **_) -> float:
         """number of connections in prediction which are are valid paths on the maze"""
-        n_connected = 0.0
+        n_connected: float = 0.0
         for step_start, step_end in path_as_segments_iter(prediction):
             if maze.nodes_connected(step_start, step_end):
                 n_connected += 1
@@ -88,14 +88,14 @@ class PathEvals:
     ) -> float:
         """fraction of connections in prediction which are are valid paths on the maze"""
 
-        num_connections = len(prediction) - 1
+        num_connections: float = len(prediction) - 1.0
         return PathEvals.num_connections_adjacent(maze, prediction) / num_connections
 
     @register_method(evals)
     @staticmethod
     def exact_path_predicted(solution: MazePath, prediction: MazePath, **_) -> float:
         """Was the maze successfully solved?"""
-        return float(np.all(solution == prediction))
+        return float(np.array_equal(solution, prediction))
 
     @register_method(evals)
     @staticmethod
@@ -112,7 +112,7 @@ class PathEvals:
         """How many moves until the predicted path deviates from the solution"""
         prediction = prediction.tolist()
         solution = solution.tolist()
-        streak_length = 0.0
+        streak_length: float = 0.0
 
         for i in range(max(len(prediction), len(solution))):
             if (
