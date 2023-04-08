@@ -1,6 +1,6 @@
-CONVERTED_NOTEBOOKS_TEMP_DIR := tests/_temp/notebooks
+HELPERS_DIR := tests/helpers
 NOTEBOOKS_DIR := notebooks
-ROOT_RELATIVE_TO_NOTEBOOKS := $(shell realpath --relative-to=$(NOTEBOOKS_DIR) .)
+CONVERTED_NOTEBOOKS_TEMP_DIR := tests/_temp/notebooks
 
 
 .PHONY: default
@@ -38,25 +38,12 @@ integration:
 
 .PHONY: convert_notebooks
 convert_notebooks:
-	@echo "convert notebooks in $(NOTEBOOKS_DIR) using tests/helpers/convert_ipynb_to_script.py"
-	python tests/helpers/convert_ipynb_to_script.py notebooks/ --output_dir $(CONVERTED_NOTEBOOKS_TEMP_DIR) --disable_plots
+	@echo "convert notebooks in $(NOTEBOOKS_DIR) using $(HELPERS_DIR)/convert_ipynb_to_script.py"
+	python $(HELPERS_DIR)/convert_ipynb_to_script.py notebooks/ --output_dir $(CONVERTED_NOTEBOOKS_TEMP_DIR) --disable_plots
 
 .PHONY: test_notebooks
 test_notebooks: convert_notebooks
-	@echo "test notebooks in $(NOTEBOOKS_DIR)"
-	@echo "Testing notebooks in $(CONVERTED_NOTEBOOKS_TEMP_DIR)"
-	@for file in $(CONVERTED_NOTEBOOKS_TEMP_DIR)/*.py; do \
-		echo "  Running $$file"; \
-		output_file=$${file%.py}__CI-output.txt; \
-		echo "  Output in $$output_file"; \
-		(cd $(NOTEBOOKS_DIR) && poetry run python $(ROOT_RELATIVE_TO_NOTEBOOKS)/$$file > $(ROOT_RELATIVE_TO_NOTEBOOKS)/$$output_file 2>&1); \
-		if [ $$? -ne 0 ]; then \
-			echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; \
-			echo "Error in $$file :"; \
-			cat $$output_file; \
-			exit 1; \
-		fi; \
-	done
+	python $(HELPERS_DIR)/run_notebook_tests.py --notebooks_dir=$(NOTEBOOKS_DIR) --converted_notebooks_temp_dir=$(CONVERTED_NOTEBOOKS_TEMP_DIR)
 
 .PHONY: test
 test: clean unit integration test_notebooks
