@@ -69,7 +69,7 @@ def test_notebooks(
 
             # print the output of the file to the console if it failed
             if process.returncode != 0:
-                with open(output_file, "r") as f:
+                with open(root_relative_to_notebooks / output_file, "r") as f:
                     file_output: str = f.read()
                 raise NotebookTestError(f"Error in {file}:\n\n{file_output}")
 
