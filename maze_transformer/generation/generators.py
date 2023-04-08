@@ -2,10 +2,6 @@ import random
 from typing import Any, Callable
 
 import numpy as np
-<<<<<<< HEAD
-from generation.utils import neighbor
-=======
->>>>>>> 13a8585 (add wilson algo)
 
 from maze_transformer.generation.latticemaze import (
     NEIGHBORS_MASK,
@@ -114,46 +110,47 @@ class LatticeMazeGenerators:
     def gen_wilson(
         grid_shape: Coord,
     ) -> LatticeMaze:
-        """Generate a lattice maze using Wilson's algorithm. Wilson's algorithm generates an unbiased sample maze
-        from the uniform distribution over all mazes, using loop-erased random walks.
+        """Generate a lattice maze using Wilson's algorithm. Wilson's algorithm generates an unbiased (random) maze
+        sampled from the uniform distribution over all mazes, using loop-erased random walks. The generated maze is
+        acyclic and all cells are part of a unique connected space.
         https://en.wikipedia.org/wiki/Maze_generation_algorithm#Wilson's_algorithm"""
 
         def neighbor(current: Coord, direction: int) -> Coord:
-            x, y = current
+            row, col = current
 
             if direction == 0:
-                y -= 1  # Left
+                col -= 1  # Left
             elif direction == 1:
-                y += 1  # Right
+                col += 1  # Right
             elif direction == 2:
-                x -= 1  # Up
+                row -= 1  # Up
             elif direction == 3:
-                x += 1  # Down
+                row += 1  # Down
             else:
                 return None
 
-            return np.array([x, y]) if 0 <= x < height and 0 <= y < width else None
+            return np.array([row, col]) if 0 <= row < rows and 0 <= col < cols else None
 
-        height, width = grid_shape
+        rows, cols = grid_shape
 
         # A connection list only contains two elements: one boolean matrix indicating all the
         # downwards connections in the maze, and one boolean matrix indicating the rightwards connections.
-        connection_list: np.ndarray = np.zeros((2, height, width), dtype=bool)
+        connection_list: np.ndarray = np.zeros((2, rows, cols), dtype=bool)
 
         connected = np.zeros(grid_shape, dtype=bool)
         direction_matrix = np.zeros(grid_shape, dtype=int)
 
         # Mark a random cell as connected
-        connected[random.randint(0, height - 1)][random.randint(0, width - 1)] = True
+        connected[random.randint(0, rows - 1)][random.randint(0, cols - 1)] = True
 
-        cells_left: int = height * width - 1
+        cells_left: int = rows * cols - 1
         while cells_left > 0:
             current: Coord = np.array(
-                [random.randint(0, height - 1), random.randint(0, width - 1)]
+                [random.randint(0, rows - 1), random.randint(0, cols - 1)]
             )
             start: Coord = current
 
-            # Random walk through the maze until a connected cell is found
+            # Random walk through the maze while recording path taken until a connected cell is found
             while not connected[current[0]][current[1]]:
                 # Find a valid neighboring cell by checking in a random direction then rotating clockwise
                 direction: int = random.randint(0, 4)
@@ -184,13 +181,13 @@ class LatticeMazeGenerators:
                 # todo(luciaq) update LatticeMaze to take an adjacency list instead of a connection list for a more
                 # natural connection update here
                 if direction == 0:  # Left
-                    connection_list[0][next[0]][next[1]] = True
-                elif direction == 1:  # Right
-                    connection_list[0][current[0]][current[1]] = True
-                elif direction == 2:  # Up
                     connection_list[1][next[0]][next[1]] = True
-                elif direction == 3:  # Down
+                elif direction == 1:  # Right
                     connection_list[1][current[0]][current[1]] = True
+                elif direction == 2:  # Up
+                    connection_list[0][next[0]][next[1]] = True
+                elif direction == 3:  # Down
+                    connection_list[0][current[0]][current[1]] = True
 
                 current = next
 
