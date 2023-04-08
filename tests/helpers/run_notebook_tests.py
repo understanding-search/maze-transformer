@@ -1,15 +1,17 @@
 import os
 import subprocess
-from pathlib import Path
 import sys
+from pathlib import Path
+
 
 class NotebookTestError(Exception):
     pass
 
+
 def test_notebooks(
     notebooks_dir: Path,
     converted_notebooks_temp_dir: Path,
-    CI_output_suffix: str = ".CI-output.txt"
+    CI_output_suffix: str = ".CI-output.txt",
 ):
     # get paths
     notebooks_dir = Path(notebooks_dir)
@@ -24,11 +26,17 @@ def test_notebooks(
         if not notebooks_dir.exists():
             raise NotebookTestError(f"Notebooks dir '{notebooks_dir}' does not exist")
         if not notebooks_dir.is_dir():
-            raise NotebookTestError(f"Notebooks dir '{notebooks_dir}' is not a directory")
+            raise NotebookTestError(
+                f"Notebooks dir '{notebooks_dir}' is not a directory"
+            )
         if not converted_notebooks_temp_dir.exists():
-            raise NotebookTestError(f"Converted notebooks dir '{converted_notebooks_temp_dir}' does not exist")
+            raise NotebookTestError(
+                f"Converted notebooks dir '{converted_notebooks_temp_dir}' does not exist"
+            )
         if not converted_notebooks_temp_dir.is_dir():
-            raise NotebookTestError(f"Converted notebooks dir '{converted_notebooks_temp_dir}' is not a directory")
+            raise NotebookTestError(
+                f"Converted notebooks dir '{converted_notebooks_temp_dir}' is not a directory"
+            )
 
         notebooks: list[Path] = list(notebooks_dir.glob("*.ipynb"))
         if not notebooks:
@@ -36,9 +44,13 @@ def test_notebooks(
 
         converted_notebooks: list[Path] = list()
         for nb in notebooks:
-            converted_file: Path = converted_notebooks_temp_dir / nb.with_suffix(".py").name
+            converted_file: Path = (
+                converted_notebooks_temp_dir / nb.with_suffix(".py").name
+            )
             if not converted_file.exists():
-                raise NotebookTestError(f"Did not find converted notebook '{converted_file}' for '{nb}'")
+                raise NotebookTestError(
+                    f"Did not find converted notebook '{converted_file}' for '{nb}'"
+                )
             converted_notebooks.append(converted_file)
 
         # the location of this line is important
@@ -51,20 +63,24 @@ def test_notebooks(
             print(f"  Output in {output_file}")
 
             command: str = f"poetry run python {root_relative_to_notebooks / converted_file} > {root_relative_to_notebooks / output_file} 2>&1"
-            process: subprocess.CompletedProcess = subprocess.run(command, shell=True, text=True)
+            process: subprocess.CompletedProcess = subprocess.run(
+                command, shell=True, text=True
+            )
 
             # print the output of the file to the console if it failed
             if process.returncode != 0:
                 with open(output_file, "r") as f:
                     file_output: str = f.read()
                 raise NotebookTestError(f"Error in {file}:\n\n{file_output}")
-    
+
     except NotebookTestError as e:
-        print('!'*50, file=sys.stderr)
+        print("!" * 50, file=sys.stderr)
         print(e, file=sys.stderr)
-        print('!'*50, file=sys.stderr)
+        print("!" * 50, file=sys.stderr)
         raise e
+
 
 if __name__ == "__main__":
     import fire
+
     fire.Fire(test_notebooks)
