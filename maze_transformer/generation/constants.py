@@ -7,8 +7,8 @@ CoordArray = NDArray["coords", np.int8]
 CoordList = list[CoordTup]
 
 SPECIAL_TOKENS: dict[str, str] = dict(
-    adjlist_start="<ADJLIST_START>",
-    adjlist_end="<ADJLIST_END>",
+    adj_list_start="<ADJLIST_START>",
+    adj_list_end="<ADJLIST_END>",
     target_start="<TARGET_START>",
     target_end="<TARGET_END>",
     origin_start="<ORIGIN_START>",

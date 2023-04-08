@@ -1,23 +1,23 @@
 from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.training.mazedataset import MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import maze_to_tokens
 from tests.helpers import utils
 
 
 def test_coordinate_system():
     """
-    Check that the adjlist created by maze_to_tokens() uses the same coordinate system as the LatticeMaze adjlist.
+    Check that the adj_list created by maze_to_tokens() uses the same coordinate system as the LatticeMaze adj_list.
 
-    To test this, generate both adjlists, sort them and convert to a common format, and check that they are equal.
+    To test this, generate both adj_lists, sort them and convert to a common format, and check that they are equal.
     """
     maze_size = 3
     maze, solution = LatticeMazeGenerators.gen_dfs_with_solution((maze_size, maze_size))
-    maze_adjlist = maze.as_adj_list()
+    maze_adj_list = maze.as_adj_list()
 
-    # convert to the same format as the tokenizer adjlist
-    maze_adjlist_connections = [
-        [f"({c[0]},{c[1]})" for c in conn] for conn in maze_adjlist
+    # convert to the same format as the tokenizer adj_list
+    maze_adj_list_connections = [
+        [f"({c[0]},{c[1]})" for c in conn] for conn in maze_adj_list
     ]
 
     # See https://github.com/AISC-understanding-search/maze-transformer/issues/77
@@ -27,21 +27,21 @@ def test_coordinate_system():
 
     tokenized_maze = maze_to_tokens(maze, solution, node_token_map)
 
-    tokenizer_adjlist = tokenized_maze[
-        tokenized_maze.index(SPECIAL_TOKENS["adjlist_start"])
-        + 1 : tokenized_maze.index(SPECIAL_TOKENS["adjlist_end"])
+    tokenizer_adj_list = tokenized_maze[
+        tokenized_maze.index(SPECIAL_TOKENS["adj_list_start"])
+        + 1 : tokenized_maze.index(SPECIAL_TOKENS["adj_list_end"])
     ]
 
     # remove special tokens
-    tokenizer_adjlist_coordinates = [
-        token for token in tokenizer_adjlist if token not in SPECIAL_TOKENS.values()
+    tokenizer_adj_list_coordinates = [
+        token for token in tokenizer_adj_list if token not in SPECIAL_TOKENS.values()
     ]
 
     # Group pairs of coordinates
-    tokenizer_adjlist_connections = [
-        *zip(tokenizer_adjlist_coordinates[::2], tokenizer_adjlist_coordinates[1::2])
+    tokenizer_adj_list_connections = [
+        *zip(tokenizer_adj_list_coordinates[::2], tokenizer_adj_list_coordinates[1::2])
     ]
 
-    assert utils.adjlist_to_nested_set(
-        tokenizer_adjlist_connections
-    ) == utils.adjlist_to_nested_set(maze_adjlist_connections)
+    assert utils.adj_list_to_nested_set(
+        tokenizer_adj_list_connections
+    ) == utils.adj_list_to_nested_set(maze_adj_list_connections)
