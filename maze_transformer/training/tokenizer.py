@@ -9,7 +9,7 @@ from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
 from maze_transformer.evaluation.plot_maze import MazePlot
-from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
+from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
 from maze_transformer.generation.lattice_maze import LatticeMaze
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 def maze_to_tokens(
     maze: LatticeMaze,
-    solution: list[Coord],
+    solution: list[CoordTup],
     node_token_map: dict[CoordTup, str],
 ) -> list[str]:
     """serialize maze and solution to tokens"""
@@ -29,9 +29,9 @@ def maze_to_tokens(
         *chain.from_iterable(
             [
                 [
-                    node_token_map[tuple(c_s.tolist())],
+                    node_token_map[tuple(list(c_s))],
                     SPECIAL_TOKENS["connector"],
-                    node_token_map[tuple(c_e.tolist())],
+                    node_token_map[tuple(list(c_e))],
                     SPECIAL_TOKENS["adjacency_endline"],
                 ]
                 for c_s, c_e in maze.as_adj_list()
@@ -47,7 +47,7 @@ def maze_to_tokens(
         node_token_map[tuple(solution[-1])],
         SPECIAL_TOKENS["target_end"],
         SPECIAL_TOKENS["path_start"],
-        *[node_token_map[tuple(c.tolist())] for c in solution],
+        *[node_token_map[c] for c in solution],
         SPECIAL_TOKENS["path_end"],
     ]
 
