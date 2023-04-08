@@ -4,7 +4,7 @@ import numpy as np
 
 from maze_transformer.evaluation.plot_maze import MazePlot
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.lattice_maze import LatticeMaze
 
 
 # start/end usage: --start=0,0 --end=4,4

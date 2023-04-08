@@ -10,9 +10,9 @@ from transformer_lens import HookedTransformer
 
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.generation.latticemaze import SolvedMaze
+from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder
-from maze_transformer.training.mazedataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 from maze_transformer.utils.token_utils import (
     decode_maze_tokens_to_coords,

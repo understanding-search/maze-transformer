@@ -6,7 +6,7 @@ from muutils.misc import shorten_numerical_to_str  # type: ignore[import]
 from tqdm import tqdm
 
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.training.mazedataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 
 
 def create_dataset(
