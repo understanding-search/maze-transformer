@@ -1,5 +1,6 @@
 import numpy as np
 from muutils.tensor_utils import NDArray
+from jaxtyping import Int
 
 Coord = NDArray["x y", np.int8]
 CoordTup = tuple[int, int]
@@ -19,7 +20,7 @@ SPECIAL_TOKENS: dict[str, str] = dict(
     padding="<PADDING>",
 )
 
-DIRECTIONS_MAP: NDArray["direction axes", int] = np.array(
+DIRECTIONS_MAP: Int[np.ndarray, "direction axes"] = np.array(
     [
         [0, 1],  # down
         [0, -1],  # up
@@ -29,7 +30,7 @@ DIRECTIONS_MAP: NDArray["direction axes", int] = np.array(
 )
 
 
-NEIGHBORS_MASK: NDArray["coord point", int] = np.array(
+NEIGHBORS_MASK: Int[np.ndarray, "coord point"] = np.array(
     [
         [0, 1],  # down
         [0, -1],  # up

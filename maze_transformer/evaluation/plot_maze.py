@@ -6,10 +6,9 @@ from dataclasses import dataclass
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from jaxtyping import Float
+from jaxtyping import Bool, Float
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
-from muutils.tensor_utils import NDArray
 
 from maze_transformer.generation.lattice_maze import Coord, CoordArray, LatticeMaze
 
@@ -225,8 +224,9 @@ class MazePlot:
         self.plot(dpi=dpi, title=title)
         plt.show()
 
-    def _rowcol_to_coord(self, point: Coord) -> NDArray:
-        """Transform Point from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
+    def _rowcol_to_coord(self, point: Coord) -> Float[np.array, "2"]:
+        """Transform Point from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x
+        is the horizontal axis."""
         point = np.array([point[1], point[0]])
         return self.unit_length * (point + 0.5)
 
@@ -286,7 +286,7 @@ class MazePlot:
 
             self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
 
-    def _lattice_maze_to_img(self) -> NDArray["row col", bool]:
+    def _lattice_maze_to_img(self) -> Bool[np.array, "row col"]:
         """
         Build an image to visualise the maze.
         Each "unit" consists of a node and the right and lower adjacent wall/connection. Its area is ul * ul.
@@ -317,7 +317,7 @@ class MazePlot:
             connection_values = scaled_node_values
 
         # Create background image (all pixels set to -1, walls everywhere)
-        img: NDArray["row col", float] = -np.ones(
+        img: Float[np.array, "row col"] = -np.ones(
             (
                 self.maze.grid_shape[0] * self.unit_length + 1,
                 self.maze.grid_shape[1] * self.unit_length + 1,
@@ -351,12 +351,13 @@ class MazePlot:
         return img
 
     def _plot_path(self, path_format: PathFormat) -> None:
-        p_transformed = np.array(
+        p_transformed: Float[np.array, "coord 2"] = np.array(
             [self._rowcol_to_coord(coord) for coord in path_format.path]
         )
+
         if path_format.quiver_kwargs is not None:
-            x: NDArray = p_transformed[:, 0]
-            y: NDArray = p_transformed[:, 1]
+            x: Float[np.array, "x"] = p_transformed[:, 0]
+            y: Float[np.array, "y"] = p_transformed[:, 1]
             self.ax.quiver(
                 x[:-1],
                 y[:-1],
@@ -392,7 +393,7 @@ class MazePlot:
             ms=10,
         )
 
-    def as_ascii(self, start=None, end=None):
+    def as_ascii(self, start=None, end=None) -> str:
         """
         Returns an ASCII visualization of the maze.
         Courtesy of ChatGPT
