@@ -6,6 +6,7 @@ import numpy as np
 from maze_transformer.generation.lattice_maze import (
     NEIGHBORS_MASK,
     Coord,
+    CoordTup,
     LatticeMaze,
     SolvedMaze,
 )
@@ -16,7 +17,7 @@ class LatticeMazeGenerators:
 
     @staticmethod
     def gen_dfs(
-        grid_shape: Coord,
+        grid_shape: Coord | CoordTup,
         start_coord: Coord | None = None,
         lattice_dim: int = 2,
     ) -> LatticeMaze:
@@ -33,7 +34,7 @@ class LatticeMazeGenerators:
                         4. Mark the chosen cell as visited and push it to the stack
         """
 
-        # n_directions: int = lattice_dim * 2
+        grid_shape = np.array(grid_shape)
 
         # initialize the maze with no connections
         connection_list: np.ndarray = np.zeros(
@@ -200,6 +201,7 @@ class LatticeMazeGenerators:
         )
 
 
+# TODO: use the thing @valedan wrote for the evals function to make this automatic?
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
     "gen_dfs": LatticeMazeGenerators.gen_dfs,
     "gen_wilson": LatticeMazeGenerators.gen_wilson,

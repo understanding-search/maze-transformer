@@ -32,11 +32,8 @@ def coord_str_to_tuple(coord_str: str) -> CoordTup:
 
 @serializable_dataclass(frozen=True, kw_only=True)
 class LatticeMaze(SerializableDataclass):
-    """lattice maze (nodes on a lattice, connections only to neighboring nodes)"""
+    """lattice maze (nodes on a lattice, connections only to neighboring nodes)
 
-    lattice_dim: int = serializable_field(default=2)
-
-    """
     Connection List represents which nodes (N) are connected in each direction.
 
     First and second elements represent rightward and downward connections,
@@ -70,50 +67,17 @@ class LatticeMaze(SerializableDataclass):
     right-hand connections going right, will always be False.
     """
     connection_list: Bool[np.ndarray, "lattice_dim x y"]
-    generation_meta: dict | None = serializable_field(default=None)
+    generation_meta: dict | None = serializable_field(default=None, compare=False)
+    lattice_dim: int = serializable_field(default=2)
 
     grid_shape = property(lambda self: self.connection_list.shape[1:])
 
     n_connections = property(lambda self: self.connection_list.sum())
 
-    lattice_dim: int = 2
 
-    def as_adj_list(
-        self, shuffle_d0: bool = True, shuffle_d1: bool = True
-    ) -> NDArray["conn start_end coord", np.int8]:
-        adj_list: NDArray["conn start_end coord", np.int8] = np.full(
-            (self.n_connections, 2, 2),
-            -1,
-        )
-
-        if shuffle_d1:
-            flip_d1: NDArray["conn", np.float16] = np.random.rand(self.n_connections)
-
-        # loop over all nonzero elements of the connection list
-        i: int = 0
-        for d, x, y in np.ndindex(self.connection_list.shape):
-            if self.connection_list[d, x, y]:
-                c_start: CoordTup = (x, y)
-                c_end: CoordTup = (
-                    x + (1 if d == 0 else 0),
-                    y + (1 if d == 1 else 0),
-                )
-                adj_list[i, 0] = np.array(c_start)
-                adj_list[i, 1] = np.array(c_end)
-
-                # flip if shuffling
-                if shuffle_d1 and (flip_d1[i] > 0.5):
-                    c_s, c_e = adj_list[i, 0].copy(), adj_list[i, 1].copy()
-                    adj_list[i, 0] = c_e
-                    adj_list[i, 1] = c_s
-
-                i += 1
-
-        if shuffle_d0:
-            np.random.shuffle(adj_list)
-
-        return adj_list
-
+    # ============================================================
+    # basic methods
+    # ============================================================
     @staticmethod
     def heuristic(a: CoordTup, b: CoordTup) -> float:
         """return manhattan distance between two points"""
@@ -229,6 +193,45 @@ class LatticeMaze(SerializableDataclass):
         start, end = random.sample(self.get_nodes(), 2)
         return self.find_shortest_path(start, end)
 
+    # ============================================================
+    # to and from adjacency list
+    # ============================================================
+    def as_adj_list(
+        self, shuffle_d0: bool = True, shuffle_d1: bool = True
+    ) -> NDArray["conn start_end coord", np.int8]:
+        adj_list: NDArray["conn start_end coord", np.int8] = np.full(
+            (self.n_connections, 2, 2),
+            -1,
+        )
+
+        if shuffle_d1:
+            flip_d1: NDArray["conn", np.float16] = np.random.rand(self.n_connections)
+
+        # loop over all nonzero elements of the connection list
+        i: int = 0
+        for d, x, y in np.ndindex(self.connection_list.shape):
+            if self.connection_list[d, x, y]:
+                c_start: CoordTup = (x, y)
+                c_end: CoordTup = (
+                    x + (1 if d == 0 else 0),
+                    y + (1 if d == 1 else 0),
+                )
+                adj_list[i, 0] = np.array(c_start)
+                adj_list[i, 1] = np.array(c_end)
+
+                # flip if shuffling
+                if shuffle_d1 and (flip_d1[i] > 0.5):
+                    c_s, c_e = adj_list[i, 0].copy(), adj_list[i, 1].copy()
+                    adj_list[i, 0] = c_e
+                    adj_list[i, 1] = c_s
+
+                i += 1
+
+        if shuffle_d0:
+            np.random.shuffle(adj_list)
+
+        return adj_list
+
     @classmethod
     def from_adj_list(
         cls,
@@ -266,6 +269,10 @@ class LatticeMaze(SerializableDataclass):
             connection_list=connection_list,
         )
 
+    # ============================================================
+    # TODO: write a to_tokens method?
+    # from tokens
+    # ============================================================
     @classmethod
     def from_tokens(cls, tokens: list[str]) -> "LatticeMaze":
         """create a LatticeMaze from a list of tokens"""
@@ -311,6 +318,9 @@ class LatticeMaze(SerializableDataclass):
 
         return cls.from_adj_list(adj_list)
 
+    # ============================================================
+    # to and from pixels
+    # ============================================================
     def _as_pixels(self) -> Bool[np.ndarray, "x y"]:
         assert self.lattice_dim == 2, "only 2D mazes are supported"
         # Create an empty pixel grid with walls
@@ -341,6 +351,30 @@ class LatticeMaze(SerializableDataclass):
         """return a pixel grid of the maze"""
         return self._as_pixels()
 
+    @classmethod
+    def _from_pixel_grid(cls, pixel_grid: Bool[np.ndarray, "x y"]) -> tuple[Bool[np.ndarray, "lattice_dim x y"], tuple[int, int]]:
+        grid_shape = (pixel_grid.shape[0] // 2, pixel_grid.shape[1] // 2)
+        connection_list = np.zeros((2, *grid_shape), dtype=np.bool_)
+
+        # Extract downward connections
+        connection_list[0] = pixel_grid[2::2, 1::2]
+
+        # Extract rightward connections
+        connection_list[1] = pixel_grid[1::2, 2::2]
+
+        return connection_list, grid_shape
+
+    @classmethod
+    def from_pixels(cls, pixel_grid: Bool[np.ndarray, "x y"]) -> "LatticeMaze":
+        connection_list, grid_shape = cls._from_pixel_grid(pixel_grid)
+        output: LatticeMaze = cls(connection_list=connection_list)
+        assert output.grid_shape == grid_shape
+        return output
+
+
+    # ============================================================
+    # to and from ASCII
+    # ============================================================
     def _as_ascii_grid(
             self, 
             char_wall: str = "#", char_open: str = " ",
@@ -363,26 +397,6 @@ class LatticeMaze(SerializableDataclass):
         return "\n".join("".join(row) for row in ascii_grid)
 
     @classmethod
-    def _from_pixel_grid(cls, pixel_grid: Bool[np.ndarray, "x y"]) -> tuple[Bool[np.ndarray, "lattice_dim x y"], tuple[int, int]]:
-        grid_shape = (pixel_grid.shape[0] // 2, pixel_grid.shape[1] // 2)
-        connection_list = np.zeros((2, *grid_shape), dtype=np.bool_)
-
-        # Extract downward connections
-        connection_list[0] = pixel_grid[2::2, 1::2]
-
-        # Extract rightward connections
-        connection_list[1] = pixel_grid[1::2, 2::2]
-
-        return connection_list, grid_shape
-
-    @classmethod
-    def from_pixels(cls, pixel_grid: Bool[np.ndarray, "x y"]) -> "LatticeMaze":
-        connection_list, grid_shape = cls._from_pixel_grid(pixel_grid)
-        output: LatticeMaze = cls(connection_list=connection_list)
-        assert output.grid_shape == grid_shape
-        return output
-
-    @classmethod
     def from_ascii(cls, ascii_str: str, char_wall: str = "#", char_open: str = " ") -> "LatticeMaze":
         lines: list[list[str]] = ascii_str.strip().split("\n")
         ascii_grid = np.array([list(line) for line in lines], dtype=str)
@@ -391,11 +405,12 @@ class LatticeMaze(SerializableDataclass):
 
 @serializable_dataclass(frozen=True, kw_only=True)
 class TargetedLatticeMaze(LatticeMaze):
+    """A LatticeMaze with a start and end position"""
     start_pos: Coord
     end_pos: Coord
 
     def __post_init__(self) -> None:
-        # make things numpy arrays (very jank)
+        # make things numpy arrays (very jank to override frozen dataclass)
         self.__dict__["start_pos"] = np.array(self.start_pos)
         self.__dict__["end_pos"] = np.array(self.end_pos)
         # check that start and end are in bounds
@@ -438,22 +453,6 @@ class TargetedLatticeMaze(LatticeMaze):
 
         return pixel_grid
 
-    def as_ascii(
-        self,
-        char_wall: str = "#",
-        char_open: str = " ",
-        char_start: str = "S",
-        char_end: str = "E",
-    ) -> str:
-        """return an ASCII grid of the maze"""
-        ascii_grid: Shaped[np.ndarray, "x y"] = self._as_ascii_grid(char_wall, char_open)
-
-        # Set start and end positions
-        ascii_grid[self.start_pos[0]*2+1, self.start_pos[1]*2+1] = char_start
-        ascii_grid[self.end_pos[0]*2+1, self.end_pos[1]*2+1] = char_end
-
-        return "\n".join("".join(row) for row in ascii_grid)
-
         
     @classmethod
     def _from_pixel_grid_with_positions(
@@ -485,6 +484,23 @@ class TargetedLatticeMaze(LatticeMaze):
         connection_list, grid_shape, start_pos, end_pos = cls._from_pixel_grid_with_positions(pixel_grid)
         return cls(connection_list=connection_list, start_pos=start_pos, end_pos=end_pos)
 
+    
+    def as_ascii(
+        self,
+        char_wall: str = "#",
+        char_open: str = " ",
+        char_start: str = "S",
+        char_end: str = "E",
+    ) -> str:
+        """return an ASCII grid of the maze"""
+        ascii_grid: Shaped[np.ndarray, "x y"] = self._as_ascii_grid(char_wall, char_open)
+
+        # Set start and end positions
+        ascii_grid[self.start_pos[0]*2+1, self.start_pos[1]*2+1] = char_start
+        ascii_grid[self.end_pos[0]*2+1, self.end_pos[1]*2+1] = char_end
+
+        return "\n".join("".join(row) for row in ascii_grid)
+
     @classmethod
     def from_ascii(
         cls,
@@ -504,7 +520,6 @@ class TargetedLatticeMaze(LatticeMaze):
         pixel_grid[ascii_grid == char_end] = (255, 0, 0)
 
         return cls.from_pixels(pixel_grid)
-
 
 class SolvedMaze(NamedTuple):
     """Stores a maze and a solution"""

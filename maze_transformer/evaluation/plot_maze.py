@@ -294,7 +294,7 @@ class MazePlot:
 
             self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
 
-    def _latticemaze_to_img(
+    def _lattice_maze_to_img(
             self, 
             connection_val_scale: float = 0.93,
         ) -> Bool[np.ndarray, "row col"]:
@@ -420,7 +420,7 @@ class MazePlot:
         self.unit_length = 2
 
         # Determine the size of the maze
-        maze: Bool[np.ndarray, "x y"] = self._latticemaze_to_img()
+        maze: Bool[np.ndarray, "x y"] = self._lattice_maze_to_img()
         n_rows: int = maze.shape[0]
         n_cols: int = maze.shape[1]
         maze_str: str = ""
