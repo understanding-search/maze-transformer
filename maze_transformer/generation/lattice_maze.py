@@ -1,6 +1,7 @@
 import random
 from dataclasses import dataclass
 from typing import NamedTuple, cast
+import warnings
 
 import numpy as np
 from jaxtyping import Float, Int, Bool, Shaped
@@ -521,16 +522,51 @@ class TargetedLatticeMaze(LatticeMaze):
 
         return cls.from_pixels(pixel_grid)
 
-class SolvedMaze(NamedTuple):
+@serializable_dataclass(frozen=True, kw_only=True)
+class SolvedMaze(LatticeMaze):
     """Stores a maze and a solution"""
 
-    maze: LatticeMaze
-    solution: list[CoordTup]
+    solution: CoordArray
+
+    # properties for similarity to TargetedLatticeMaze
+    @property
+    def start_pos(self) -> Coord:
+        return self.solution[0]
+    
+    @property
+    def end_pos(self) -> Coord:
+        return self.solution[-1]
+
+    # for backwards compatibility
+    @property
+    def maze(self) -> LatticeMaze:
+        warnings.warn("maze is deprecated, SolvedMaze now inherits from LatticeMaze", DeprecationWarning)
+        return self
+
+    @classmethod
+    def from_lattice_maze(cls, lattice_maze: LatticeMaze, solution: list[CoordTup]) -> "SolvedMaze":
+        return cls(
+            connection_list=lattice_maze.connection_list,
+            solution=solution,
+        )
 
     @classmethod
     def from_tokens(cls, tokens: list[str], data_cfg) -> "SolvedMaze":
-        maze = LatticeMaze.from_tokens(tokens)
-        path_tokens = get_path_tokens(tokens)
-        solution = decode_maze_tokens_to_coords(path_tokens, data_cfg)
+        maze: LatticeMaze = LatticeMaze.from_tokens(tokens)
+        path_tokens: list[str] = get_path_tokens(tokens)
+        solution: list[str | tuple[int, int]] = decode_maze_tokens_to_coords(path_tokens, data_cfg)
 
-        return cls(maze, cast(list[CoordTup], solution))
+        assert len(solution) > 0, f"No solution found: {solution = }"
+
+        try:
+            solution_cast: list[CoordTup] = cast(list[CoordTup], solution)
+            solution_np: CoordArray = np.array(solution_cast)
+        except ValueError as e:
+            raise ValueError(f"Invalid solution: {solution = }") from e
+        
+        return cls.from_lattice_maze(lattice_maze=maze, solution=solution_np)
+
+
+    def as_tuple(self) -> tuple[LatticeMaze, CoordArray]:
+        warnings.warn("as_tuple is deprecated", DeprecationWarning)
+        return self, self.solution

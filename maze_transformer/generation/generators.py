@@ -2,6 +2,8 @@ import random
 from typing import Any, Callable
 
 import numpy as np
+from jaxtyping import Int
+from maze_transformer.generation.constants import CoordArray
 
 from maze_transformer.generation.lattice_maze import (
     NEIGHBORS_MASK,
@@ -101,11 +103,11 @@ class LatticeMazeGenerators:
         )
 
     @classmethod
-    def gen_dfs_with_solution(cls, grid_shape: Coord):
-        maze = cls.gen_dfs(grid_shape)
-        solution = np.array(maze.generate_random_path())
+    def gen_dfs_with_solution(cls, grid_shape: Coord) -> SolvedMaze:
+        maze: LatticeMaze = cls.gen_dfs(grid_shape)
+        solution: CoordArray = np.array(maze.generate_random_path())
 
-        return SolvedMaze(maze, solution)
+        return SolvedMaze.from_lattice_maze(lattice_maze=maze, solution=solution)
 
     @staticmethod
     def gen_wilson(

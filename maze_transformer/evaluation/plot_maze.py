@@ -11,7 +11,7 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
-from maze_transformer.generation.constants import Coord, CoordArray, CoordList
+from maze_transformer.generation.constants import Coord, CoordArray, CoordList, CoordTup
 from maze_transformer.generation.lattice_maze import Coord, CoordArray, LatticeMaze
 
 MAX_NODE_VALUE_EPSILON: float = 1e-10

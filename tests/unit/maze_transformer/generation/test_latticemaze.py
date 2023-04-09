@@ -19,8 +19,8 @@ def test_pixels_ascii_roundtrip():
         assert maze == LatticeMaze.from_pixels(maze_pixels)
         assert maze == LatticeMaze.from_ascii(maze_ascii)
 
-        assert maze_pixels.shape == (n*2+1, n*2+1, 3), maze_pixels.shape
-        assert len(maze_ascii) == (n*2+1) ** 2, len(maze_ascii)
+        assert maze_pixels.shape == (n*2+1, n*2+1), maze_pixels.shape
+        assert all(n*2+1 == len(line) for line in maze_ascii.splitlines()), maze_ascii
 
 
 def test_as_adj_list():
