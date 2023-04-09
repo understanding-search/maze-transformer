@@ -102,4 +102,3 @@ if __name__ == "__main__":
         Path(args.notebooks_dir),
         Path(args.converted_notebooks_temp_dir),
     )
-        
