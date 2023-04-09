@@ -81,6 +81,25 @@ def test_notebooks(
 
 
 if __name__ == "__main__":
-    import fire
+    import argparse
 
-    fire.Fire(test_notebooks)
+    parser: argparse.ArgumentParser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--notebooks-dir",
+        type=str,
+        help="The directory from which to run the notebooks",
+    )
+    parser.add_argument(
+        "--converted-notebooks-temp-dir",
+        type=str,
+        help="The directory containing the converted notebooks to test",
+    )
+
+    args: argparse.Namespace = parser.parse_args()
+
+    test_notebooks(
+        Path(args.notebooks_dir),
+        Path(args.converted_notebooks_temp_dir),
+    )
+        
