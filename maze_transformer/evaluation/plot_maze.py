@@ -11,8 +11,8 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
-from maze_transformer.generation.constants import Coord, CoordArray, CoordList, CoordTup
-from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.constants import Coord, CoordArray, CoordList
+from maze_transformer.generation.lattice_maze import Coord, CoordArray, LatticeMaze
 
 MAX_NODE_VALUE_EPSILON: float = 1e-10
 
@@ -246,7 +246,7 @@ class MazePlot:
                         fade from dark blue to white,
                         upper bound adaptive to max node value
         """
-        img = self._latticemaze_to_img()
+        img = self._lattice_maze_to_img()
 
         if self.target_token_coord is not None:
             x, y = self._rowcol_to_coord(self.target_token_coord)

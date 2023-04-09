@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from maze_transformer.training.mazedataset import MazeDataset
+from maze_transformer.training.maze_dataset import MazeDataset
 from scripts.create_dataset import create_dataset
 
 

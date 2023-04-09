@@ -4,7 +4,7 @@ import numpy as np
 from jaxtyping import Int
 
 from maze_transformer.generation.constants import Coord, CoordTup
-from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.lattice_maze import LatticeMaze
 from maze_transformer.utils.utils import register_method
 
 # pylint: disable=unused-argument
@@ -23,14 +23,18 @@ class PathEvalFunction(Protocol):
 
 def path_as_segments_iter(path: MazePath) -> Iterable[tuple]:
     """
-    Iterate over the segments of a path.
+    Iterate over the segments of a path (ie each consecutive pair).
     """
-    i: int
     step_start: Coord | CoordTup
     step_end: Coord | CoordTup
     for i, step_start in enumerate(path[:-1]):
         step_end = path[i + 1]
         yield step_start, step_end
+
+
+def is_adjacent(node1: Coord, node2: Coord) -> bool:
+    """Check that the nodes are at most 1 step apart (diagonal steps not possible)"""
+    return np.abs(node1 - node2).sum() == 1
 
 
 class PathEvals:
@@ -41,29 +45,20 @@ class PathEvals:
     @register_method(evals)
     @staticmethod
     def node_overlap(solution: MazePath, prediction: MazePath, **_) -> float:
-        """number of shared nodes (any order) / total number of (unique) nodes"""
-        if len(prediction) <= 1:
-            return 0.0
+        """number of shared nodes (any order) / total number of (unique) nodes in solution"""
 
-        n_shared: int = 0
         solution_set = {tuple(coord) for coord in solution}
         prediction_set = {tuple(coord) for coord in prediction}
 
-        for coord in solution:
-            if tuple(coord) in prediction_set:
-                n_shared += 1
-        return n_shared / len(solution_set)
+        return len(prediction_set & solution_set) / len(solution_set)
 
     @register_method(evals)
     @staticmethod
     def num_connections_adjacent_lattice(prediction: MazePath, **_) -> float:
         """number of the connections in prediction which actually connect nodes that are adjacent on the lattice, ignoring if they are adjacent on the maze"""
-        if len(prediction) <= 1:
-            return 0.0
-
-        n_adj: int = 0
+        n_adj: float = 0.0
         for step_start, step_end in path_as_segments_iter(prediction):
-            if (np.abs(step_start - step_end).sum() == 1).all():
+            if is_adjacent(step_start, step_end):
                 n_adj += 1
 
         return n_adj
@@ -79,11 +74,7 @@ class PathEvals:
     @staticmethod
     def num_connections_adjacent(maze: LatticeMaze, prediction: MazePath, **_) -> float:
         """number of connections in prediction which are are valid paths on the maze"""
-
-        if len(prediction) <= 1:
-            return 0.0
-
-        n_connected: int = 0
+        n_connected: float = 0.0
         for step_start, step_end in path_as_segments_iter(prediction):
             if maze.nodes_connected(step_start, step_end):
                 n_connected += 1
@@ -97,4 +88,42 @@ class PathEvals:
     ) -> float:
         """fraction of connections in prediction which are are valid paths on the maze"""
 
-        return PathEvals.num_connections_adjacent(maze, prediction) / len(prediction)
+        num_connections: float = len(prediction) - 1.0
+        return PathEvals.num_connections_adjacent(maze, prediction) / max(
+            num_connections, 1.0
+        )
+
+    @register_method(evals)
+    @staticmethod
+    def exact_path_predicted(solution: MazePath, prediction: MazePath, **_) -> float:
+        """Was the maze successfully solved?"""
+        return float(np.array_equal(solution, prediction))
+
+    @register_method(evals)
+    @staticmethod
+    def solution_length(solution: MazePath, **_) -> float:
+        return float(len(solution))
+
+    @register_method(evals)
+    @staticmethod
+    def streak_length_until_incorrect(
+        solution: MazePath,
+        prediction: MazePath,
+        **_,
+    ) -> float:
+        """How many moves until the predicted path deviates from the solution"""
+        prediction = prediction.tolist()
+        solution = solution.tolist()
+        streak_length: float = 0.0
+
+        for i in range(max(len(prediction), len(solution))):
+            if (
+                i + 1 > len(prediction)
+                or i + 1 > len(solution)
+                or prediction[i] != solution[i]
+            ):
+                return streak_length
+            else:
+                streak_length += 1
+
+        return streak_length

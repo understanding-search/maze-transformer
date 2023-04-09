@@ -10,7 +10,7 @@ from transformers.tokenization_utils import BatchEncoding
 
 from maze_transformer.evaluation.plot_maze import MazePlot
 from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
-from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.lattice_maze import LatticeMaze
 
 if TYPE_CHECKING:
     from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig
@@ -26,7 +26,7 @@ def maze_to_tokens(
     """serialize maze and solution to tokens"""
     tokens: list[str] = [
         # give adjacency list
-        SPECIAL_TOKENS["adjlist_start"],
+        SPECIAL_TOKENS["adj_list_start"],
         *chain.from_iterable(
             [
                 [
@@ -38,7 +38,7 @@ def maze_to_tokens(
                 for c_s, c_e in maze.as_adj_list()
             ]
         ),
-        SPECIAL_TOKENS["adjlist_end"],
+        SPECIAL_TOKENS["adj_list_end"],
         # give origin
         SPECIAL_TOKENS["origin_start"],
         node_token_map[tuple(solution[0])],

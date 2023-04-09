@@ -16,8 +16,8 @@ def test_tokens_between_out_of_order():
         token_utils.tokens_between(MAZE_TOKENS, "<PATH_END>", "<PATH_START>")
 
 
-def test_get_adjlist_tokens():
-    result = token_utils.get_adjlist_tokens(MAZE_TOKENS)
+def test_get_adj_list_tokens():
+    result = token_utils.get_adj_list_tokens(MAZE_TOKENS)
     expected = "(0,1) <--> (1,1) ; (1,0) <--> (1,1) ; (0,1) <--> (0,0) ;".split()
     assert result == expected
 
@@ -52,7 +52,7 @@ def test_get_tokens_up_to_path_start_excluding_start():
 
 
 def test_decode_maze_tokens_to_coords():
-    adj_list = token_utils.get_adjlist_tokens(MAZE_TOKENS)
+    adj_list = token_utils.get_adj_list_tokens(MAZE_TOKENS)
     config = MazeDatasetConfig(name="test", grid_n=2, n_mazes=1)
 
     skipped = token_utils.decode_maze_tokens_to_coords(

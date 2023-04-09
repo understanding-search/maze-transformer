@@ -16,7 +16,7 @@ from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.training.mazedataset import MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import HuggingMazeTokenizer
 
 

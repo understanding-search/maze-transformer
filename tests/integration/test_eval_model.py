@@ -16,7 +16,7 @@ from maze_transformer.evaluation.eval_model import (
     predict_maze_paths,
 )
 from maze_transformer.evaluation.path_evals import PathEvals
-from maze_transformer.training.mazedataset import MazeDataset
+from maze_transformer.training.maze_dataset import MazeDataset
 from maze_transformer.training.wandb_logger import WandbProject
 from scripts.create_dataset import create_dataset
 from scripts.train_model import train_model

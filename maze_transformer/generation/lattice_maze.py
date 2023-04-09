@@ -17,7 +17,7 @@ from maze_transformer.generation.constants import (
 )
 from maze_transformer.utils.token_utils import (
     decode_maze_tokens_to_coords,
-    get_adjlist_tokens,
+    get_adj_list_tokens,
     get_path_tokens,
 )
 
@@ -76,10 +76,12 @@ class LatticeMaze(SerializableDataclass):
 
     n_connections = property(lambda self: self.connection_list.sum())
 
+    lattice_dim: int = 2
+
     def as_adj_list(
         self, shuffle_d0: bool = True, shuffle_d1: bool = True
     ) -> NDArray["conn start_end coord", np.int8]:
-        adjlist: NDArray["conn start_end coord", np.int8] = np.full(
+        adj_list: NDArray["conn start_end coord", np.int8] = np.full(
             (self.n_connections, 2, 2),
             -1,
         )
@@ -96,21 +98,21 @@ class LatticeMaze(SerializableDataclass):
                     x + (1 if d == 0 else 0),
                     y + (1 if d == 1 else 0),
                 )
-                adjlist[i, 0] = np.array(c_start)
-                adjlist[i, 1] = np.array(c_end)
+                adj_list[i, 0] = np.array(c_start)
+                adj_list[i, 1] = np.array(c_end)
 
                 # flip if shuffling
                 if shuffle_d1 and (flip_d1[i] > 0.5):
-                    c_s, c_e = adjlist[i, 0].copy(), adjlist[i, 1].copy()
-                    adjlist[i, 0] = c_e
-                    adjlist[i, 1] = c_s
+                    c_s, c_e = adj_list[i, 0].copy(), adj_list[i, 1].copy()
+                    adj_list[i, 0] = c_e
+                    adj_list[i, 1] = c_s
 
                 i += 1
 
         if shuffle_d0:
-            np.random.shuffle(adjlist)
+            np.random.shuffle(adj_list)
 
-        return adjlist
+        return adj_list
 
     @staticmethod
     def heuristic(a: CoordTup, b: CoordTup) -> float:
@@ -228,21 +230,21 @@ class LatticeMaze(SerializableDataclass):
         return self.find_shortest_path(start, end)
 
     @classmethod
-    def from_adjlist(
+    def from_adj_list(
         cls,
-        adjlist: NDArray["conn start_end coord", np.int8],
+        adj_list: NDArray["conn start_end coord", np.int8],
     ) -> "LatticeMaze":
         """create a LatticeMaze from a list of connections"""
 
         # Note: This has only been tested for square mazes. Might need to change some things if rectangular mazes are needed.
-        grid_n: int = adjlist.max() + 1
+        grid_n: int = adj_list.max() + 1
 
         connection_list: NDArray["lattice_dim x y", bool] = np.zeros(
             (2, grid_n, grid_n),
             dtype=bool,
         )
 
-        for c_start, c_end in adjlist:
+        for c_start, c_end in adj_list:
             # check that exactly 1 coordinate matches
             if (c_start == c_end).sum() != 1:
                 raise ValueError("invalid connection")
@@ -267,14 +269,14 @@ class LatticeMaze(SerializableDataclass):
     @classmethod
     def from_tokens(cls, tokens: list[str]) -> "LatticeMaze":
         """create a LatticeMaze from a list of tokens"""
-        if tokens[0] == SPECIAL_TOKENS["adjlist_start"]:
-            adjlist_tokens = get_adjlist_tokens(tokens)
+        if tokens[0] == SPECIAL_TOKENS["adj_list_start"]:
+            adj_list_tokens = get_adj_list_tokens(tokens)
         else:
             # If we're not getting a "complete" tokenized maze, assume it's a list of coord tokens already
-            adjlist_tokens = tokens
+            adj_list_tokens = tokens
 
         edges: list[str] = list_split(
-            adjlist_tokens,
+            adj_list_tokens,
             SPECIAL_TOKENS["adjacency_endline"],
         )
 
@@ -298,16 +300,16 @@ class LatticeMaze(SerializableDataclass):
             len(c) == 2 for c in coordinates
         ), f"invalid coordinates: {coordinates = }"
 
-        adjlist: NDArray["conn start_end coord", np.int8] = np.full(
+        adj_list: NDArray["conn start_end coord", np.int8] = np.full(
             (len(coordinates), 2, 2),
             -1,
         )
 
         for i, (c_start, c_end) in enumerate(coordinates):
-            adjlist[i, 0] = np.array(coord_str_to_tuple(c_start))
-            adjlist[i, 1] = np.array(coord_str_to_tuple(c_end))
+            adj_list[i, 0] = np.array(coord_str_to_tuple(c_start))
+            adj_list[i, 1] = np.array(coord_str_to_tuple(c_end))
 
-        return cls.from_adjlist(adjlist)
+        return cls.from_adj_list(adj_list)
 
     def _as_pixels(self) -> Bool[np.ndarray, "x y"]:
         assert self.lattice_dim == 2, "only 2D mazes are supported"
