@@ -21,9 +21,9 @@ from maze_transformer.generation.constants import (
     CoordTup,
 )
 from maze_transformer.utils.token_utils import (
-    decode_maze_tokens_to_coords,
     get_adj_list_tokens,
     get_path_tokens,
+    tokens_to_coords,
 )
 
 RGB = tuple[int, int, int]
