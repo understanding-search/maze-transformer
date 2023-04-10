@@ -10,7 +10,7 @@ from transformer_lens import HookedTransformer
 
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
-from maze_transformer.training.mazedataset import MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import maze_to_tokens
 
 

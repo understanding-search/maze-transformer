@@ -7,7 +7,7 @@ from jaxtyping import Float
 from transformer_lens import HookedTransformer
 
 from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
-from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.lattice_maze import LatticeMaze
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.utils.token_utils import (
     coords_to_tokens,

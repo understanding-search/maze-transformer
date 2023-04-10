@@ -12,9 +12,9 @@ def tokens_between(tokens: list[str], start_value: str, end_value: str) -> list[
     return tokens[start_idx:end_idx]
 
 
-def get_adjlist_tokens(tokens: list[str]) -> list[str]:
+def get_adj_list_tokens(tokens: list[str]) -> list[str]:
     return tokens_between(
-        tokens, SPECIAL_TOKENS["adjlist_start"], SPECIAL_TOKENS["adjlist_end"]
+        tokens, SPECIAL_TOKENS["adj_list_start"], SPECIAL_TOKENS["adj_list_end"]
     )
 
 
