@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import warnings
 from functools import cached_property
 from typing import Any, Type
-import warnings
 
 import torch
 from muutils.json_serialize import (
