@@ -23,7 +23,6 @@ from maze_transformer.generation.constants import (
 from maze_transformer.utils.token_utils import (
     get_adj_list_tokens,
     get_path_tokens,
-    tokens_to_coords,
 )
 
 RGB = tuple[int, int, int]

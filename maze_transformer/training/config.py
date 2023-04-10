@@ -204,12 +204,8 @@ class ConfigHolder(SerializableDataclass):
         else:
             return HuggingMazeTokenizer(self.dataset_cfg)
 
-<<<<<<< HEAD
     @cached_property
     def hooked_transformer_cfg(self) -> HookedTransformerConfig:
-=======
-    def transformer_config(self) -> HookedTransformerConfig:
->>>>>>> main
         return HookedTransformerConfig(
             act_fn=self.model_cfg.act_fn,
             d_model=self.model_cfg.d_model,
@@ -218,6 +214,13 @@ class ConfigHolder(SerializableDataclass):
             n_ctx=self.dataset_cfg.seq_len_max,
             d_vocab=len(self.dataset_cfg.token_arr),
         )
+
+    def transformer_config(self) -> HookedTransformerConfig:
+        warnings.warn(
+            "cfg.transformer_config() is deprecated, use cfg.hooked_transformer_cfg or cfg.create_model_zanj() instead",
+            DeprecationWarning,
+        )
+        return self.hooked_transformer_cfg
 
     def create_model(self) -> HookedTransformer:
         return HookedTransformer(
