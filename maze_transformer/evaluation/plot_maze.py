@@ -11,7 +11,6 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
-from maze_transformer.generation.constants import Coord, CoordArray, CoordList
 from maze_transformer.generation.lattice_maze import Coord, CoordArray, LatticeMaze
 
 MAX_NODE_VALUE_EPSILON: float = 1e-10
@@ -22,7 +21,7 @@ class PathFormat:
     """formatting options for path plot"""
 
     label: str | None = None
-    fmt: str = "o"
+    fmt: str | None = None
     color: str | None = None
     line_width: float | None = None
     quiver_kwargs: dict | None = None
@@ -39,9 +38,7 @@ class PathFormat:
                     f"Cannot overwrite path attribute! {self = }, {other = }"
                 )
             if value is not None:
-                setattr(output, key, value)
-
-        return output
+                setattr(self, key, value)
 
 
 # styled path
@@ -69,7 +66,7 @@ DEFAULT_FORMATS: dict[str, PathFormat] = {
 
 
 def process_path_input(
-    path: CoordList | CoordArray | StyledPath,
+    path: CoordArray | StyledPath,
     _default_key: str,
     path_fmt: PathFormat | None = None,
     **kwargs,
@@ -77,18 +74,12 @@ def process_path_input(
     styled_path: StyledPath
     if isinstance(path, StyledPath):
         styled_path = path
-    elif isinstance(path, np.ndarray):
+    elif isinstance(path, CoordArray):
         styled_path = StyledPath(path=path)
         # add default formatting
         styled_path = styled_path.combine(DEFAULT_FORMATS[_default_key])
-    elif isinstance(path, list):
-        styled_path = StyledPath(path=np.array(path))
-        # add default formatting
-        styled_path = styled_path.combine(DEFAULT_FORMATS[_default_key])
     else:
-        raise TypeError(
-            f"Expected CoordList, CoordArray or StyledPath, got {type(path)}: {path}"
-        )
+        raise TypeError(f"Expected CoordArray or StyledPath, got {type(path)}: {path}")
 
     # add formatting from path_fmt
     if path_fmt is not None:
@@ -133,7 +124,7 @@ class MazePlot:
 
     def add_true_path(
         self,
-        path: CoordList | CoordArray | StyledPath,
+        path: CoordArray | StyledPath,
         path_fmt: PathFormat | None = None,
         **kwargs,
     ) -> MazePlot:
@@ -148,7 +139,7 @@ class MazePlot:
 
     def add_predicted_path(
         self,
-        path: CoordList | CoordArray | StyledPath,
+        path: CoordArray | StyledPath,
         path_fmt: PathFormat | None = None,
         **kwargs,
     ) -> MazePlot:
@@ -176,7 +167,7 @@ class MazePlot:
         self.predicted_paths.append(styled_path)
         return self
 
-    def add_multiple_paths(self, path_list: list[CoordList | CoordArray | StyledPath]):
+    def add_multiple_paths(self, path_list: list[CoordArray | StyledPath]):
         """
         Function for adding multiple paths to MazePlot at once. This can be done in two ways:
         1. Passing a list of
@@ -227,11 +218,12 @@ class MazePlot:
         self.ax.set_ylabel("row")
         self.fig.suptitle(title)
 
+        return self
+
     def show(self, dpi: int = 100, title: str = "") -> None:
-        """Plot the maze and paths and show the plot. DONT USE THIS IN NOTEBOOKS WHICH NEED TO BE TESTED IN CI!!!"""
+        """Plot the maze and paths and show the plot."""
         self.plot(dpi=dpi, title=title)
         plt.show()
-        return self
 
     def _rowcol_to_coord(self, point: Coord) -> NDArray:
         """Transform Point from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
@@ -377,11 +369,8 @@ class MazePlot:
                 **path_format.quiver_kwargs,
             )
         else:
-            x: NDArray = p_transformed[:, 0]
-            y: NDArray = p_transformed[:, 1]
             self.ax.plot(
-                x,
-                y,
+                *zip(*p_transformed),
                 path_format.fmt,
                 lw=path_format.line_width,
                 color=path_format.color,

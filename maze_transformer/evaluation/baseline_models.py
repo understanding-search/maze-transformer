@@ -30,11 +30,8 @@ class RandomBaseline(HookedTransformer):
     """
 
     def __init__(self, config: ConfigHolder, bias: float = 0.0):
-        assert isinstance(
-            config, ConfigHolder
-        ), f"config must be a ConfigHolder, got {type(config) = }"
-        self.config: ConfigHolder = config
-        self.bias: float = bias
+        self.config = config
+        self.bias = bias
         super().__init__(cfg=config.transformer_config(), tokenizer=config.tokenizer)
 
     def _get_coord_neighbors(
@@ -111,7 +108,7 @@ class RandomBaseline(HookedTransformer):
         self,
         indices_batch: Union[str, Float[torch.Tensor, "batch pos"]],
         max_new_tokens: int,
-        **_,
+        **_
     ) -> Float[torch.Tensor, "batch pos_plus_new_tokens"]:
         tokens_batch = [self.to_str_tokens(indices) for indices in indices_batch]
 

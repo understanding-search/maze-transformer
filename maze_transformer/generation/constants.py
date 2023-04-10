@@ -4,7 +4,6 @@ from muutils.tensor_utils import NDArray
 Coord = NDArray["x y", np.int8]
 CoordTup = tuple[int, int]
 CoordArray = NDArray["coords", np.int8]
-CoordList = list[CoordTup]
 
 SPECIAL_TOKENS: dict[str, str] = dict(
     adj_list_start="<ADJLIST_START>",
