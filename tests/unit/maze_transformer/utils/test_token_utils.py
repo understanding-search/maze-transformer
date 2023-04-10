@@ -51,17 +51,13 @@ def test_get_tokens_up_to_path_start_excluding_start():
     assert result == expected
 
 
-def test_decode_maze_tokens_to_coords():
+def test_tokens_to_coords():
     adj_list = token_utils.get_adj_list_tokens(MAZE_TOKENS)
     config = MazeDatasetConfig(name="test", grid_n=2, n_mazes=1)
 
-    skipped = token_utils.decode_maze_tokens_to_coords(
-        adj_list, config, when_noncoord="skip"
-    )
+    skipped = token_utils.tokens_to_coords(adj_list, config, when_noncoord="skip")
 
-    included = token_utils.decode_maze_tokens_to_coords(
-        adj_list, config, when_noncoord="include"
-    )
+    included = token_utils.tokens_to_coords(adj_list, config, when_noncoord="include")
 
     assert skipped == [
         (0, 1),
@@ -87,7 +83,41 @@ def test_decode_maze_tokens_to_coords():
         ";",
     ]
 
-    with pytest.raises(ValueError, match="not a coordinate"):
-        token_utils.decode_maze_tokens_to_coords(
-            adj_list, config, when_noncoord="except"
-        )
+    with pytest.raises(ValueError, match="missing from mapping"):
+        token_utils.tokens_to_coords(adj_list, config, when_noncoord="except")
+
+
+def test_coords_to_tokens():
+    adj_list = token_utils.get_adj_list_tokens(MAZE_TOKENS)
+    config = MazeDatasetConfig(name="test", grid_n=2, n_mazes=1)
+    coords = token_utils.tokens_to_coords(adj_list, config, when_noncoord="include")
+
+    skipped = token_utils.coords_to_tokens(coords, config, when_noncoord="skip")
+    included = token_utils.coords_to_tokens(coords, config, when_noncoord="include")
+
+    assert skipped == [
+        "(0,1)",
+        "(1,1)",
+        "(1,0)",
+        "(1,1)",
+        "(0,1)",
+        "(0,0)",
+    ]
+
+    assert included == [
+        "(0,1)",
+        "<-->",
+        "(1,1)",
+        ";",
+        "(1,0)",
+        "<-->",
+        "(1,1)",
+        ";",
+        "(0,1)",
+        "<-->",
+        "(0,0)",
+        ";",
+    ]
+
+    with pytest.raises(ValueError, match="missing from mapping"):
+        token_utils.coords_to_tokens(coords, config, when_noncoord="except")
