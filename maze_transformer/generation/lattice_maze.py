@@ -20,7 +20,11 @@ from maze_transformer.generation.constants import (
     CoordArray,
     CoordTup,
 )
-from maze_transformer.utils.token_utils import get_adj_list_tokens, get_path_tokens, tokens_to_coords
+from maze_transformer.utils.token_utils import (
+    get_adj_list_tokens,
+    get_path_tokens,
+    tokens_to_coords,
+)
 
 RGB = tuple[int, int, int]
 
@@ -627,9 +631,7 @@ class SolvedMaze(LatticeMaze):
     def from_tokens(cls, tokens: list[str], data_cfg) -> "SolvedMaze":
         maze: LatticeMaze = LatticeMaze.from_tokens(tokens)
         path_tokens: list[str] = get_path_tokens(tokens)
-        solution: list[str | tuple[int, int]] = tokens_to_coords(
-            path_tokens, data_cfg
-        )
+        solution: list[str | tuple[int, int]] = tokens_to_coords(path_tokens, data_cfg)
 
         assert len(solution) > 0, f"No solution found: {solution = }"
 

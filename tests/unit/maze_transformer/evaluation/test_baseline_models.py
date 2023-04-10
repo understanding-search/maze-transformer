@@ -56,5 +56,7 @@ def test_random_baseline(temp_dir):
     assert max(unbiased_coords) == grid_n - 1
 
     for i, path in enumerate(biased_paths):
-        solved_maze: SolvedMaze = SolvedMaze.from_tokens(dataset.mazes_tokens[i], dataset.cfg)
+        solved_maze: SolvedMaze = SolvedMaze.from_tokens(
+            dataset.mazes_tokens[i], dataset.cfg
+        )
         assert (path == solved_maze.solution).all()
