@@ -9,7 +9,7 @@ from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
 from maze_transformer.evaluation.plot_maze import MazePlot
-from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
+from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
 from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
 
 if TYPE_CHECKING:
@@ -56,6 +56,7 @@ def maze_to_tokens(
 
 class HuggingMazeTokenizer(PreTrainedTokenizer):
     """extension of PreTrainedTokenizer for mazes"""
+
     vocab: dict[str, int]  # map of token_ids to strings
 
     bos_token: str = SPECIAL_TOKENS["path_start"]

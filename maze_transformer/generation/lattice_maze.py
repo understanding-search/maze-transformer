@@ -1,13 +1,16 @@
 import random
-from dataclasses import dataclass
-from typing import NamedTuple, cast
 import warnings
-import enum
+from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
-from jaxtyping import Float, Int, Bool, Shaped
+from jaxtyping import Bool, Int, Shaped
+from muutils.json_serialize.serializable_dataclass import (
+    SerializableDataclass,
+    serializable_dataclass,
+    serializable_field,
+)
 from muutils.misc import list_split
-from muutils.json_serialize.serializable_dataclass import SerializableDataclass, serializable_dataclass, serializable_field
 from muutils.tensor_utils import NDArray
 
 from maze_transformer.generation.constants import (
@@ -25,6 +28,7 @@ from maze_transformer.utils.token_utils import (
 
 RGB = tuple[int, int, int]
 
+
 @dataclass(frozen=True)
 class PixelColors:
     WALL: RGB = (0, 0, 0)
@@ -33,6 +37,7 @@ class PixelColors:
     END: RGB = (255, 0, 0)
     PATH: RGB = (0, 0, 255)
 
+
 @dataclass(frozen=True)
 class AsciiChars:
     WALL: str = "#"
@@ -40,6 +45,7 @@ class AsciiChars:
     START: str = "S"
     END: str = "E"
     PATH: str = "X"
+
 
 ASCII_PIXEL_PAIRINGS: dict[RGB, str] = {
     AsciiChars.WALL: PixelColors.WALL,
@@ -93,6 +99,7 @@ class LatticeMaze(SerializableDataclass):
     Note: the bottom row connections going down, and the
     right-hand connections going right, will always be False.
     """
+
     connection_list: Bool[np.ndarray, "lattice_dim x y"]
     generation_meta: dict | None = serializable_field(default=None, compare=False)
     lattice_dim: int = serializable_field(default=2)
@@ -100,7 +107,6 @@ class LatticeMaze(SerializableDataclass):
     grid_shape = property(lambda self: self.connection_list.shape[1:])
 
     n_connections = property(lambda self: self.connection_list.sum())
-
 
     # ============================================================
     # basic methods
@@ -135,7 +141,10 @@ class LatticeMaze(SerializableDataclass):
 
         output: CoordArray = np.array(neighbors)
         if len(neighbors) > 0:
-            assert output.shape == (len(neighbors), 2), f"invalid shape: {output.shape}, expected ({len(neighbors)}, 2))\n{c = }\n{neighbors = }\n{self.as_ascii()}"
+            assert output.shape == (
+                len(neighbors),
+                2,
+            ), f"invalid shape: {output.shape}, expected ({len(neighbors)}, 2))\n{c = }\n{neighbors = }\n{self.as_ascii()}"
         return output
 
     def find_shortest_path(
@@ -357,7 +366,7 @@ class LatticeMaze(SerializableDataclass):
         assert self.lattice_dim == 2, "only 2D mazes are supported"
         # Create an empty pixel grid with walls
         pixel_grid: Int[np.ndarray, "x y"] = np.full(
-            (self.grid_shape[0] * 2 + 1, self.grid_shape[1] * 2 + 1), 
+            (self.grid_shape[0] * 2 + 1, self.grid_shape[1] * 2 + 1),
             False,
             dtype=np.bool_,
         )
@@ -384,7 +393,9 @@ class LatticeMaze(SerializableDataclass):
         return self._as_pixels()
 
     @classmethod
-    def _from_pixel_grid(cls, pixel_grid: Bool[np.ndarray, "x y"]) -> tuple[Bool[np.ndarray, "lattice_dim x y"], tuple[int, int]]:
+    def _from_pixel_grid(
+        cls, pixel_grid: Bool[np.ndarray, "x y"]
+    ) -> tuple[Bool[np.ndarray, "lattice_dim x y"], tuple[int, int]]:
         grid_shape = (pixel_grid.shape[0] // 2, pixel_grid.shape[1] // 2)
         connection_list = np.zeros((2, *grid_shape), dtype=np.bool_)
 
@@ -403,16 +414,19 @@ class LatticeMaze(SerializableDataclass):
         assert output.grid_shape == grid_shape
         return output
 
-
     @classmethod
     def _from_pixel_grid_with_positions(
         cls,
         pixel_grid: Int[np.ndarray, "x y rgb"],
         marked_positions: dict[str, RGB],
-    ) -> tuple[Bool[np.ndarray, "lattice_dim x y"], tuple[int, int], dict[str, CoordArray]]:
+    ) -> tuple[
+        Bool[np.ndarray, "lattice_dim x y"], tuple[int, int], dict[str, CoordArray]
+    ]:
         # Convert RGB pixel grid to Bool pixel grid
-        pixel_grid_bw: Bool[np.ndarray, "x y"] = ~np.all(pixel_grid == PixelColors.WALL, axis=-1)
-        
+        pixel_grid_bw: Bool[np.ndarray, "x y"] = ~np.all(
+            pixel_grid == PixelColors.WALL, axis=-1
+        )
+
         connection_list, grid_shape = cls._from_pixel_grid(pixel_grid_bw)
 
         # Find any marked positions
@@ -423,12 +437,11 @@ class LatticeMaze(SerializableDataclass):
             for pos in pos_temp:
                 # if it is a coordinate and not connection (transform position, %2==1)
                 if pos[0] % 2 == 1 and pos[1] % 2 == 1:
-                    pos_save.append((pos[0]//2, pos[1]//2))
+                    pos_save.append((pos[0] // 2, pos[1] // 2))
 
             out_positions[key] = np.array(pos_save)
 
         return connection_list, grid_shape, out_positions
-
 
     # ============================================================
     # to and from ASCII
@@ -438,11 +451,13 @@ class LatticeMaze(SerializableDataclass):
         pixel_grid: Bool[np.ndarray, "x y"] = self._as_pixels()
 
         # Replace pixel values with ASCII characters.
-        ascii_grid: Shaped[np.ndarray, "x y"] = np.full(pixel_grid.shape, AsciiChars.WALL, dtype=str)
+        ascii_grid: Shaped[np.ndarray, "x y"] = np.full(
+            pixel_grid.shape, AsciiChars.WALL, dtype=str
+        )
         ascii_grid[pixel_grid == True] = AsciiChars.OPEN
 
         return ascii_grid
-    
+
     def as_ascii(self) -> str:
         """return an ASCII grid of the maze"""
         ascii_grid: Shaped[np.ndarray, "x y"] = self._as_ascii_grid()
@@ -452,12 +467,14 @@ class LatticeMaze(SerializableDataclass):
     def from_ascii(cls, ascii_str: str) -> "LatticeMaze":
         lines: list[list[str]] = ascii_str.strip().split("\n")
         ascii_grid = np.array([list(line) for line in lines], dtype=str)
-        pixel_grid = (ascii_grid == AsciiChars.OPEN)
+        pixel_grid = ascii_grid == AsciiChars.OPEN
         return cls.from_pixels(pixel_grid)
+
 
 @serializable_dataclass(frozen=True, kw_only=True)
 class TargetedLatticeMaze(LatticeMaze):
     """A LatticeMaze with a start and end position"""
+
     start_pos: Coord
     end_pos: Coord
 
@@ -466,10 +483,20 @@ class TargetedLatticeMaze(LatticeMaze):
         self.__dict__["start_pos"] = np.array(self.start_pos)
         self.__dict__["end_pos"] = np.array(self.end_pos)
         # check that start and end are in bounds
-        if self.start_pos[0] >= self.grid_shape[0] or self.start_pos[1] >= self.grid_shape[1]:
-            raise ValueError(f"start_pos {self.start_pos} is out of bounds for grid shape {self.grid_shape}")
-        if self.end_pos[0] >= self.grid_shape[0] or self.end_pos[1] >= self.grid_shape[1]:
-            raise ValueError(f"end_pos {self.end_pos} is out of bounds for grid shape {self.grid_shape}")
+        if (
+            self.start_pos[0] >= self.grid_shape[0]
+            or self.start_pos[1] >= self.grid_shape[1]
+        ):
+            raise ValueError(
+                f"start_pos {self.start_pos} is out of bounds for grid shape {self.grid_shape}"
+            )
+        if (
+            self.end_pos[0] >= self.grid_shape[0]
+            or self.end_pos[1] >= self.grid_shape[1]
+        ):
+            raise ValueError(
+                f"end_pos {self.end_pos} is out of bounds for grid shape {self.grid_shape}"
+            )
 
     @classmethod
     def from_lattice_maze(
@@ -483,9 +510,8 @@ class TargetedLatticeMaze(LatticeMaze):
             start_pos=start_pos,
             end_pos=end_pos,
         )
-    
-    def as_pixels(self) -> Int[np.ndarray, "x y rgb"]:
 
+    def as_pixels(self) -> Int[np.ndarray, "x y rgb"]:
         # convert original bool pixel grid to RGB
         pixel_grid_bw: Bool[np.ndarray, "x y"] = self._as_pixels()
         pixel_grid: Int[np.ndarray, "x y rgb"] = np.full(
@@ -494,28 +520,42 @@ class TargetedLatticeMaze(LatticeMaze):
         pixel_grid[pixel_grid_bw == True] = PixelColors.OPEN
 
         # set start and end
-        pixel_grid[self.start_pos[0]*2+1, self.start_pos[1]*2+1] = PixelColors.START
-        pixel_grid[self.end_pos[0]*2+1, self.end_pos[1]*2+1] = PixelColors.END
+        pixel_grid[
+            self.start_pos[0] * 2 + 1, self.start_pos[1] * 2 + 1
+        ] = PixelColors.START
+        pixel_grid[self.end_pos[0] * 2 + 1, self.end_pos[1] * 2 + 1] = PixelColors.END
 
         return pixel_grid
 
-
     @classmethod
     def from_pixels(
-            cls, 
-            pixel_grid: Int[np.ndarray, "x y rgb"],
-        ) -> "TargetedLatticeMaze":
-        connection_list: Bool[np.ndarray, "lattice_dim x y"]; grid_shape: tuple[int, int]; out_positions: dict[str, CoordArray]
-        connection_list, grid_shape, start_end_pos = cls._from_pixel_grid_with_positions(
-            pixel_grid = pixel_grid,
-            marked_positions = dict(start=PixelColors.START, end=PixelColors.END),
+        cls,
+        pixel_grid: Int[np.ndarray, "x y rgb"],
+    ) -> "TargetedLatticeMaze":
+        connection_list: Bool[np.ndarray, "lattice_dim x y"]
+        grid_shape: tuple[int, int]
+        out_positions: dict[str, CoordArray]
+        (
+            connection_list,
+            grid_shape,
+            start_end_pos,
+        ) = cls._from_pixel_grid_with_positions(
+            pixel_grid=pixel_grid,
+            marked_positions=dict(start=PixelColors.START, end=PixelColors.END),
         )
         start_pos, end_pos = start_end_pos["start"], start_end_pos["end"]
-        assert start_pos.shape == (1, 2), f"start_pos {start_pos} has shape {start_pos.shape}, expected shape (1, 2)"
-        assert end_pos.shape == (1, 2), f"end_pos {end_pos} has shape {end_pos.shape}, expected shape (1, 2)"
-        return cls(connection_list=connection_list, start_pos=start_pos[0], end_pos=end_pos[0])
+        assert start_pos.shape == (
+            1,
+            2,
+        ), f"start_pos {start_pos} has shape {start_pos.shape}, expected shape (1, 2)"
+        assert end_pos.shape == (
+            1,
+            2,
+        ), f"end_pos {end_pos} has shape {end_pos.shape}, expected shape (1, 2)"
+        return cls(
+            connection_list=connection_list, start_pos=start_pos[0], end_pos=end_pos[0]
+        )
 
-    
     def as_ascii(self) -> str:
         """return an ASCII grid of the maze"""
         ascii_grid: Shaped[np.ndarray, "x y"] = self._as_ascii_grid()
@@ -537,8 +577,8 @@ class TargetedLatticeMaze(LatticeMaze):
         for ascii_char, pixel_color in ASCII_PIXEL_PAIRINGS.items():
             pixel_grid[ascii_grid == ascii_char] = pixel_color
 
-
         return cls.from_pixels(pixel_grid)
+
 
 @serializable_dataclass(frozen=True, kw_only=True)
 class SolvedMaze(LatticeMaze):
@@ -550,7 +590,7 @@ class SolvedMaze(LatticeMaze):
     @property
     def start_pos(self) -> Coord:
         return self.solution[0]
-    
+
     @property
     def end_pos(self) -> Coord:
         return self.solution[-1]
@@ -558,18 +598,25 @@ class SolvedMaze(LatticeMaze):
     # for backwards compatibility
     @property
     def maze(self) -> LatticeMaze:
-        warnings.warn("maze is deprecated, SolvedMaze now inherits from LatticeMaze", DeprecationWarning)
+        warnings.warn(
+            "maze is deprecated, SolvedMaze now inherits from LatticeMaze",
+            DeprecationWarning,
+        )
         return self
 
     @classmethod
-    def from_lattice_maze(cls, lattice_maze: LatticeMaze, solution: list[CoordTup]) -> "SolvedMaze":
+    def from_lattice_maze(
+        cls, lattice_maze: LatticeMaze, solution: list[CoordTup]
+    ) -> "SolvedMaze":
         return cls(
             connection_list=lattice_maze.connection_list,
             solution=solution,
         )
 
     @classmethod
-    def from_targeted_lattice_maze(cls, targeted_lattice_maze: TargetedLatticeMaze) -> "SolvedMaze":
+    def from_targeted_lattice_maze(
+        cls, targeted_lattice_maze: TargetedLatticeMaze
+    ) -> "SolvedMaze":
         """solves the given targeted lattice maze and returns a SolvedMaze"""
         solution: list[CoordTup] = targeted_lattice_maze.find_shortest_path(
             targeted_lattice_maze.start_pos,
@@ -584,7 +631,9 @@ class SolvedMaze(LatticeMaze):
     def from_tokens(cls, tokens: list[str], data_cfg) -> "SolvedMaze":
         maze: LatticeMaze = LatticeMaze.from_tokens(tokens)
         path_tokens: list[str] = get_path_tokens(tokens)
-        solution: list[str | tuple[int, int]] = decode_maze_tokens_to_coords(path_tokens, data_cfg)
+        solution: list[str | tuple[int, int]] = decode_maze_tokens_to_coords(
+            path_tokens, data_cfg
+        )
 
         assert len(solution) > 0, f"No solution found: {solution = }"
 
@@ -593,17 +642,14 @@ class SolvedMaze(LatticeMaze):
             solution_np: CoordArray = np.array(solution_cast)
         except ValueError as e:
             raise ValueError(f"Invalid solution: {solution = }") from e
-        
-        return cls.from_lattice_maze(lattice_maze=maze, solution=solution_np)
 
+        return cls.from_lattice_maze(lattice_maze=maze, solution=solution_np)
 
     def as_tuple(self) -> tuple[LatticeMaze, CoordArray]:
         warnings.warn("as_tuple is deprecated", DeprecationWarning)
         return self, self.solution
 
-
     def as_pixels(self) -> Int[np.ndarray, "x y rgb"]:
-
         # convert original bool pixel grid to RGB
         pixel_grid_bw: Bool[np.ndarray, "x y"] = self._as_pixels()
         pixel_grid: Int[np.ndarray, "x y rgb"] = np.full(
@@ -613,74 +659,108 @@ class SolvedMaze(LatticeMaze):
 
         # set solution
         for coord in self.solution:
-            pixel_grid[coord[0]*2+1, coord[1]*2+1] = PixelColors.PATH
+            pixel_grid[coord[0] * 2 + 1, coord[1] * 2 + 1] = PixelColors.PATH
 
         # set pixels between coords
         for index, coord in enumerate(self.solution[:-1]):
-            next_coord = self.solution[index+1]
+            next_coord = self.solution[index + 1]
             # check they are adjacent using norm
-            assert np.linalg.norm(np.array(coord) - np.array(next_coord)) == 1, f"Coords {coord} and {next_coord} are not adjacent"
+            assert (
+                np.linalg.norm(np.array(coord) - np.array(next_coord)) == 1
+            ), f"Coords {coord} and {next_coord} are not adjacent"
             # set pixel between them
-            pixel_grid[coord[0]*2+1 + next_coord[0] - coord[0], coord[1]*2+1 + next_coord[1] - coord[1]] = PixelColors.PATH
+            pixel_grid[
+                coord[0] * 2 + 1 + next_coord[0] - coord[0],
+                coord[1] * 2 + 1 + next_coord[1] - coord[1],
+            ] = PixelColors.PATH
 
         # set start and end
-        pixel_grid[self.start_pos[0]*2+1, self.start_pos[1]*2+1] = PixelColors.START
-        pixel_grid[self.end_pos[0]*2+1, self.end_pos[1]*2+1] = PixelColors.END
+        pixel_grid[
+            self.start_pos[0] * 2 + 1, self.start_pos[1] * 2 + 1
+        ] = PixelColors.START
+        pixel_grid[self.end_pos[0] * 2 + 1, self.end_pos[1] * 2 + 1] = PixelColors.END
 
         return pixel_grid
-        
+
     @classmethod
     def from_pixels(
-        cls, 
+        cls,
         pixel_grid: Int[np.ndarray, "x y rgb"],
     ) -> "SolvedMaze":
-        connection_list: Bool[np.ndarray, "lattice_dim x y"]; grid_shape: tuple[int, int]; out_positions: dict[str, CoordArray]
-        connection_list, grid_shape, start_end_pos = cls._from_pixel_grid_with_positions(
-            pixel_grid = pixel_grid,
-            marked_positions = dict(start=PixelColors.START, end=PixelColors.END, solution=PixelColors.PATH),
+        connection_list: Bool[np.ndarray, "lattice_dim x y"]
+        grid_shape: tuple[int, int]
+        out_positions: dict[str, CoordArray]
+        (
+            connection_list,
+            grid_shape,
+            start_end_pos,
+        ) = cls._from_pixel_grid_with_positions(
+            pixel_grid=pixel_grid,
+            marked_positions=dict(
+                start=PixelColors.START, end=PixelColors.END, solution=PixelColors.PATH
+            ),
         )
         temp_maze: LatticeMaze = LatticeMaze(connection_list=connection_list)
 
         # start and end pos
         start_pos, end_pos = start_end_pos["start"], start_end_pos["end"]
-        assert start_pos.shape == (1, 2), f"start_pos {start_pos} has shape {start_pos.shape}, expected shape (1, 2)"
-        assert end_pos.shape == (1, 2), f"end_pos {end_pos} has shape {end_pos.shape}, expected shape (1, 2)"
+        assert start_pos.shape == (
+            1,
+            2,
+        ), f"start_pos {start_pos} has shape {start_pos.shape}, expected shape (1, 2)"
+        assert end_pos.shape == (
+            1,
+            2,
+        ), f"end_pos {end_pos} has shape {end_pos.shape}, expected shape (1, 2)"
 
         # solution
         solution_raw: CoordArray = start_end_pos["solution"]
-        assert solution_raw.shape[1] == 2, f"solution {solution_raw} has shape {solution_raw.shape}, expected shape (n, 2)"
+        assert (
+            solution_raw.shape[1] == 2
+        ), f"solution {solution_raw} has shape {solution_raw.shape}, expected shape (n, 2)"
         # order the solution, by creating a list from the start to the end
-        solution_raw_list: list[CoordTup] = [tuple(c) for c in solution_raw] + [tuple(end_pos[0])]
+        solution_raw_list: list[CoordTup] = [tuple(c) for c in solution_raw] + [
+            tuple(end_pos[0])
+        ]
         solution: list[CoordTup] = [tuple(start_pos[0])]
         while solution[-1] != tuple(end_pos[0]):
             # use `get_coord_neighbors` to find connected neighbors
             neighbors: CoordArray = temp_maze.get_coord_neighbors(solution[-1])
             # TODO: make this less ugly
-            assert (len(neighbors.shape) == 2) and (neighbors.shape[1] == 2), f"neighbors {neighbors} has shape {neighbors.shape}, expected shape (n, 2)\n{neighbors = }\n{solution = }\n{solution_raw = }\n{temp_maze.as_ascii()}"
+            assert (len(neighbors.shape) == 2) and (
+                neighbors.shape[1] == 2
+            ), f"neighbors {neighbors} has shape {neighbors.shape}, expected shape (n, 2)\n{neighbors = }\n{solution = }\n{solution_raw = }\n{temp_maze.as_ascii()}"
             # neighbors = neighbors[:, [1, 0]]
             # filter out neighbors that are not in the raw solution
-            neighbors_filtered: CoordArray = np.array([
-                coord 
-                for coord in neighbors
-                if (
-                    tuple(coord) in solution_raw_list
-                    and not tuple(coord) in solution
-                )
-            ])
+            neighbors_filtered: CoordArray = np.array(
+                [
+                    coord
+                    for coord in neighbors
+                    if (
+                        tuple(coord) in solution_raw_list
+                        and not tuple(coord) in solution
+                    )
+                ]
+            )
             # assert only one element is left, and then add it to the solution
-            assert neighbors_filtered.shape == (1,2), f"neighbors_filtered has shape {neighbors_filtered.shape}, expected shape (1, 2)\n{neighbors = }\n{neighbors_filtered = }\n{solution = }\n{solution_raw_list = }\n{temp_maze.as_ascii()}"
+            assert neighbors_filtered.shape == (
+                1,
+                2,
+            ), f"neighbors_filtered has shape {neighbors_filtered.shape}, expected shape (1, 2)\n{neighbors = }\n{neighbors_filtered = }\n{solution = }\n{solution_raw_list = }\n{temp_maze.as_ascii()}"
             solution.append(tuple(neighbors_filtered[0]))
 
         # assert the solution is complete
-        assert solution[0] == tuple(start_pos[0]), f"solution {solution} does not start at start_pos {start_pos}"
-        assert solution[-1] == tuple(end_pos[0]), f"solution {solution} does not end at end_pos {end_pos}"
-
+        assert solution[0] == tuple(
+            start_pos[0]
+        ), f"solution {solution} does not start at start_pos {start_pos}"
+        assert solution[-1] == tuple(
+            end_pos[0]
+        ), f"solution {solution} does not end at end_pos {end_pos}"
 
         return cls(
             connection_list=np.array(connection_list),
             solution=np.array(solution),
         )
-
 
     def as_ascii(self) -> str:
         """return an ASCII grid of the maze"""

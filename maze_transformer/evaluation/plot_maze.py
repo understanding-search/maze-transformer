@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from jaxtyping import Float, Bool
+from jaxtyping import Bool, Float
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
@@ -295,9 +295,9 @@ class MazePlot:
             self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
 
     def _lattice_maze_to_img(
-            self, 
-            connection_val_scale: float = 0.93,
-        ) -> Bool[np.ndarray, "row col"]:
+        self,
+        connection_val_scale: float = 0.93,
+    ) -> Bool[np.ndarray, "row col"]:
         """
         Build an image to visualise the maze.
         Each "unit" consists of a node and the right and lower adjacent wall/connection. Its area is ul * ul.
@@ -407,11 +407,14 @@ class MazePlot:
         )
 
     def as_ascii(
-            self, 
-            start: CoordTup = None, end: CoordTup = None,
-            char_wall: str = "#", char_open: str = " ",
-            char_start: str = "S", char_end: str = "E",
-        ):
+        self,
+        start: CoordTup = None,
+        end: CoordTup = None,
+        char_wall: str = "#",
+        char_open: str = " ",
+        char_start: str = "S",
+        char_end: str = "E",
+    ):
         """
         Returns an ASCII visualization of the maze.
         Courtesy of ChatGPT
@@ -428,17 +431,9 @@ class MazePlot:
         # Iterate through each element of the maze and print the appropriate symbol
         for i in range(n_rows):
             for j in range(n_cols):
-                if (
-                    start is not None 
-                    and start[0] == i - 1 
-                    and start[1] == j - 1
-                ):
+                if start is not None and start[0] == i - 1 and start[1] == j - 1:
                     maze_str += char_start
-                elif (
-                    end is not None 
-                    and end[0] == i - 1 
-                    and end[1] == j - 1
-                ):
+                elif end is not None and end[0] == i - 1 and end[1] == j - 1:
                     maze_str += char_end
                 elif maze[i, j] == -1:
                     maze_str += char_wall

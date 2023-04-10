@@ -153,7 +153,9 @@ def evaluate_model(
     for batch in chunks(dataset.mazes_tokens, batch_size):
         # TODO: This won't be needed after #124, then we can call mazes_objs instead
         # https://github.com/orgs/AISC-understanding-search/projects/1/views/1?pane=issue&itemId=23879308
-        solved_mazes: SolvedMaze = [SolvedMaze.from_tokens(tokens, dataset.cfg) for tokens in batch]
+        solved_mazes: SolvedMaze = [
+            SolvedMaze.from_tokens(tokens, dataset.cfg) for tokens in batch
+        ]
 
         predictions = predict_maze_paths(
             tokens_batch=batch,

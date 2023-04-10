@@ -20,7 +20,9 @@ def test_gen_dfs_oblong():
 
 def test_gen_dfs_with_solution():
     three_by_three: Coord = np.array([3, 3])
-    maze, solution = LatticeMazeGenerators.gen_dfs_with_solution(three_by_three).as_tuple()
+    maze, solution = LatticeMazeGenerators.gen_dfs_with_solution(
+        three_by_three
+    ).as_tuple()
 
     assert maze.connection_list.shape == (2, 3, 3)
     assert len(solution[0]) == 2

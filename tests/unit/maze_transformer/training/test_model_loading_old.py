@@ -2,16 +2,16 @@
 test loading of old style models
 """
 import json
-from pathlib import Path
 
 import pytest
 import torch
 
-from maze_transformer.evaluation.eval_model import load_model_with_configs
-from maze_transformer.training.config import ConfigHolder, TrainConfig, MazeDatasetConfig, BaseGPTConfig
-from maze_transformer.training.wandb_logger import WandbProject
-from scripts.create_dataset import create_dataset
-from scripts.train_model import train_model
+from maze_transformer.training.config import (
+    BaseGPTConfig,
+    ConfigHolder,
+    MazeDatasetConfig,
+    TrainConfig,
+)
 
 
 @pytest.mark.usefixtures("temp_dir")
@@ -21,7 +21,7 @@ def test_model_loading_notrain(temp_dir):
         dataset_cfg=MazeDatasetConfig(name="test_cfg_save-data", grid_n=5, n_mazes=10),
         model_cfg=BaseGPTConfig(
             name="test_cfg_save-model",
-            act_fn="relu", # need an actual function here since HookedTransformer will complain otherwise
+            act_fn="relu",  # need an actual function here since HookedTransformer will complain otherwise
             d_model=128,
             d_head=64,
             n_layers=4,

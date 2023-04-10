@@ -41,7 +41,9 @@ def test_model_loading(temp_dir):
     run_folder_path = [x for x in run_folder_path.glob("*") if x.is_dir()][0]
 
     # Load model using our function (with layernorm folding etc.)
-    model, cfg = load_model_with_configs(run_folder_path / "model.final.pt", fold_ln=False)
+    model, cfg = load_model_with_configs(
+        run_folder_path / "model.final.pt", fold_ln=False
+    )
 
     # Load model manually without folding
     model_state_dict = torch.load(run_folder_path / "model.final.pt")

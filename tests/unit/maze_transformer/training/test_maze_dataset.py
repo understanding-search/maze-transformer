@@ -22,8 +22,7 @@ def test_dataset_construction():
     # check the tokenization
 
     test_tokenizations = [
-        maze_to_tokens(sm, node_token_map=config.node_token_map)
-        for sm in solved_mazes
+        maze_to_tokens(sm, node_token_map=config.node_token_map) for sm in solved_mazes
     ]
 
     # the adj_list always gets shuffled, so easier to check the paths

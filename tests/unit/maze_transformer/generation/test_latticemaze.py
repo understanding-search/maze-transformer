@@ -1,8 +1,12 @@
 import numpy as np
 import pytest
 
-from maze_transformer.generation.generators import LatticeMazeGenerators, GENERATORS_MAP
-from maze_transformer.generation.lattice_maze import LatticeMaze, TargetedLatticeMaze, SolvedMaze
+from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
+from maze_transformer.generation.lattice_maze import (
+    LatticeMaze,
+    SolvedMaze,
+    TargetedLatticeMaze,
+)
 from maze_transformer.generation.utils import bool_array_from_string
 from tests.helpers import utils
 
@@ -11,7 +15,7 @@ def test_pixels_ascii_roundtrip():
     """tests all generators work and can be written to/from ascii and pixels"""
     n: int = 5
     for maze_gen_func in GENERATORS_MAP.values():
-        maze: LatticeMaze = maze_gen_func(np.array([n,n]))
+        maze: LatticeMaze = maze_gen_func(np.array([n, n]))
 
         maze_pixels: np.ndarray = maze.as_pixels()
         maze_ascii: str = maze.as_ascii()
@@ -19,15 +23,23 @@ def test_pixels_ascii_roundtrip():
         assert maze == LatticeMaze.from_pixels(maze_pixels)
         assert maze == LatticeMaze.from_ascii(maze_ascii)
 
-        assert maze_pixels.shape == (n*2+1, n*2+1), f"{maze_pixels.shape} != {(n*2+1, n*2+1)}"
-        assert all(n*2+1 == len(line) for line in maze_ascii.splitlines()), f"{maze_ascii}"
+        assert maze_pixels.shape == (
+            n * 2 + 1,
+            n * 2 + 1,
+        ), f"{maze_pixels.shape} != {(n*2+1, n*2+1)}"
+        assert all(
+            n * 2 + 1 == len(line) for line in maze_ascii.splitlines()
+        ), f"{maze_ascii}"
+
 
 def test_targeted_solved_maze():
     n: int = 5
 
     for maze_gen_func in GENERATORS_MAP.values():
-        maze: LatticeMaze = maze_gen_func(np.array([n,n]))
-        tgt_maze: TargetedLatticeMaze = TargetedLatticeMaze.from_lattice_maze(maze, (0,0), (n-1,n-1))
+        maze: LatticeMaze = maze_gen_func(np.array([n, n]))
+        tgt_maze: TargetedLatticeMaze = TargetedLatticeMaze.from_lattice_maze(
+            maze, (0, 0), (n - 1, n - 1)
+        )
 
         tgt_maze_pixels: np.ndarray = tgt_maze.as_pixels()
         tgt_maze_ascii: str = tgt_maze.as_ascii()
@@ -35,8 +47,14 @@ def test_targeted_solved_maze():
         assert tgt_maze == TargetedLatticeMaze.from_pixels(tgt_maze_pixels)
         assert tgt_maze == TargetedLatticeMaze.from_ascii(tgt_maze_ascii)
 
-        assert tgt_maze_pixels.shape == (n*2+1, n*2+1, 3), f"{tgt_maze_pixels.shape} != {(n*2+1, n*2+1, 3)}"
-        assert all(n*2+1 == len(line) for line in tgt_maze_ascii.splitlines()), f"{tgt_maze_ascii}"
+        assert tgt_maze_pixels.shape == (
+            n * 2 + 1,
+            n * 2 + 1,
+            3,
+        ), f"{tgt_maze_pixels.shape} != {(n*2+1, n*2+1, 3)}"
+        assert all(
+            n * 2 + 1 == len(line) for line in tgt_maze_ascii.splitlines()
+        ), f"{tgt_maze_ascii}"
 
         solved_maze: SolvedMaze = SolvedMaze.from_targeted_lattice_maze(tgt_maze)
 
@@ -46,9 +64,14 @@ def test_targeted_solved_maze():
         assert solved_maze == SolvedMaze.from_pixels(solved_maze_pixels)
         assert solved_maze == SolvedMaze.from_ascii(solved_maze_ascii)
 
-        assert solved_maze_pixels.shape == (n*2+1, n*2+1, 3), f"{solved_maze_pixels.shape} != {(n*2+1, n*2+1, 3)}"
-        assert all(n*2+1 == len(line) for line in solved_maze_ascii.splitlines()), f"{solved_maze_ascii}"
-
+        assert solved_maze_pixels.shape == (
+            n * 2 + 1,
+            n * 2 + 1,
+            3,
+        ), f"{solved_maze_pixels.shape} != {(n*2+1, n*2+1, 3)}"
+        assert all(
+            n * 2 + 1 == len(line) for line in solved_maze_ascii.splitlines()
+        ), f"{solved_maze_ascii}"
 
 
 def test_as_adj_list():

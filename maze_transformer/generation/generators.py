@@ -2,9 +2,8 @@ import random
 from typing import Any, Callable
 
 import numpy as np
-from jaxtyping import Int
-from maze_transformer.generation.constants import CoordArray
 
+from maze_transformer.generation.constants import CoordArray
 from maze_transformer.generation.lattice_maze import (
     NEIGHBORS_MASK,
     Coord,

@@ -1,9 +1,8 @@
-from typing import Iterable, Optional, Protocol, TypeAlias
+from typing import Iterable, Optional, Protocol
 
 import numpy as np
-from jaxtyping import Int
 
-from maze_transformer.generation.constants import Coord, CoordTup, CoordArray
+from maze_transformer.generation.constants import Coord, CoordArray, CoordTup
 from maze_transformer.generation.lattice_maze import LatticeMaze
 from maze_transformer.utils.utils import register_method
 
@@ -71,7 +70,9 @@ class PathEvals:
 
     @register_method(evals)
     @staticmethod
-    def num_connections_adjacent(maze: LatticeMaze, prediction: CoordArray, **_) -> float:
+    def num_connections_adjacent(
+        maze: LatticeMaze, prediction: CoordArray, **_
+    ) -> float:
         """number of connections in prediction which are are valid paths on the maze"""
         n_connected: float = 0.0
         for step_start, step_end in path_as_segments_iter(prediction):
@@ -94,7 +95,9 @@ class PathEvals:
 
     @register_method(evals)
     @staticmethod
-    def exact_path_predicted(solution: CoordArray, prediction: CoordArray, **_) -> float:
+    def exact_path_predicted(
+        solution: CoordArray, prediction: CoordArray, **_
+    ) -> float:
         """Was the maze successfully solved?"""
         return float(np.array_equal(solution, prediction))
 
