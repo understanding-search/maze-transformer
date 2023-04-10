@@ -32,7 +32,7 @@ class RandomBaseline(HookedTransformer):
     def __init__(self, config: ConfigHolder, bias: float = 0.0):
         self.config = config
         self.bias = bias
-        super().__init__(cfg=config.transformer_config, tokenizer=config.tokenizer)
+        super().__init__(cfg=config.transformer_config(), tokenizer=config.tokenizer)
 
     def _get_coord_neighbors(
         self, maze: LatticeMaze, current_position: CoordTup

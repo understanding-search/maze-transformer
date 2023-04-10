@@ -179,7 +179,6 @@ class ConfigHolder(SerializableDataclass):
         else:
             return HuggingMazeTokenizer(self.dataset_cfg)
 
-    @cached_property
     def transformer_config(self) -> HookedTransformerConfig:
         return HookedTransformerConfig(
             act_fn=self.model_cfg.act_fn,
@@ -191,4 +190,6 @@ class ConfigHolder(SerializableDataclass):
         )
 
     def create_model(self) -> HookedTransformer:
-        return HookedTransformer(cfg=self.transformer_config, tokenizer=self.tokenizer)
+        return HookedTransformer(
+            cfg=self.transformer_config(), tokenizer=self.tokenizer
+        )
