@@ -56,30 +56,30 @@ def apply_mapping(
     for item in iter:
         if item in mapping:
             output.append(mapping[item])
-        else:
-            match when_missing:
-                case "skip":
-                    continue
-                case "include":
-                    output.append(item)
-                case "except":
-                    raise ValueError(f"item {item} is missing from mapping {mapping}")
-                case _:
-                    raise ValueError(f"invalid value for {when_missing = }")
+            continue
+        match when_missing:
+            case "skip":
+                continue
+            case "include":
+                output.append(item)
+            case "except":
+                raise ValueError(f"item {item} is missing from mapping {mapping}")
+            case _:
+                raise ValueError(f"invalid value for {when_missing = }")
     return output
 
 
 def tokens_to_coords(
     tokens: list[str],
-    mazedata_cfg,  # TODO: cannot type this right now because importing MazeDatasetConfig causes a circular import
+    maze_data_cfg,  # TODO: cannot type this right now because importing MazeDatasetConfig causes a circular import
     when_noncoord: Literal["except", "skip", "include"] = "skip",
 ) -> list[str | CoordTup]:
-    return apply_mapping(tokens, mazedata_cfg.token_node_map, when_noncoord)
+    return apply_mapping(tokens, maze_data_cfg.token_node_map, when_noncoord)
 
 
 def coords_to_tokens(
     coords: list[str | CoordTup],
-    mazedata_cfg,  # TODO: cannot type this right now because importing MazeDatasetConfig causes a circular import
+    maze_data_cfg,  # TODO: cannot type this right now because importing MazeDatasetConfig causes a circular import
     when_noncoord: Literal["except", "skip", "include"] = "skip",
 ) -> list[str]:
-    return apply_mapping(coords, mazedata_cfg.node_token_map, when_noncoord)
+    return apply_mapping(coords, maze_data_cfg.node_token_map, when_noncoord)

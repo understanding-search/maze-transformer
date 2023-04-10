@@ -125,7 +125,7 @@ def predict_maze_paths(
         pred_tokens: list[str] = [data_cfg.token_arr[t] for t in preds]
         path_tokens = get_path_tokens(pred_tokens)
         path_coords = tokens_to_coords(
-            path_tokens, mazedata_cfg=data_cfg, when_noncoord="skip"
+            path_tokens, maze_data_cfg=data_cfg, when_noncoord="skip"
         )
         # This is the correct type when using "skip"
         paths.append(cast(list[tuple[int, int]], path_coords))
