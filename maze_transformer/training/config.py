@@ -179,8 +179,8 @@ class ConfigHolder(SerializableDataclass):
         else:
             return HuggingMazeTokenizer(self.dataset_cfg)
 
-    def create_model(self) -> HookedTransformer:
-        hooked_transformer_cfg: HookedTransformerConfig = HookedTransformerConfig(
+    def transformer_config(self) -> HookedTransformerConfig:
+        return HookedTransformerConfig(
             act_fn=self.model_cfg.act_fn,
             d_model=self.model_cfg.d_model,
             d_head=self.model_cfg.d_head,
@@ -188,4 +188,8 @@ class ConfigHolder(SerializableDataclass):
             n_ctx=self.dataset_cfg.seq_len_max,
             d_vocab=len(self.dataset_cfg.token_arr),
         )
-        return HookedTransformer(cfg=hooked_transformer_cfg, tokenizer=self.tokenizer)
+
+    def create_model(self) -> HookedTransformer:
+        return HookedTransformer(
+            cfg=self.transformer_config(), tokenizer=self.tokenizer
+        )

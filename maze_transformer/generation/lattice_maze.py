@@ -14,9 +14,9 @@ from maze_transformer.generation.constants import (
     CoordTup,
 )
 from maze_transformer.utils.token_utils import (
-    decode_maze_tokens_to_coords,
     get_adj_list_tokens,
     get_path_tokens,
+    tokens_to_coords,
 )
 
 
@@ -317,6 +317,6 @@ class SolvedMaze(NamedTuple):
     def from_tokens(cls, tokens: list[str], data_cfg) -> "SolvedMaze":
         maze = LatticeMaze.from_tokens(tokens)
         path_tokens = get_path_tokens(tokens)
-        solution = decode_maze_tokens_to_coords(path_tokens, data_cfg)
+        solution = tokens_to_coords(path_tokens, data_cfg)
 
         return cls(maze, cast(list[CoordTup], solution))
