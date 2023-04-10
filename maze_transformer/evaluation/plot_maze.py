@@ -12,7 +12,12 @@ from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
 from maze_transformer.generation.constants import Coord, CoordArray, CoordList, CoordTup
-from maze_transformer.generation.lattice_maze import Coord, CoordArray, LatticeMaze
+from maze_transformer.generation.lattice_maze import (
+    Coord,
+    CoordArray,
+    LatticeMaze,
+    TargetedLatticeMaze,
+)
 
 MAX_NODE_VALUE_EPSILON: float = 1e-10
 
@@ -408,38 +413,24 @@ class MazePlot:
 
     def as_ascii(
         self,
-        start: CoordTup = None,
-        end: CoordTup = None,
-        char_wall: str = "#",
-        char_open: str = " ",
-        char_start: str = "S",
-        char_end: str = "E",
+        start_pos: CoordTup = None,
+        end_pos: CoordTup = None,
     ):
-        """
-        Returns an ASCII visualization of the maze.
-        Courtesy of ChatGPT
-        """
-        old_unit_length_temp: float = self.unit_length
-        self.unit_length = 2
+        if start_pos is None:
+            if self.true_path is not None:
+                start_pos = self.true_path[0]
+        if end_pos is None:
+            if self.true_path is not None:
+                end_pos = self.true_path[-1]
 
-        # Determine the size of the maze
-        maze: Bool[np.ndarray, "x y"] = self._lattice_maze_to_img()
-        n_rows: int = maze.shape[0]
-        n_cols: int = maze.shape[1]
-        maze_str: str = ""
-
-        # Iterate through each element of the maze and print the appropriate symbol
-        for i in range(n_rows):
-            for j in range(n_cols):
-                if start is not None and start[0] == i - 1 and start[1] == j - 1:
-                    maze_str += char_start
-                elif end is not None and end[0] == i - 1 and end[1] == j - 1:
-                    maze_str += char_end
-                elif maze[i, j] == -1:
-                    maze_str += char_wall
-                else:
-                    maze_str += char_open
-            maze_str += "\n"  # Start a new line after each row
-
-        self.unit_length = old_unit_length_temp
-        return maze_str
+        if (start_pos is None) or (end_pos is None):
+            return self.maze.as_ascii()
+        elif (start_pos is not None) and (end_pos is not None):
+            tgt_maze: TargetedLatticeMaze = TargetedLatticeMaze.from_lattice_maze(
+                lattice_maze=self.maze,
+                start_pos=start_pos,
+                end_pos=end_pos,
+            )
+            return tgt_maze.as_ascii()
+        else:
+            raise ValueError("start_pos and end_pos must both be None or not None.")

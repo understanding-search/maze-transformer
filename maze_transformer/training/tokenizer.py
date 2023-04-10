@@ -141,7 +141,10 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         return super().batch_decode(sequences, skip_special_tokens, **kwargs)
 
     def to_ascii(
-        self, sequence: list[int | str] | ATensor, start=None, end=None
+        self,
+        sequence: list[int | str] | ATensor,
+        start_post=None,
+        end_pos=None,
     ) -> NDArray:
         # Sequence should be a single maze (not batch)
         if isinstance(sequence, list) and isinstance(sequence[0], str):
@@ -154,4 +157,4 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             str_sequence = self.batch_decode(sequence)
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence)
-        return MazePlot(lattice_maze).as_ascii(start=start, end=end)
+        return MazePlot(lattice_maze).as_ascii(start_pos=start_post, end_pos=end_pos)
