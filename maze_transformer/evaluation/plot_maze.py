@@ -16,6 +16,7 @@ from maze_transformer.generation.lattice_maze import (
     Coord,
     CoordArray,
     LatticeMaze,
+    SolvedMaze,
     TargetedLatticeMaze,
 )
 
@@ -135,6 +136,12 @@ class MazePlot:
         self.node_color_map: str = "Blues"
         self.target_token_coord: Coord = None
         self.preceding_tokens_coords: CoordArray = None
+
+        if isinstance(maze, TargetedLatticeMaze):
+            self.add_true_path(SolvedMaze.from_targeted_lattice_maze(maze).solution)
+
+        if isinstance(maze, SolvedMaze):
+            self.add_true_path(maze.solution)
 
     def add_true_path(
         self,
