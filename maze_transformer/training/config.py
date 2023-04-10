@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import cached_property
 from typing import Any, Type
+import warnings
 
 import torch
 from muutils.json_serialize import (
@@ -16,7 +17,7 @@ from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.training.mazedataset import MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MazeDatasetConfig
 from maze_transformer.training.tokenizer import HuggingMazeTokenizer
 
 
@@ -214,6 +215,13 @@ class ConfigHolder(SerializableDataclass):
             n_ctx=self.dataset_cfg.seq_len_max,
             d_vocab=len(self.dataset_cfg.token_arr),
         )
+
+    def transformer_config(self) -> HookedTransformerConfig:
+        warnings.warn(
+            "transformer_config is deprecated, use hooked_transformer_cfg instead",
+            DeprecationWarning,
+        )
+        return self.hooked_transformer_cfg
 
     def create_model(self) -> HookedTransformer:
         return HookedTransformer(

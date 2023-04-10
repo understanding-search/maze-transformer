@@ -10,14 +10,14 @@ from transformer_lens import HookedTransformer
 
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.generation.latticemaze import SolvedMaze
+from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder
-from maze_transformer.training.mazedataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 from maze_transformer.utils.token_utils import (
-    decode_maze_tokens_to_coords,
     get_path_tokens,
     get_tokens_up_to_path_start,
+    tokens_to_coords,
 )
 from maze_transformer.utils.utils import chunks
 
@@ -125,8 +125,8 @@ def predict_maze_paths(
     for preds in prediction_batch:
         pred_tokens: list[str] = [data_cfg.token_arr[t] for t in preds]
         path_tokens = get_path_tokens(pred_tokens)
-        path_coords = decode_maze_tokens_to_coords(
-            path_tokens, mazedata_cfg=data_cfg, when_noncoord="skip"
+        path_coords = tokens_to_coords(
+            path_tokens, maze_data_cfg=data_cfg, when_noncoord="skip"
         )
         # This is the correct type when using "skip"
         paths.append(cast(list[tuple[int, int]], path_coords))
@@ -170,6 +170,7 @@ def evaluate_model(
                     maze=maze,
                     solution=np.array(solution),
                     prediction=np.array(prediction),
+                    model=model,
                 )
                 for maze, solution, prediction in zip(mazes, solutions, predictions)
             )

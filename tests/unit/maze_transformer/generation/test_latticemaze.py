@@ -1,7 +1,7 @@
 import pytest
 
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.generation.latticemaze import LatticeMaze
+from maze_transformer.generation.lattice_maze import LatticeMaze
 from maze_transformer.generation.utils import bool_array_from_string
 from tests.helpers import utils
 
@@ -20,11 +20,13 @@ def test_as_adj_list():
 
     maze = LatticeMaze(connection_list=connection_list)
 
-    adjlist = maze.as_adj_list(shuffle_d0=False, shuffle_d1=False)
+    adj_list = maze.as_adj_list(shuffle_d0=False, shuffle_d1=False)
 
     expected = [[[0, 1], [1, 1]], [[0, 0], [0, 1]], [[1, 0], [1, 1]]]
 
-    assert utils.adjlist_to_nested_set(expected) == utils.adjlist_to_nested_set(adjlist)
+    assert utils.adj_list_to_nested_set(expected) == utils.adj_list_to_nested_set(
+        adj_list
+    )
 
 
 def test_get_nodes():

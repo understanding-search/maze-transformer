@@ -2,7 +2,7 @@ import pytest
 import torch
 
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
-from maze_transformer.training.mazedataset import MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MazeDatasetConfig
 
 
 def test_create_model_forward():

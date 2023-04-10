@@ -11,7 +11,7 @@ from transformer_lens import HookedTransformer
 
 from maze_transformer.training.config import ConfigHolder, TrainConfig
 from maze_transformer.training.dataset import GPTDatasetConfig
-from maze_transformer.training.mazedataset import MazeDataset
+from maze_transformer.training.maze_dataset import MazeDataset
 from maze_transformer.training.wandb_logger import WandbLogger
 
 
