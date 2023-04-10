@@ -128,7 +128,7 @@ class PathEvals:
                 streak_length += 1
 
         return streak_length
-    
+
     @register_method(evals)
     @staticmethod
     def distance_between_end_nodes(
