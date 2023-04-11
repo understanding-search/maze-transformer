@@ -1,6 +1,8 @@
+import enum
 import json
 import multiprocessing
 import os
+from pathlib import Path
 import warnings
 from functools import cached_property, partial
 from typing import Callable
@@ -118,13 +120,57 @@ class MazeDatasetConfig(GPTDatasetConfig):
 class MazeDataset(GPTDataset):
     """maze dataset"""
 
+
+    def __getitem__(self, index: int) -> ATensor[("tokens")]:
+        """index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
+
+        subseq: np.ndarray = self.mazes_array.arr[
+            self.mazes_array.indices[index] : self.mazes_array.indices[index+1]
+        ]
+        # left-pad the sequence
+        return torch.nn.functional.pad(
+            subseq,
+            (self.cfg.seq_len_max + 1 - len(subseq), 0),
+            value=self.cfg.padding_token_index,
+        )
+
+    def __len__(self) -> int:
+        return len(self.mazes_array.indices) - 1
+
+    def get_all_lengths(self) -> list[int]:
+        return self.mazes_array.get_all_lengths().tolist()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # ======================================================================
+    # ======================================================================
+    # ======================================================================
+    # EVERYTHING BELOW HERE SHOULD BE REMOVED
+    # ======================================================================
+    # ======================================================================
+    # ======================================================================
+
     def __init__(
         self,
         cfg: MazeDatasetConfig,
         mazes_objs: list[SolvedMaze] | None = None,
         mazes_tokens: list[list[str]] | None = None,
         mazes_array: IndexedArray | None = None,
-        paths: dict[str, str] = None,
     ) -> None:
         super().__init__()
 
@@ -191,37 +237,7 @@ class MazeDataset(GPTDataset):
                     f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_array.indices) = }"
                 )
 
-    def __getitem__(self, index: int) -> ATensor[("tokens")]:
-        """index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
-
-        # A nice-to-have refactor would be to have some notion of a minimum sequence length here, such that this method
-        # never returns a sequence below that length. The motivation here is that for a particular dataset we might know
-        # that the first N tokens are always part of the maze, so this method can safetly skip that many before it finds
-        # the start of the correct sequence. The min value could be part of the dataset config.
-
-        # last element in mazes_array.indices whose value is smaller than `index`
-        sequence_index: int = torch.searchsorted(self.mazes_array.indices, index) - 1
-        # slice the array from the start of the sequence to `index`, including `index`
-        end_arr_index: int = min(
-            index + 1,  # up to end of sequence
-            self.mazes_array.indices[sequence_index]
-            + self.cfg.seq_len_max,  # up to sequence length cutoff
-        )
-        subseq: ATensor = self.mazes_array.arr[
-            self.mazes_array.indices[sequence_index] : end_arr_index
-        ]
-        # left-pad the sequence
-        return torch.nn.functional.pad(
-            subseq,
-            (self.cfg.seq_len_max + 1 - len(subseq), 0),
-            value=self.cfg.padding_token_index,
-        )
-
-    def __len__(self) -> int:
-        return len(self.mazes_array.arr)
-
-    def get_all_lengths(self) -> list[int]:
-        return self.mazes_array.get_all_lengths().tolist()
+        raise NotImplementedError("TODO: remove this")
 
     @classmethod
     def gen_default(
@@ -280,6 +296,10 @@ class MazeDataset(GPTDataset):
 
     @classmethod
     def config_save_name(cls) -> str:
+        warnings.warn(
+            "MazeDataset.config_save_name is deprecated, use ZANJ instead",
+            DeprecationWarning,
+        )
         return cls.DISK_SAVE_FILES.cfg
 
     def disk_save(
@@ -290,6 +310,10 @@ class MazeDataset(GPTDataset):
         do_tokens: bool = True,
         do_tokenized: bool = True,
     ) -> None:
+        warnings.warn(
+            "MazeDataset.config_save_name is deprecated, use ZANJ instead",
+            DeprecationWarning,
+        )
         # make the appropriate directories
         print(f"saving to '{path_base}'")
         os.makedirs(path_base, exist_ok=False)
@@ -335,6 +359,10 @@ class MazeDataset(GPTDataset):
         do_tokens: bool = False,
         do_tokenized: bool = False,
     ) -> "MazeDataset":
+        warnings.warn(
+            "MazeDataset.config_save_name is deprecated, use ZANJ instead",
+            DeprecationWarning,
+        )
         cfg: MazeDatasetConfig | None = None
         if do_config:
             # load config from json

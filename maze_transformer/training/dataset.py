@@ -1,4 +1,6 @@
+import enum
 from functools import cached_property
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -6,7 +8,9 @@ from muutils.json_serialize import (
     SerializableDataclass,
     serializable_dataclass,
     serializable_field,
+    JSONitem,
 )
+from muutils.zanj import ZANJ
 from muutils.tensor_utils import DTYPE_MAP, ATensor
 from torch.utils.data import Dataset
 
@@ -114,6 +118,11 @@ class IndexedArray(SerializableDataclass):
         indices: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
         return cls(arr=arr, indices=indices)
 
+class SaveFormats(enum.Enum):
+    OBJECTS: str = "objects"
+    TOKENS: str = "tokens"
+    ARRAY: str = "array"
+
 
 class GPTDataset(Dataset):
     """wrapper for torch dataset with some extra functionality
@@ -121,11 +130,132 @@ class GPTDataset(Dataset):
     (meaning the functionality should be inherited in downstream classes)
     """
 
-    def get_all_lengths(self) -> list[int]:
-        """get the lengths of all sequences"""
+    @classmethod
+    def from_config(
+            cls, 
+            cfg: GPTDatasetConfig,
+            do_generate: bool = True,
+            load_local: bool = True,
+            save_local: bool = True,
+            save_formats: set[SaveFormats] = {SaveFormats.OBJECTS, SaveFormats.TOKENS},
+            do_download: bool = True,
+            local_base_path: Path = Path("data/maze_dataset"),
+            **kwargs,
+        ) -> None:
+        """base class for gpt datasets
+
+        priority of loading:
+        1. load from local
+        2. download
+        3. generate
+
+        note: `GPTDatasetConfig` should implement a `to_fname` method that returns a unique filename for the config
+
+        # Requires:
+        the following methods should be implemented in subclasses:
+         - `generate(cls, cfg: GPTDatasetConfig, **kwargs) -> GPTDataset`
+            generate the dataset from a given config. kwargs are passed through from `from_config`, and should only contain things that dont belong in the config (i.e. how many threads to use for generation)
+         - `serialize(self) -> JSONitem`
+            serialize the dataset to a ZANJ-serializable object, including:
+             - config
+             - data in formats specified by `self.save_formats`
+         - `load(cls, data: JSONitem) -> GPTDataset`
+            load the dataset from a ZANJ-serializable object
+         - `download(cls, cfg: GPTDatasetConfig, **kwargs) -> GPTDataset`
+            given a config, try to download a dataset from some source. kwargs are passed through from `from_config`, and should only contain things that dont belong in the config (i.e. some kind of auth token or source url)
+         - `__len__(self) -> int`
+            return the length of the dataset, required for `torch.utils.data.Dataset`
+         - `__getitem__(self, i: int) -> torch.Tensor`
+            return the ith item in the dataset, required for `torch.utils.data.Dataset`
+         - `get_all_lengths(self) -> list[int]`
+            get the lengths of all sequences in the dataset
+
+        # Parameters:
+         - `cfg : GPTDatasetConfig`   
+            config for the dataset, used to generate the dataset
+         - `do_generate : bool`   
+            whether to generate the dataset if it isn't found
+            (defaults to `True`)
+         - `load_local : bool`   
+            whether to try finding the dataset locally
+            (defaults to `True`)
+         - `save_local : bool`   
+            whether to save the dataset locally if it is generated or downloaded
+            (defaults to `True`)
+         - `save_formats : set[SaveFormats]`   
+            which formats to save the dataset in
+            (defaults to `{SaveFormats.OBJECTS, SaveFormats.TOKENS}`)
+         - `do_download : bool`   
+            whether to try downloading the dataset
+            (defaults to `True`)
+         - `local_base_path : Path`   
+            where to save the dataset
+            (defaults to `Path("data/maze_dataset")`)
+
+        # Returns:
+         - `GPTDataset`
+            the dataset, as you wanted it
+        
+        # Implements:
+         - `save(self, file_path: str) -> None`
+            save the dataset to a file, using ZANJ
+         - `read(cls, file_path: str) -> GPTDataset`
+            read the dataset from a file, using ZANJ
+
+        """
+        # self.cfg: GPTDatasetConfig = cfg
+        # self.save_formats: set[SaveFormats] = save_formats
+        # self.local_base_path: Path = local_base_path
+        
+        fname: str = cfg.to_fname()
+
+        if load_local:
+            if (local_base_path / fname).exists():
+                output: GPTDataset = cls.read(local_base_path / fname)
+                if output.cfg != cfg:
+                    raise ValueError(f"config mismatch: {cfg.diff(output.cfg)}")
+                return output
+
+        if do_download:
+            try:
+                output: GPTDataset = cls.download(cfg, **kwargs)
+                if save_local:
+                    output.save(local_base_path / fname)
+                return output
+            except NotImplementedError:
+                pass
+
+        if do_generate:
+            output: GPTDataset = cls.generate(cfg, **kwargs)
+            if save_local:
+                output.save(local_base_path / fname)
+            return output
+
+    def save(self, file_path: str, zanj: ZANJ | None = None):
+        if zanj is None:
+            zanj = ZANJ()
+        zanj.save(self.serialize(), file_path)
+
+    def read(cls, file_path: str, zanj: ZANJ | None = None):
+        if zanj is None:
+            zanj = ZANJ()
+        return cls.load(zanj.read(file_path))
+
+    def serialize(self) -> JSONitem:
+        raise NotImplementedError()
+    
+    @classmethod
+    def load(cls, data: JSONitem) -> "GPTDataset":
         raise NotImplementedError()
 
     @classmethod
-    def config_save_name(cls) -> str:
-        """name of the config file"""
+    def generate(cls, cfg: GPTDatasetConfig, **kwargs) -> "GPTDataset":
+        raise NotImplementedError()
+
+    @classmethod
+    def download(cls, cfg: GPTDatasetConfig, **kwargs) -> "GPTDataset":
+        raise NotImplementedError()
+
+    def get_all_lengths(self) -> list[int]:
+        """get the lengths of all sequences"""
         raise NotImplementedError()
