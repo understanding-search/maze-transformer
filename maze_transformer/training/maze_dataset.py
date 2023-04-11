@@ -3,12 +3,14 @@ import json
 import multiprocessing
 import os
 from pathlib import Path
+import typing
 import warnings
 from functools import cached_property, partial
 from typing import Callable
 
 import numpy as np
 import torch
+from jaxtyping import Int, Shaped
 from muutils.json_serialize import (
     JSONitem,
     json_serialize,
@@ -16,15 +18,15 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.json_serialize.util import safe_getsource, string_as_lines
-from muutils.misc import freeze
+from muutils.misc import freeze, sanitize_fname
 from muutils.statcounter import StatCounter
 from muutils.tensor_utils import ATensor, NDArray
 from tqdm import tqdm
 
 from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordArray, CoordTup
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
-from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
-from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, IndexedArray
+from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze, TargetedLatticeMaze
+from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, IndexedArray, SaveFormats
 from maze_transformer.training.tokenizer import maze_to_tokens
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
@@ -116,291 +118,97 @@ class MazeDatasetConfig(GPTDatasetConfig):
     def padding_token_index(self) -> str:
         return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
+    def to_fname(self) -> str:
+        self_json_str: str = json.dumps(self.serialize())
+        self_json_hash: int = int(abs(hash(self_json_str))%1e5)
+        return sanitize_fname(f"f{self.name}-g{self.grid_n}-n{self.n_mazes}-h{self_json_hash}.zanj")
+
 
 class MazeDataset(GPTDataset):
     """maze dataset"""
 
+    def __init__(
+            self, 
+            cfg: MazeDatasetConfig, 
+            mazes: typing.Sequence[SolvedMaze],
+        ) -> None:
+        super().__init__()
+        self.cfg: MazeDatasetConfig = cfg
+        self.mazes: list[SolvedMaze] = list(mazes)
 
-    def __getitem__(self, index: int) -> ATensor[("tokens")]:
+    def get(self, index: int, fmt: SaveFormats = SaveFormats.OBJECTS) -> SolvedMaze|list[str]|np.ndarray:
+        """get a single maze, as one of the formats"""
+        if fmt == SaveFormats.OBJECTS:
+            return self.mazes[index]
+        elif fmt == SaveFormats.TOKENS:
+            return maze_to_tokens(self.mazes[index], self.cfg.node_token_map)
+        elif fmt == SaveFormats.ARRAY:
+            raise NotImplementedError("getting as array not implemented yet")
+        else:
+            raise ValueError(f"unknown fmt {fmt}, expected an instance of `SaveFormats` enum")
+
+    def __getitem__(self, index: int) -> list[str]:
         """index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
 
-        subseq: np.ndarray = self.mazes_array.arr[
-            self.mazes_array.indices[index] : self.mazes_array.indices[index+1]
-        ]
-        # left-pad the sequence
-        return torch.nn.functional.pad(
-            subseq,
-            (self.cfg.seq_len_max + 1 - len(subseq), 0),
-            value=self.cfg.padding_token_index,
-        )
+        return maze_to_tokens(self.mazes[index], self.cfg.node_token_map)
+
+    mazes_objs: list[SolvedMaze] = property(lambda self: list(self.get_all(fmt=SaveFormats.OBJECTS)))
+    mazes_tokens: list[list[str]] = property(lambda self: list(self.get_all(fmt=SaveFormats.TOKENS)))
+    mazes_array: IndexedArray = property(lambda self: IndexedArray(self.get_all(fmt=SaveFormats.ARRAY)))
+    
 
     def __len__(self) -> int:
-        return len(self.mazes_array.indices) - 1
+        return len(self.mazes)
 
     def get_all_lengths(self) -> list[int]:
-        return self.mazes_array.get_all_lengths().tolist()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # ======================================================================
-    # ======================================================================
-    # ======================================================================
-    # EVERYTHING BELOW HERE SHOULD BE REMOVED
-    # ======================================================================
-    # ======================================================================
-    # ======================================================================
-
-    def __init__(
-        self,
-        cfg: MazeDatasetConfig,
-        mazes_objs: list[SolvedMaze] | None = None,
-        mazes_tokens: list[list[str]] | None = None,
-        mazes_array: IndexedArray | None = None,
-    ) -> None:
-        super().__init__()
-
-        self.cfg: MazeDatasetConfig = cfg
-
-        # get mode
-        if (
-            sum(1 if x is None else 0 for x in [mazes_objs, mazes_tokens, mazes_array])
-            < 1
-        ):
-            raise ValueError(
-                "at least one of mazes_objs, mazes_tokens, mazes_tokenized must be provided to MazeDataset"
-            )
-
-        # transfer
-        self.mazes_objs: list[SolvedMaze] | None = mazes_objs
-        self.mazes_tokens: list[list[str]] | None = mazes_tokens
-        self.mazes_array: IndexedArray | None = mazes_array
-
-        # process into tokens
-        if (self.mazes_objs is not None) and (self.mazes_tokens is None):
-            with multiprocessing.Pool() as pool:
-                self.mazes_tokens = list(
-                    tqdm(
-                        pool.map(
-                            partial(maze_to_tokens, node_token_map=cfg.node_token_map),
-                            self.mazes_objs,
-                        ),
-                        total=len(self.mazes_objs),
-                        desc="tokenizing mazes",
-                        unit="maze",
-                    )
-                )
-
-        # process tokens into tokenized
-        if (self.mazes_tokens is not None) and (mazes_array is None):
-            max_len: int = max(len(t) for t in self.mazes_tokens)
-            if max_len > cfg.seq_len_max:
-                raise ValueError(f"{max_len=} exceeds {cfg.seq_len_max=}")
-
-            self.mazes_array = IndexedArray.from_sequences(
-                [cfg.tokenize_seq(m) for m in self.mazes_tokens]
-            )
-
-        # validate
-        # if any(x is None for x in (self.mazes_objs, self.mazes_tokens, self.mazes_tokenized)):
-        # 	raise ValueError(f"MazeDataset invalid, something is None: {type(self.mazes_objs) = } {type(self.mazes_tokens) = } {type(self.mazes_tokenized) = }")
-
-        if self.mazes_objs is not None and self.mazes_tokens is not None:
-            if len(self.mazes_objs) != len(self.mazes_tokens):
-                raise ValueError(
-                    f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokens) = }"
-                )
-
-        if self.mazes_objs is not None and self.mazes_array.indices is not None:
-            if len(self.mazes_objs) != len(self.mazes_array.indices):
-                raise ValueError(
-                    f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_array.indices) = }"
-                )
-
-        if self.mazes_tokens is not None and self.mazes_array.indices is not None:
-            if len(self.mazes_tokens) != len(self.mazes_array.indices):
-                raise ValueError(
-                    f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_array.indices) = }"
-                )
-
-        raise NotImplementedError("TODO: remove this")
+        raise NotImplementedError("not implemented yet")
 
     @classmethod
-    def gen_default(
-        cls,
-        cfg: MazeDatasetConfig,
-    ) -> "MazeDataset":
-        """generate a dataset of mazes
-
-        p_min_tgt_dist is the minimum manhattan distance between the start and target,
-        as a fraction of max of the maze's dimensions
-        """
-
-        # Currently we don't enforce a minimum distance between the start and end of the path. If we need to do this in future, there's a beginning of an implementation here:
-        # n_min_tgt_dist: int = int(max(maze.grid_shape) * p_min_tgt_dist)
-
-        """if np.abs(start_node - end_node).sum() < n_min_tgt_dist:
-			# if too close, move end node towards the corner opposite the start node
-			opposite_corner: CoordTup = (
-				maze.grid_shape[0] * round(start_node[0] / maze.grid_shape[0]),
-				maze.grid_shape[1] * round(start_node[1] / maze.grid_shape[1]),
-			)
-			# end_node +=
-		"""
-
-        solved_mazes: list[SolvedMaze] = list()
-        endpoint_nodes: NDArray[
-            (("maze_index", cfg.n_mazes), ("start_end", 2), ("coord", 2)), np.int8
-        ] = np.random.randint(0, cfg.grid_shape, (cfg.n_mazes, 2, 2))
-
-        print(endpoint_nodes)
+    def generate(cls, cfg: MazeDatasetConfig) -> "MazeDataset":
+        mazes: list[SolvedMaze] = list()
+        endpoint_nodes: Int[np.int8, "maze_index 2 2"] = np.random.randint(
+            0, cfg.grid_shape, 
+            (cfg.n_mazes, 2, 2),
+        )
+        # TODO: filter min distanced based on MazeDatasetConfig
+        # TODO: parallelize
 
         for i, (c_start, c_end) in enumerate(endpoint_nodes):
-            m: LatticeMaze = cfg.maze_ctor(cfg.grid_shape)
+            m: TargetedLatticeMaze = TargetedLatticeMaze.from_lattice_maze(
+                lattice_maze = cfg.maze_ctor(cfg.grid_shape),
+                start_pos=c_start,
+                end_pos=c_end,
+            )
             path: CoordArray = np.array(m.find_shortest_path(c_start, c_end))
-            solved_mazes.append(
+            mazes.append(
                 SolvedMaze.from_lattice_maze(lattice_maze=m, solution=path)
             )
 
         return cls(
             cfg=cfg,
-            mazes_objs=solved_mazes,
+            mazes=mazes,
         )
-
-    def serialize_config(self) -> JSONitem:
-        return json_serialize(self.cfg)
-
-    @freeze
-    class DISK_SAVE_FILES:
-        """namespace for filenames"""
-
-        cfg: str = "cfg.json"
-        # Not implemented
-        # obj: str = "maze_obj.jsonl"
-        tokens: str = "maze_tokens.jsonl"
-        tokenized: str = "maze_tokenized.npz"
+    
+    @classmethod
+    def download(cls, cfg: MazeDatasetConfig, **kwargs) -> "MazeDataset":
+        raise NotImplementedError("not implemented yet")
+        
 
     @classmethod
-    def config_save_name(cls) -> str:
-        warnings.warn(
-            "MazeDataset.config_save_name is deprecated, use ZANJ instead",
-            DeprecationWarning,
-        )
-        return cls.DISK_SAVE_FILES.cfg
-
-    def disk_save(
-        self,
-        path_base: str = "data/test-001",
-        do_config: bool = True,
-        do_obj: bool = False,
-        do_tokens: bool = True,
-        do_tokenized: bool = True,
-    ) -> None:
-        warnings.warn(
-            "MazeDataset.config_save_name is deprecated, use ZANJ instead",
-            DeprecationWarning,
-        )
-        # make the appropriate directories
-        print(f"saving to '{path_base}'")
-        os.makedirs(path_base, exist_ok=False)
-
-        if do_config:
-            # save config as json, with metadata
-            config_out: dict[str, JSONitem] = {
-                **json_serialize(self.cfg),
-                "_postgen_meta": {
-                    "seq_len_stats": StatCounter(
-                        self.mazes_array.get_all_lengths().tolist()
-                    ).summary(),
-                },
-            }
-            with open(f"{path_base}/{self.DISK_SAVE_FILES.cfg}", "w") as f:
-                json.dump(config_out, f, indent="\t")
-
-        if do_obj:
-            raise NotImplementedError("do_obj not implemented")
-
-        if do_tokens:
-            # save tokens as jsonl
-            with open(f"{path_base}/{self.DISK_SAVE_FILES.tokens}", "w") as f:
-                for x in self.mazes_tokens:
-                    f.write(" ".join(x) + "\n")
-
-        if do_tokenized:
-            # save tokenized data as npz
-            np.savez(
-                f"{path_base}/{self.DISK_SAVE_FILES.tokenized}",
-                **dict(
-                    arr=self.mazes_array.arr.cpu().numpy(),
-                    indices=self.mazes_array.indices.cpu().numpy(),
-                ),
-            )
-
-    @classmethod
-    def disk_load(
-        cls,
-        path_base: str,
-        do_config: bool = False,
-        do_obj: bool = False,
-        do_tokens: bool = False,
-        do_tokenized: bool = False,
-    ) -> "MazeDataset":
-        warnings.warn(
-            "MazeDataset.config_save_name is deprecated, use ZANJ instead",
-            DeprecationWarning,
-        )
-        cfg: MazeDatasetConfig | None = None
-        if do_config:
-            # load config from json
-            with open(f"{path_base}/{cls.DISK_SAVE_FILES.cfg}", "r") as f:
-                cfg = MazeDatasetConfig.load(json.load(f))
-
-        mazes_objs: list[SolvedMaze] | None = None
-        if do_obj:
-            raise NotImplementedError("do_obj not implemented")
-
-        mazes_tokens: list[list[str]] | None = None
-        if do_tokens:
-            # load tokens from jsonl
-            with open(f"{path_base}/{cls.DISK_SAVE_FILES.tokens}", "r") as f:
-                mazes_tokens = [x.split() for x in f.readlines()]
-
-        loaded_dict: dict | None = None
-        if do_tokenized:
-            # load tokenized data from npz
-            loaded_dict = np.load(
-                f"{path_base}/{cls.DISK_SAVE_FILES.tokenized}",
-                allow_pickle=False,
-            )
-
-            assert "arr" in loaded_dict
-            assert "indices" in loaded_dict
-
+    def load(cls, data: JSONitem) -> "MazeDataset":
+        """load from zanj/json"""
+        assert data["__format__"] == "MazeDataset"
         return cls(
-            cfg=cfg,
-            mazes_objs=mazes_objs,
-            mazes_tokens=mazes_tokens,
-            mazes_array=None
-            if loaded_dict is None
-            else IndexedArray(
-                arr=torch.tensor(loaded_dict["arr"], device="cpu"),
-                indices=torch.tensor(loaded_dict["indices"], device="cpu"),
-            ),
+            cfg=MazeDatasetConfig.load(data["cfg"]),
+            mazes_objs=[SolvedMaze.load(m) for m in data["mazes"]],
         )
 
+    def serialize(self) -> JSONitem:
+        """serialize to zanj/json"""
+        return {
+            "__format__": "MazeDataset",
+            "cfg": self.cfg.serialize(),
+            "mazes": [m.serialize() for m in self.mazes],
+        }
 
 MazeDatasetConfig._dataset_class = MazeDataset

@@ -1,6 +1,9 @@
 import enum
 from functools import cached_property
+import json
 from pathlib import Path
+import typing
+import warnings
 
 import numpy as np
 import torch
@@ -12,6 +15,7 @@ from muutils.json_serialize import (
 )
 from muutils.zanj import ZANJ
 from muutils.tensor_utils import DTYPE_MAP, ATensor
+from muutils.misc import sanitize_fname
 from torch.utils.data import Dataset
 
 from maze_transformer.utils.utils import get_device
@@ -71,6 +75,13 @@ class GPTDatasetConfig(SerializableDataclass):
             dtype=self.dtype,
             device="cpu",
         )
+
+    def to_fname(self) -> str:
+        """convert config to a filename"""
+        self_json_str: str = json.dumps(self.serialize())
+        self_json_hash: int = int(abs(hash(self_json_str))%1e10)
+        warnings.warn(f"using fallblack to_fname() method for {self.__class__.__name__}, this should be implemented by subclasses!")
+        return sanitize_fname(f"f{self.name}_{self_json_hash}.zanj")
 
 
 @serializable_dataclass(kw_only=True)
@@ -153,6 +164,8 @@ class GPTDataset(Dataset):
 
         # Requires:
         the following methods should be implemented in subclasses:
+         - `__init__(self, cfg: GPTDatasetConfig, **kwargs)`
+            initialize the dataset from a given config. kwargs are not passed through, the kwargs should take the actual generated or loaded data (a list of objects or sequences probably)
          - `generate(cls, cfg: GPTDatasetConfig, **kwargs) -> GPTDataset`
             generate the dataset from a given config. kwargs are passed through from `from_config`, and should only contain things that dont belong in the config (i.e. how many threads to use for generation)
          - `serialize(self) -> JSONitem`
@@ -165,7 +178,9 @@ class GPTDataset(Dataset):
             given a config, try to download a dataset from some source. kwargs are passed through from `from_config`, and should only contain things that dont belong in the config (i.e. some kind of auth token or source url)
          - `__len__(self) -> int`
             return the length of the dataset, required for `torch.utils.data.Dataset`
-         - `__getitem__(self, i: int) -> torch.Tensor`
+         - `__getitem__(self, i: int) -> list[str]`
+            return the ith item in the dataset, required for `torch.utils.data.Dataset`
+         - `get(self, i: int, fmt: SaveFormats) -> Any`
             return the ith item in the dataset, required for `torch.utils.data.Dataset`
          - `get_all_lengths(self) -> list[int]`
             get the lengths of all sequences in the dataset
@@ -201,35 +216,49 @@ class GPTDataset(Dataset):
             save the dataset to a file, using ZANJ
          - `read(cls, file_path: str) -> GPTDataset`
             read the dataset from a file, using ZANJ
+         - `get_all(self, fmt: SaveFormats) -> Iterator[Any]`
+            get all items in the dataset, in the specified format
 
         """
-        # self.cfg: GPTDatasetConfig = cfg
-        # self.save_formats: set[SaveFormats] = save_formats
-        # self.local_base_path: Path = local_base_path
-        
-        fname: str = cfg.to_fname()
 
+        local_base_path = Path(local_base_path)
+        fname: str = cfg.to_fname()
+        output: GPTDataset|None = None
+        did_load_local: bool = False
+
+        if not (load_local or do_download or do_generate):
+            raise ValueError("no way to load dataset! you said not to load local, not to download, and not to generate")
+
+        # try loading
         if load_local:
             if (local_base_path / fname).exists():
-                output: GPTDataset = cls.read(local_base_path / fname)
-                if output.cfg != cfg:
-                    raise ValueError(f"config mismatch: {cfg.diff(output.cfg)}")
-                return output
+                output = cls.read(local_base_path / fname)
+                did_load_local = True
 
         if do_download:
             try:
-                output: GPTDataset = cls.download(cfg, **kwargs)
-                if save_local:
-                    output.save(local_base_path / fname)
-                return output
+                output = cls.download(cfg, **kwargs)
             except NotImplementedError:
                 pass
 
         if do_generate:
-            output: GPTDataset = cls.generate(cfg, **kwargs)
-            if save_local:
-                output.save(local_base_path / fname)
-            return output
+            output = cls.generate(cfg, **kwargs)
+
+        # check and save
+        if output is None:
+            raise ValueError("failed to load dataset!")
+        
+        if output.cfg != cfg:
+            raise ValueError(f"config mismatch: {cfg.diff(output.cfg)}")
+        
+        if save_local and not did_load_local:
+            output.save(local_base_path / fname)
+
+        return output
+
+    def get_all(self, fmt: SaveFormats) -> typing.Iterator[typing.Any]:
+        for idx in range(len(self)):
+            yield self.get(idx, fmt)
 
     def save(self, file_path: str, zanj: ZANJ | None = None):
         if zanj is None:

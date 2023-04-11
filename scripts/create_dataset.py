@@ -1,6 +1,7 @@
 import multiprocessing
 import os
 from pathlib import Path
+import warnings
 
 from muutils.misc import shorten_numerical_to_str  # type: ignore[import]
 from tqdm import tqdm
@@ -16,6 +17,10 @@ def create_dataset(
     name: str | None = None,
     **cfg_kwargs,
 ):
+    warnings.warn(
+        "create_dataset is deprecated, use MazeDataset.from_config instead",
+        DeprecationWarning,
+    )
     if n_mazes < 0:
         raise ValueError("n_mazes must be >= 0")
     if grid_n < 0:
@@ -62,10 +67,10 @@ def create_dataset(
     # create and save dataset
     dataset: MazeDataset = MazeDataset(
         cfg=config,
-        mazes_objs=solved_mazes,
+        mazes=solved_mazes,
     )
 
-    dataset.disk_save(str(data_path))
+    dataset.save(str(data_path))
 
 
 def load(path: str) -> None:
