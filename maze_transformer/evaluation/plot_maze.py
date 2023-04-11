@@ -119,14 +119,14 @@ class MazePlot:
         "slategrey",
     ]
 
-    def __init__(self, maze: LatticeMaze) -> None:
+    def __init__(self, maze: LatticeMaze, unit_length: int = 14) -> None:
         """
         UNIT_LENGTH: Set ratio between node size and wall thickness in image.
         Wall thickness is fixed to 1px
         A "unit" consists of a single node and the right and lower connection/wall.
         Example: ul = 14 yields 13:1 ratio between node size and wall thickness
         """
-        self.unit_length: int = 14
+        self.unit_length: int = unit_length
         self.maze: LatticeMaze = maze
         self.true_path: StyledPath = None
         self.predicted_paths: list[StyledPath] = []
