@@ -4,7 +4,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Union  # need Union as "a" | "b" doesn't work
 
 import torch
-from muutils.tensor_utils import ATensor, NDArray
+from muutils.tensor_utils import ATensor
 from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
@@ -140,7 +140,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     def to_ascii(
         self, sequence: list[int | str] | ATensor, start=None, end=None
-    ) -> NDArray:
+    ) -> str:
         # Sequence should be a single maze (not batch)
         if isinstance(sequence, list) and isinstance(sequence[0], str):
             str_sequence = sequence  # already decoded

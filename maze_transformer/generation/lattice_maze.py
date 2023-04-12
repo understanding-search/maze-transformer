@@ -1,6 +1,7 @@
 import random
 from dataclasses import dataclass
 from typing import NamedTuple, cast
+from jaxtyping import Bool
 
 import numpy as np
 from muutils.misc import list_split
@@ -64,7 +65,7 @@ class LatticeMaze:
     right-hand connections going right, will always be False.
     """
 
-    connection_list: NDArray["lattice_dim x y", bool]
+    connection_list: Bool[np.array, "lattice_dim x y"]
     generation_meta: dict | None = None
 
     grid_shape = property(lambda self: self.connection_list.shape[1:])
