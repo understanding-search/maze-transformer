@@ -274,7 +274,7 @@ class ConfigHolder(SerializableDataclass):
             dataset_cfg_name: str; model_cfg_name: str; train_cfg_name: str; name: str
             if len(cfg_names) == 3:
                 dataset_cfg_name, model_cfg_name, train_cfg_name = cfg_names
-                name = f"from_names_{dataset_cfg_name}_{model_cfg_name}_{train_cfg_name}"
+                name = f"multsrc_{dataset_cfg_name}_{model_cfg_name}_{train_cfg_name}"
             else:
                 dataset_cfg_name, model_cfg_name, train_cfg_name, name = cfg_names
             config = ConfigHolder(

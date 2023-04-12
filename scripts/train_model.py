@@ -17,10 +17,11 @@ from maze_transformer.training.wandb_logger import (
 from maze_transformer.utils.utils import get_device
 from torch.utils.data import DataLoader
 from muutils.dictmagic import kwargs_to_nested_dict
+from muutils.misc import sanitize_fname
 
 
 def train_model(
-    output_path: str|Path,
+    base_path: str|Path,
     wandb_project: Union[WandbProject, str],
     cfg: ConfigHolder|None = None,
     cfg_file: str|Path|None = None,
@@ -52,7 +53,10 @@ def train_model(
     )
 
     # set up path, save config
+    base_path = Path(base_path)
+    output_path = base_path / TRAIN_SAVE_FILES.model_run_dir(cfg)
     output_path = Path(output_path)
+    output_path.mkdir(parents=True)
     with open(Path(output_path) / TRAIN_SAVE_FILES.config_holder, "w") as f:
         json.dump(cfg.serialize(), f, indent="\t")
     (output_path / TRAIN_SAVE_FILES.checkpoints).mkdir(parents=True)

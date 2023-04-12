@@ -22,23 +22,21 @@ from maze_transformer.training.wandb_logger import WandbLogger
 class TRAIN_SAVE_FILES:
     """namespace for filenames/formats for saving training data"""
 
+    # old
     data_cfg: str = "data_config.json"
     train_cfg: str = "train_config.json"
-    config_holder: str = "config.json"
-    log: str = "log.jsonl"
-    checkpoints: str = "checkpoints"
-    train_dir_format: Callable[
-        [GPTDatasetConfig, TrainConfig], str
-    ] = (
-        lambda d_cfg, t_cfg: f"{sanitize_fname(d_cfg.name)}_{sanitize_fname(t_cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
-    )
     model_checkpt: Callable[[int], str] = lambda iteration: f"model.iter_{iteration}.pt"
     model_final: str = "model.final.pt"
 
+    # keep these
+    config_holder: str = "config.json"
+    checkpoints: str = "checkpoints"
+    log: str = "log.jsonl"
     model_checkpt_zanj: Callable[
         [int], str
     ] = lambda iteration: f"model.iter_{iteration}.zanj"
     model_final_zanj: str = "model.final.zanj"
+    model_run_dir: Callable[[ConfigHolder], str] = lambda cfg: f"{sanitize_fname(cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
 
 
 def get_dataloader(
@@ -92,11 +90,12 @@ def train(
     )
     for iteration, batch in enumerate(dataloader):
         # compute loss
-        batch_on_device: Int[torch.Tensor, "batch sequence"] = batch.type(
-            dtype=torch.LongTensor
-        ).to(model.cfg.device)
+        # batch_on_device: Int[torch.Tensor, "batch sequence"] = batch.type(
+        #     dtype=torch.LongTensor
+        # ).to(model.cfg.device)
 
-        loss: Loss = model(batch_on_device[:, :-1], return_type="loss")
+        # loss: Loss = model(batch_on_device[:, :-1], return_type="loss")
+        loss: Loss = model(batch, return_type="loss")
         loss.backward()
 
         optimizer.step()
@@ -110,7 +109,7 @@ def train(
             model_save_path: Path = (
                 output_dir
                 / TRAIN_SAVE_FILES.checkpoints
-                / TRAIN_SAVE_FILES.model_checkpt(iteration)
+                / TRAIN_SAVE_FILES.model_checkpt_zanj(iteration)
             )
             logger.progress(f"Saving model to {model_save_path.as_posix()}")
             zanj.save(model, model_save_path)
@@ -120,7 +119,7 @@ def train(
 
     # save the final model
     # ==================================================
-    final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final
+    final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final_zanj
     logger.progress(f"Saving final model to {final_model_path.as_posix()}")
     zanj.save(model, final_model_path)
     logger.upload_model(final_model_path, aliases=["latest", "final"])
