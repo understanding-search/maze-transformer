@@ -7,7 +7,7 @@ import torch
 
 from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, BaseGPTConfig, ConfigHolder, TrainConfig, ZanjHookedTransformer
-from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MAZE_DATASET_CONFIGS, MazeDataset, MazeDatasetConfig
 from maze_transformer.training.training import TRAIN_SAVE_FILES, get_dataloader, train
 from maze_transformer.training.wandb_logger import (
     WandbJobType,
@@ -26,10 +26,25 @@ def train_model(
     cfg_file: str|Path|None = None,
     cfg_names: typing.Sequence[str]|None = None,
     do_generate_dataset: bool = False,
+    help: bool = False,
     **kwargs,
 ) -> ZanjHookedTransformer:
+    """specifying a location, wandb project, and config, train a model
+    
+    config be specified in one of three ways:
+     - `cfg: ConfigHolder`: a ConfigHolder object (cant do this with command line)
+     - `cfg_file: str|Path` path to a json file containing a config
+        # TODO: allow getting config from existing saved model zanj file
+     - `cfg_names: list[str]`: a 3-tuple or list of names of standard configs, optional 4th element is name for the ConfigHolder
+        - dataset config names: {dataset_cfg_names}
+        - model config names: {model_cfg_names}
+        - train config names: {train_cfg_names}    
+    """
+    if help:
+        print(train_model.__doc__)
+        return
 
-    cfg = ConfigHolder.get_config_cli(
+    cfg = ConfigHolder.get_config_multisource(
         cfg=cfg,
         cfg_file=cfg_file,
         cfg_names=cfg_names,
@@ -65,7 +80,7 @@ def train_model(
     # load dataset
     dataset: MazeDataset = MazeDataset.from_config(
         cfg=cfg.dataset_cfg,
-        do_generate_dataset=False,
+        do_generate=do_generate_dataset,
     )
     logger.progress("loaded dataset")
 
@@ -80,7 +95,13 @@ def train_model(
         output_dir=output_path,
         device=device,
     )
+    
 
+train_model.__doc__ = train_model.__doc__.format(
+    dataset_cfg_names=str(list(MAZE_DATASET_CONFIGS.keys())),
+    model_cfg_names=str(list(GPT_CONFIGS.keys())),
+    train_cfg_names=str(list(TRAINING_CONFIGS.keys())),
+)
 
 if __name__ == "__main__":
     import fire

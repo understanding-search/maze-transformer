@@ -51,7 +51,7 @@ def test_load_save_mazedataset_manual():
         local_base_path=temp_dir,
     )
 
-    m_fname: Path = temp_dir / m.cfg.to_fname()
+    m_fname: Path = temp_dir / (m.cfg.to_fname() + ".zanj")
 
     m2: MazeDataset = MazeDataset.load(ZANJ().read(m_fname))
     m3: MazeDataset = MazeDataset.read(m_fname)

@@ -81,7 +81,7 @@ class GPTDatasetConfig(SerializableDataclass):
         self_json_str: str = json.dumps(self.serialize())
         self_json_hash: int = int(abs(hash(self_json_str))%1e10)
         warnings.warn(f"using fallblack to_fname() method for {self.__class__.__name__}, this should be implemented by subclasses!")
-        return sanitize_fname(f"f{self.name}_{self_json_hash}.zanj")
+        return sanitize_fname(f"f{self.name}_{self_json_hash}")
 
 
 @serializable_dataclass(kw_only=True)
@@ -222,7 +222,7 @@ class GPTDataset(Dataset):
         """
 
         local_base_path = Path(local_base_path)
-        fname: str = cfg.to_fname()
+        fname: Path = Path(f"{cfg.to_fname()}.zanj")
         output: GPTDataset|None = None
         did_load_local: bool = False
 

@@ -119,9 +119,10 @@ class MazeDatasetConfig(GPTDatasetConfig):
         return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
     def to_fname(self) -> str:
-        self_json_str: str = json.dumps(self.serialize())
-        self_json_hash: int = int(abs(hash(self_json_str))%1e5)
-        return sanitize_fname(f"{self.name}-g{self.grid_n}-n{self.n_mazes}-h{self_json_hash}.zanj")
+        # self_json_str: str = json.dumps(self.serialize())
+        # self_json_hash: int = int(abs(hash(self_json_str))%1e5)
+        # return sanitize_fname(f"{self.name}-g{self.grid_n}-n{self.n_mazes}-h{self_json_hash}")
+        return sanitize_fname(f"{self.name}-g{self.grid_n}-n{self.n_mazes}-a_{self.maze_ctor.__name__.removeprefix('gen_')}")
 
 
 class MazeDataset(GPTDataset):
@@ -152,16 +153,17 @@ class MazeDataset(GPTDataset):
 
         return maze_to_tokens(self.mazes[index], self.cfg.node_token_map)
 
-    mazes_objs: list[SolvedMaze] = property(lambda self: list(self.get_all(fmt=SaveFormats.OBJECTS)))
-    mazes_tokens: list[list[str]] = property(lambda self: list(self.get_all(fmt=SaveFormats.TOKENS)))
-    mazes_array: IndexedArray = property(lambda self: IndexedArray(self.get_all(fmt=SaveFormats.ARRAY)))
+    mazes_objs: list[SolvedMaze] = cached_property(lambda self: list(self.get_all(fmt=SaveFormats.OBJECTS)))
+    mazes_tokens: list[list[str]] = cached_property(lambda self: list(self.get_all(fmt=SaveFormats.TOKENS)))
+    mazes_array: IndexedArray = cached_property(lambda self: IndexedArray(self.get_all(fmt=SaveFormats.ARRAY)))
     
 
     def __len__(self) -> int:
         return len(self.mazes)
 
     def get_all_lengths(self) -> list[int]:
-        raise NotImplementedError("not implemented yet")
+        raise NotImplementedError()
+        # return [len(m) for m in self.mazes_tokens]
 
     @classmethod
     def generate(cls, cfg: MazeDatasetConfig) -> "MazeDataset":
@@ -229,7 +231,7 @@ MazeDatasetConfig._dataset_class = MazeDataset
 MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
     cfg.to_fname(): cfg for cfg in [
         MazeDatasetConfig(
-            name="test-nano",
+            name="test",
             grid_n=3,
             n_mazes=5,
             maze_ctor=LatticeMazeGenerators.gen_dfs,

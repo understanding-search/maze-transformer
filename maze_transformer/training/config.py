@@ -68,6 +68,10 @@ class TrainConfig(SerializableDataclass):
         default_factory=lambda: dict(lr=0.000001)
     )
 
+    @property
+    def get_optimizer(self, params) -> Type[torch.optim.Optimizer]:
+        return self.optimizer(params, **self.optimizer_kwargs)
+
     batch_size: int = serializable_field(default=128)
 
     dataloader_cfg: dict = serializable_field(  # type: ignore
@@ -193,13 +197,11 @@ class ConfigHolder(SerializableDataclass):
     Handles any logic that moves data between the configs below it.
     """
 
-    name: str = serializable_field(default="default")
-    train_cfg: TrainConfig
     dataset_cfg: MazeDatasetConfig
     model_cfg: BaseGPTConfig
-    pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
-        default_factory=lambda: None,
-    )
+    train_cfg: TrainConfig
+    name: str = serializable_field(default="default")
+    pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(default=None)
 
     @cached_property
     def tokenizer(self) -> PreTrainedTokenizer:
@@ -237,27 +239,27 @@ class ConfigHolder(SerializableDataclass):
         return ZanjHookedTransformer(self)
 
     @classmethod
-    def get_config_from_names(
-        dataset_cfg_name: str,
-        model_cfg_name: str,
-        train_cfg_name: str,
-        name: str = "combined_from_names",
-    ) -> ConfigHolder:
-        return ConfigHolder(
-            name=name,
-            train_cfg=TRAINING_CONFIGS[train_cfg_name],
-            dataset_cfg=MAZE_DATASET_CONFIGS[dataset_cfg_name],
-            model_cfg=GPT_CONFIGS[model_cfg_name],
-        )
-
-    @classmethod
-    def get_config_cli(
+    def get_config_multisource(
+        cls,
         cfg: ConfigHolder|None = None,
         cfg_file: str|Path|None = None,
         cfg_names: typing.Sequence[str]|None = None,
         kwargs_in: dict|None = None,
     ) -> ConfigHolder:
-        """pass one of cfg object, file, or list of names. Any kwargs will be applied to the config object (and should start with 'cfg.')"""
+        """pass one of cfg object, file, or list of names. Any kwargs will be applied to the config object (and should start with 'cfg.')
+        
+        cfg_names should be either `(dataset_cfg_name,model_cfg_name,train_cfg_name)` or the same with collective name at the end
+
+        valid name keys:
+            - dataset_cfg_name: {dataset_cfg_names}
+            - model_cfg_name: {model_cfg_names}
+            - train_cfg_name: {train_cfg_names}
+        """.format(
+            dataset_cfg_names=str(list(MAZE_DATASET_CONFIGS.keys())),
+            model_cfg_names=str(list(GPT_CONFIGS.keys())),
+            train_cfg_names=str(list(TRAINING_CONFIGS.keys())),
+        )
+        
         config: ConfigHolder
         assert sum(1 for x in (cfg, cfg_file, cfg_names) if x is not None) == 1, "Must provide exactly one of cfg, cfg_file, or cfg_names"
         
@@ -269,7 +271,19 @@ class ConfigHolder(SerializableDataclass):
                 config = ConfigHolder.load(json.load(f))
         elif cfg_names is not None:
             assert len(cfg_names) == 3 or len(cfg_names) == 4, "cfg_names must be (dataset_cfg_name,model_cfg_name,train_cfg_name) or the same with collective name at the end"
-            config = ConfigHolder.get_config_from_names(*cfg_names)
+            dataset_cfg_name: str; model_cfg_name: str; train_cfg_name: str; name: str
+            if len(cfg_names) == 3:
+                dataset_cfg_name, model_cfg_name, train_cfg_name = cfg_names
+                name = f"from_names_{dataset_cfg_name}_{model_cfg_name}_{train_cfg_name}"
+            else:
+                dataset_cfg_name, model_cfg_name, train_cfg_name, name = cfg_names
+            config = ConfigHolder(
+                name=name,
+                dataset_cfg=MAZE_DATASET_CONFIGS[dataset_cfg_name],
+                model_cfg=GPT_CONFIGS[model_cfg_name],
+                train_cfg=TRAINING_CONFIGS[train_cfg_name],
+            )
+
         else:
             raise ValueError("Must provide exactly one of cfg, cfg_file, or cfg_names. this state should be unreachable btw.")
         

@@ -9,7 +9,8 @@ from muutils.zanj import ZANJ
 from muutils.statcounter import StatCounter  # type: ignore[import]
 from muutils.tensor_utils import ATensor  # type: ignore[import]
 from torch.utils.data import DataLoader
-from transformer_lens import HookedTransformer, Loss
+from transformer_lens import HookedTransformer
+from transformer_lens.HookedTransformer import Loss
 
 from maze_transformer.training.config import ConfigHolder, TrainConfig, ZanjHookedTransformer
 from maze_transformer.training.dataset import GPTDatasetConfig
@@ -43,11 +44,11 @@ class TRAIN_SAVE_FILES:
 def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
 ) -> DataLoader:
-    length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
-    logger.summary({"dataset_seq_len_stats_summary": length_stats.summary()})
-    logger.summary(
-        {"dataset_seq_len_stats": length_stats.serialize(typecast=lambda x: str(x))}
-    )
+    # length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
+    # logger.summary({"dataset_seq_len_stats_summary": length_stats.summary()})
+    # logger.summary(
+    #     {"dataset_seq_len_stats": length_stats.serialize(typecast=lambda x: str(x))}
+    # )
 
     logger.progress(f"Loaded {len(dataset)} sequences")
     logger.progress("Creating dataloader")
