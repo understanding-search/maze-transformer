@@ -265,7 +265,8 @@ class GPTDataset(Dataset):
             zanj = ZANJ()
         zanj.save(self.serialize(), file_path)
 
-    def read(cls, file_path: str, zanj: ZANJ | None = None):
+    @classmethod
+    def read(cls, file_path: str, zanj: ZANJ | None = None) -> "GPTDataset":
         if zanj is None:
             zanj = ZANJ()
         return cls.load(zanj.read(file_path))

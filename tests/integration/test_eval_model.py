@@ -16,7 +16,7 @@ from maze_transformer.evaluation.eval_model import (
     predict_maze_paths,
 )
 from maze_transformer.evaluation.path_evals import PathEvals
-from maze_transformer.training.maze_dataset import MazeDataset
+from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.wandb_logger import WandbProject
 from scripts.create_dataset import create_dataset
 from scripts.train_model import train_model
@@ -26,14 +26,17 @@ from scripts.train_model import train_model
 def test_model_loading(temp_dir):
     # First create a dataset and train a model
     #! Awaiting change of all paths to Path for training scripts
-    if not Path.exists(temp_dir / "g3-n5-test"):
-        create_dataset(path_base=str(temp_dir), n_mazes=5, grid_n=3, name="test")
-        train_model(
-            basepath=str(temp_dir / "g3-n5-test"),
-            wandb_project=WandbProject.INTEGRATION_TESTS,
-            training_cfg="integration-v1",
-            model_cfg="nano-v1",
-        )
+    dataset: MazeDataset = MazeDataset.from_config(
+        MazeDatasetConfig(n_mazes=5, grid_n=3, name="test"),
+        save_local=True,
+    )
+
+    train_model(
+        basepath=str(temp_dir / "g3-n5-test"),
+        wandb_project=WandbProject.INTEGRATION_TESTS,
+        training_cfg="integration-v1",
+        model_cfg="nano-v1",
+    )
 
     # Now load the model and compare the outputs
     # Get directory of the training run

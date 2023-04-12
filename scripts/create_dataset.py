@@ -15,7 +15,7 @@ def create_dataset(
     n_mazes: int,
     grid_n: int = 16,
     name: str | None = None,
-    do_tqdm: bool = False,
+    verbose: bool = False,
     **cfg_kwargs,
 ):
     warnings.warn(
@@ -36,9 +36,10 @@ def create_dataset(
         name = f"{name_base}-{name}"
 
     data_path = Path(path_base) / name
-    print(
-        f"generating dataset: {data_path.as_posix() = } {n_mazes = } {grid_n = } {name = } {cfg_kwargs = }"
-    )
+    if verbose:
+        print(
+            f"generating dataset: {data_path.as_posix() = } {n_mazes = } {grid_n = } {name = } {cfg_kwargs = }"
+        )
 
     if os.path.exists(data_path):
         raise FileExistsError(f"path {data_path} already exists!")
@@ -62,7 +63,7 @@ def create_dataset(
                 total=config.n_mazes,
                 unit="maze",
                 desc="generating & solving mazes",
-                disable=not do_tqdm,
+                disable=not verbose,
             )
         )
 

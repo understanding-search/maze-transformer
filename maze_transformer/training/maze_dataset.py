@@ -200,7 +200,7 @@ class MazeDataset(GPTDataset):
         assert data["__format__"] == "MazeDataset"
         return cls(
             cfg=MazeDatasetConfig.load(data["cfg"]),
-            mazes_objs=[SolvedMaze.load(m) for m in data["mazes"]],
+            mazes=[SolvedMaze.load(m) for m in data["mazes"]],
         )
 
     def serialize(self) -> JSONitem:
@@ -212,12 +212,14 @@ class MazeDataset(GPTDataset):
         }
 
     @classmethod
-    def disk_load(cls, path: str) -> "MazeDataset":
+    def disk_load(cls, path: str, **kwargs) -> "MazeDataset":
         """load from disk"""
         warnings.warn(
             "deprecated, use `MazeDataset.read(path)` or `MazeDataset.load(ZANJ().read(path)))` instead",
             DeprecationWarning,
         )
+        if kwargs:
+            warnings.warn(f"kwargs to disk_load dont do anything: {kwargs = }", DeprecationWarning)
         return cls.read(path)
 
 
