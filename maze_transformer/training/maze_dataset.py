@@ -224,3 +224,16 @@ class MazeDataset(GPTDataset):
 
 
 MazeDatasetConfig._dataset_class = MazeDataset
+
+
+MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
+    cfg.to_fname(): cfg for cfg in [
+        MazeDatasetConfig(
+            name="test-nano",
+            grid_n=3,
+            n_mazes=5,
+            maze_ctor=LatticeMazeGenerators.gen_dfs,
+        ),
+    ]
+}
+

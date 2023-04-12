@@ -1,10 +1,13 @@
 import json
 from pathlib import Path
 from typing import Union
+import typing
+
+import torch
 
 from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
-from maze_transformer.training.maze_dataset import MazeDataset
+from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, BaseGPTConfig, ConfigHolder, TrainConfig, ZanjHookedTransformer
+from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.training import TRAIN_SAVE_FILES, get_dataloader, train
 from maze_transformer.training.wandb_logger import (
     WandbJobType,
@@ -12,57 +15,71 @@ from maze_transformer.training.wandb_logger import (
     WandbProject,
 )
 from maze_transformer.utils.utils import get_device
+from torch.utils.data import DataLoader
+from muutils.dictmagic import kwargs_to_nested_dict
 
 
 def train_model(
-    basepath: str,
+    output_path: str|Path,
     wandb_project: Union[WandbProject, str],
-    training_cfg: str = "tiny-v1",
-    model_cfg: str = "tiny-v1",
-):
-    dataset = MazeDataset.disk_load(basepath, do_config=True, do_tokenized=True)
+    cfg: ConfigHolder|None = None,
+    cfg_file: str|Path|None = None,
+    cfg_names: typing.Sequence[str]|None = None,
+    do_generate_dataset: bool = False,
+    **kwargs,
+) -> ZanjHookedTransformer:
 
-    cfg: ConfigHolder = ConfigHolder(
-        dataset_cfg=dataset.cfg,
-        model_cfg=GPT_CONFIGS[model_cfg],
-        train_cfg=TRAINING_CONFIGS[training_cfg],
-        pretrainedtokenizer_kwargs=dict(
-            bos_token=SPECIAL_TOKENS["padding"],
-            eos_token=SPECIAL_TOKENS["padding"],
-            pad_token=SPECIAL_TOKENS["padding"],
-        ),
+    cfg = ConfigHolder.get_config_cli(
+        cfg=cfg,
+        cfg_file=cfg_file,
+        cfg_names=cfg_names,
+        kwargs_in=kwargs,
     )
 
-    with open(Path(basepath) / TRAIN_SAVE_FILES.config_holder, "w") as f:
+    # set up path, save config
+    output_path = Path(output_path)
+    with open(Path(output_path) / TRAIN_SAVE_FILES.config_holder, "w") as f:
         json.dump(cfg.serialize(), f, indent="\t")
-
-    output_dir_name = TRAIN_SAVE_FILES.train_dir_format(cfg.dataset_cfg, cfg.train_cfg)
-    output_path: Path = Path(basepath) / output_dir_name
     (output_path / TRAIN_SAVE_FILES.checkpoints).mkdir(parents=True)
 
-    logger = WandbLogger.create(
+    # set up logger
+    logger: WandbLogger = WandbLogger.create(
         config=cfg.serialize(),
         project=wandb_project,
         job_type=WandbJobType.TRAIN_MODEL,
     )
-
-    logger.progress("Loaded data config, initialized logger")
-
+    logger.progress("Initialized logger")
     logger.summary(
         dict(
             logger_cfg={
-                "output_dir": str(output_path),
+                "output_dir": output_path.as_posix(),
+                "cfg.name": cfg.name,
                 "data_cfg.name": cfg.dataset_cfg.name,
                 "train_cfg.name": cfg.train_cfg.name,
                 "model_cfg.name": cfg.model_cfg.name,
+                "cfg": cfg.serialize(),
             },
         )
     )
 
-    dataloader = get_dataloader(dataset, cfg, logger)
-    device = get_device()
+    # load dataset
+    dataset: MazeDataset = MazeDataset.from_config(
+        cfg=cfg.dataset_cfg,
+        do_generate_dataset=False,
+    )
+    logger.progress("loaded dataset")
 
-    train(dataloader, cfg, logger, output_path, device)
+    # get dataloader, device, and then train
+    dataloader: DataLoader = get_dataloader(dataset, cfg, logger)
+    device: torch.device = get_device()
+
+    return train(
+        cfg=cfg,
+        dataloader=dataloader,
+        logger=logger, 
+        output_dir=output_path,
+        device=device,
+    )
 
 
 if __name__ == "__main__":
