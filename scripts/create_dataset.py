@@ -15,6 +15,7 @@ def create_dataset(
     n_mazes: int,
     grid_n: int = 16,
     name: str | None = None,
+    do_tqdm: bool = False,
     **cfg_kwargs,
 ):
     warnings.warn(
@@ -61,6 +62,7 @@ def create_dataset(
                 total=config.n_mazes,
                 unit="maze",
                 desc="generating & solving mazes",
+                disable=not do_tqdm,
             )
         )
 

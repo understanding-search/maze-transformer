@@ -121,7 +121,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
     def to_fname(self) -> str:
         self_json_str: str = json.dumps(self.serialize())
         self_json_hash: int = int(abs(hash(self_json_str))%1e5)
-        return sanitize_fname(f"f{self.name}-g{self.grid_n}-n{self.n_mazes}-h{self_json_hash}.zanj")
+        return sanitize_fname(f"{self.name}-g{self.grid_n}-n{self.n_mazes}-h{self_json_hash}.zanj")
 
 
 class MazeDataset(GPTDataset):
@@ -210,5 +210,15 @@ class MazeDataset(GPTDataset):
             "cfg": self.cfg.serialize(),
             "mazes": [m.serialize() for m in self.mazes],
         }
+
+    @classmethod
+    def disk_load(cls, path: str) -> "MazeDataset":
+        """load from disk"""
+        warnings.warn(
+            "deprecated, use `MazeDataset.read(path)` or `MazeDataset.load(ZANJ().read(path)))` instead",
+            DeprecationWarning,
+        )
+        return cls.read(path)
+
 
 MazeDatasetConfig._dataset_class = MazeDataset

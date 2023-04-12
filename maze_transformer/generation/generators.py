@@ -39,7 +39,7 @@ class LatticeMazeGenerators:
 
         # initialize the maze with no connections
         connection_list: np.ndarray = np.zeros(
-            (lattice_dim, grid_shape[0], grid_shape[1]), dtype=bool
+            (lattice_dim, grid_shape[0], grid_shape[1]), dtype=np.bool_
         )
 
         if start_coord is None:
@@ -137,9 +137,9 @@ class LatticeMazeGenerators:
 
         # A connection list only contains two elements: one boolean matrix indicating all the
         # downwards connections in the maze, and one boolean matrix indicating the rightwards connections.
-        connection_list: np.ndarray = np.zeros((2, rows, cols), dtype=bool)
+        connection_list: np.ndarray = np.zeros((2, rows, cols), dtype=np.bool_)
 
-        connected = np.zeros(grid_shape, dtype=bool)
+        connected = np.zeros(grid_shape, dtype=np.bool_)
         direction_matrix = np.zeros(grid_shape, dtype=int)
 
         # Mark a random cell as connected
