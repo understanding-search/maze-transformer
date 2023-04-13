@@ -4,6 +4,7 @@ from typing import Union
 import typing
 
 import torch
+from muutils.json_serialize import serializable_dataclass, SerializableDataclass, serializable_field
 
 from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, BaseGPTConfig, ConfigHolder, TrainConfig, ZanjHookedTransformer
@@ -20,6 +21,17 @@ from muutils.dictmagic import kwargs_to_nested_dict
 from muutils.misc import sanitize_fname
 
 
+@serializable_dataclass(kw_only=True)
+class TrainingResult(SerializableDataclass):
+    output_path: Path
+    model: ZanjHookedTransformer
+    training_log: typing.Any = serializable_field(default=None)
+
+
+    def __str__(self):
+        return f"TrainingResult of training run stored at output_path='{self.output_path}', trained a model from config with name: {self.model.zanj_model_config.name}"
+
+
 def train_model(
     base_path: str|Path,
     wandb_project: Union[WandbProject, str],
@@ -29,7 +41,7 @@ def train_model(
     do_generate_dataset: bool = False,
     help: bool = False,
     **kwargs,
-) -> ZanjHookedTransformer:
+) -> TrainingResult:
     """specifying a location, wandb project, and config, train a model
     
     config be specified in one of three ways:
@@ -92,12 +104,17 @@ def train_model(
     dataloader: DataLoader = get_dataloader(dataset, cfg, logger)
     device: torch.device = get_device()
 
-    return train(
+    trained_model: ZanjHookedTransformer = train(
         cfg=cfg,
         dataloader=dataloader,
         logger=logger, 
         output_dir=output_path,
         device=device,
+    )
+
+    return TrainingResult(
+        output_path=output_path,
+        model=trained_model,
     )
     
 

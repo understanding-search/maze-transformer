@@ -10,78 +10,68 @@ from pathlib import Path
 import pytest
 import torch
 
+from muutils.zanj import ZANJ
+from muutils.zanj.torchutil import (
+    ConfigMismatchException,
+    assert_model_cfg_equality,
+    assert_model_exact_equality,
+)
+
 from maze_transformer.evaluation.eval_model import (
     evaluate_model,
     load_model_with_configs,
     predict_maze_paths,
 )
 from maze_transformer.evaluation.path_evals import PathEvals
+from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.training.training import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbProject
 from scripts.create_dataset import create_dataset
-from scripts.train_model import train_model
+from scripts.train_model import train_model, TrainingResult
+from maze_transformer.evaluation.util import assert_model_output_equality
 
+temp_dir: Path = Path("tests/_temp/test_eval_model")
 
-@pytest.mark.usefixtures("temp_dir")
-def test_model_loading(temp_dir):
-    # First create a dataset and train a model
-    #! Awaiting change of all paths to Path for training scripts
-    dataset: MazeDataset = MazeDataset.from_config(
-        MazeDatasetConfig(n_mazes=5, grid_n=3, name="test"),
-        save_local=True,
+def test_model_loading():
+    # get config
+    cfg: ConfigHolder = ConfigHolder.get_config_multisource(
+        cfg_names=("test-g3-n5-a_dfs", "nano-v1", "integration-v1"),
     )
-
-    train_model(
-        basepath=str(temp_dir / "g3-n5-test"),
+    # train model
+    result: TrainingResult = train_model(
+        base_path=temp_dir,
         wandb_project=WandbProject.INTEGRATION_TESTS,
-        training_cfg="integration-v1",
-        model_cfg="nano-v1",
+        cfg=cfg,
+        do_generate_dataset=True,
     )
+    model_ret: ZanjHookedTransformer = result.model
 
-    # Now load the model and compare the outputs
-    # Get directory of the training run
-    run_folder_path = Path(temp_dir / "g3-n5-test")
-    run_folder_path = [x for x in run_folder_path.glob("*") if x.is_dir()][0]
-
-    # Load model using our function (with layernorm folding etc.)
-    model, cfg = load_model_with_configs(
-        run_folder_path / "model.final.pt", fold_ln=False
-    )
+    # load model
+    model_load_auto: ZanjHookedTransformer = ZANJ().read(result.output_path / TRAIN_SAVE_FILES.model_final_zanj)
 
     # Load model manually without folding
-    model_state_dict = torch.load(run_folder_path / "model.final.pt")
-    model_basic = cfg.create_model()
-    model_basic.load_state_dict(model_state_dict)
+    assert cfg == model_ret.zanj_model_config
+    assert_model_cfg_equality(model_ret, model_load_auto)
 
-    # Random input tokens
-    input_sequence = torch.randint(
-        low=0,
-        high=len(cfg.dataset_cfg.token_arr),
-        size=(1, min(cfg.dataset_cfg.seq_len_max, 10)),
-    )
-
-    # Check for equality in argsort (absolute values won't be equal due to centering the unembedding weight matrix)
-    # Alternatively could apply normalization (e.g. softmax) and check with atol v-small
-    # (roughly 1E-7 for float error on logexp I think)
-    assert torch.all(
-        model(input_sequence.clone()).argsort()
-        == model_basic(input_sequence.clone()).argsort()
-    )
+    assert_model_output_equality(model_ret, model_load_auto, cfg)
+    assert_model_exact_equality(model_ret, model_load_auto)
 
 
-@pytest.mark.usefixtures("temp_dir")
-def test_predict_maze_paths(temp_dir):
+def test_predict_maze_paths():
     # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
     # First create a dataset and train a model
-    grid_n = 3
-    if not Path.exists(temp_dir / "g3-n5-test"):
-        create_dataset(path_base=str(temp_dir), n_mazes=5, grid_n=grid_n, name="test")
-        train_model(
-            basepath=str(temp_dir / "g3-n5-test"),
-            training_cfg="integration-v1",
-            model_cfg="nano-v1",
-            wandb_project=WandbProject.INTEGRATION_TESTS,
-        )
+    # get config
+    cfg: ConfigHolder = ConfigHolder.get_config_multisource(
+        cfg_names=("test-g3-n5-a_dfs", "nano-v1", "integration-v1"),
+    )
+    # train model
+    model_ret: ZanjHookedTransformer = train_model(
+        base_path=temp_dir,
+        wandb_project=WandbProject.INTEGRATION_TESTS,
+        cfg=cfg,
+        do_generate_dataset=True,
+    )
 
     # Now load the model and compare the outputs
     # Get directory of the training run
@@ -111,15 +101,17 @@ def test_predict_maze_paths(temp_dir):
 def test_evaluate_model(temp_dir):
     # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
     # First create a dataset and train a model
-    n_mazes = 5
-    if not Path.exists(temp_dir / "g3-n5-test"):
-        create_dataset(path_base=str(temp_dir), n_mazes=n_mazes, grid_n=3, name="test")
-        train_model(
-            basepath=str(temp_dir / "g3-n5-test"),
-            training_cfg="integration-v1",
-            model_cfg="nano-v1",
-            wandb_project=WandbProject.INTEGRATION_TESTS,
-        )
+    # get config
+    cfg: ConfigHolder = ConfigHolder.get_config_multisource(
+        cfg_names=("test-g3-n5-a_dfs", "nano-v1", "integration-v1"),
+    )
+    # train model
+    model_ret: ZanjHookedTransformer = train_model(
+        base_path=temp_dir,
+        wandb_project=WandbProject.INTEGRATION_TESTS,
+        cfg=cfg,
+        do_generate_dataset=True,
+    )
 
     # Now load the model and compare the outputs
     # Get directory of the training run
