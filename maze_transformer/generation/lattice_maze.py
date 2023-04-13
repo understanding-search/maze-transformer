@@ -179,17 +179,17 @@ class LatticeMaze:
                 if neighbor in nodes_evaluated:
                     continue
 
-                neighbour_g_score: float = g_score[current_node] + 1
+                neighbor_g_score: float = g_score[current_node] + 1
 
                 if neighbor not in nodes_to_evaluate:
                     nodes_to_evaluate.add(neighbor)
-                elif neighbour_g_score >= g_score[neighbor]:
+                elif neighbor_g_score >= g_score[neighbor]:
                     # if already knew about this one, but current g_score is worse, skip
                     continue
 
                 # store g_score and source
                 source[neighbor] = current_node
-                g_score[neighbor] = neighbour_g_score
+                g_score[neighbor] = neighbor_g_score
                 f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, c_end)
 
     def get_nodes(self) -> list[CoordTup]:
