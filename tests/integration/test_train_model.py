@@ -1,10 +1,6 @@
-from pathlib import Path
-import pytest
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
-
 from maze_transformer.training.wandb_logger import WandbProject
-from scripts.create_dataset import create_dataset
-from scripts.train_model import train_model, TrainingResult
+from scripts.train_model import TrainingResult, train_model
 
 
 def test_train_model():
@@ -20,4 +16,3 @@ def test_train_model():
 
     assert isinstance(result.model, ZanjHookedTransformer)
     assert result.model.zanj_model_config == cfg
-

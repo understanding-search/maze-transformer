@@ -1,13 +1,8 @@
 import torch
-from muutils.zanj import ZANJ
-from muutils.zanj.torchutil import (
-    ConfigMismatchException,
-    assert_model_cfg_equality,
-)
+from muutils.zanj.torchutil import ConfigMismatchException, assert_model_cfg_equality
 
-from maze_transformer.training.config import (
-    ZanjHookedTransformer,
-)
+from maze_transformer.training.config import ZanjHookedTransformer
+
 
 def assert_model_output_equality(
     model_a: ZanjHookedTransformer, model_b: ZanjHookedTransformer

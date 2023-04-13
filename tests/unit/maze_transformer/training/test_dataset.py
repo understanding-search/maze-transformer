@@ -1,5 +1,4 @@
 import torch
-import pytest
 
 from maze_transformer.training.dataset import IndexedArray
 
@@ -17,6 +16,7 @@ def test_indexed_array_get_len():
 
     assert indexed_array.get_len(0) == 5
     assert indexed_array.get_len(9) == 5
+
 
 def test_indexed_array_get_all_lengths():
     indexed_array = IndexedArray.from_sequences(

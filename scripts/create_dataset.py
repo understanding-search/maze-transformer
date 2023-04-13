@@ -1,7 +1,7 @@
 import multiprocessing
 import os
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 from muutils.misc import shorten_numerical_to_str  # type: ignore[import]
 from tqdm import tqdm

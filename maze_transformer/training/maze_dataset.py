@@ -1,32 +1,23 @@
-import enum
-import json
-import multiprocessing
-import os
-from pathlib import Path
 import typing
 import warnings
-from functools import cached_property, partial
+from functools import cached_property
 from typing import Callable
 
 import numpy as np
-import torch
-from jaxtyping import Int, Shaped
-from muutils.json_serialize import (
-    JSONitem,
-    json_serialize,
-    serializable_dataclass,
-    serializable_field,
-)
+from jaxtyping import Int
+from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field
 from muutils.json_serialize.util import safe_getsource, string_as_lines
-from muutils.misc import freeze, sanitize_fname
-from muutils.statcounter import StatCounter
-from muutils.tensor_utils import ATensor, NDArray
-from tqdm import tqdm
+from muutils.misc import sanitize_fname
 
 from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordArray, CoordTup
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
-from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze, TargetedLatticeMaze
-from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, IndexedArray, SaveFormats
+from maze_transformer.generation.lattice_maze import SolvedMaze, TargetedLatticeMaze
+from maze_transformer.training.dataset import (
+    GPTDataset,
+    GPTDatasetConfig,
+    IndexedArray,
+    SaveFormats,
+)
 from maze_transformer.training.tokenizer import maze_to_tokens
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
@@ -122,22 +113,26 @@ class MazeDatasetConfig(GPTDatasetConfig):
         # self_json_str: str = json.dumps(self.serialize())
         # self_json_hash: int = int(abs(hash(self_json_str))%1e5)
         # return sanitize_fname(f"{self.name}-g{self.grid_n}-n{self.n_mazes}-h{self_json_hash}")
-        return sanitize_fname(f"{self.name}-g{self.grid_n}-n{self.n_mazes}-a_{self.maze_ctor.__name__.removeprefix('gen_')}")
+        return sanitize_fname(
+            f"{self.name}-g{self.grid_n}-n{self.n_mazes}-a_{self.maze_ctor.__name__.removeprefix('gen_')}"
+        )
 
 
 class MazeDataset(GPTDataset):
     """maze dataset"""
 
     def __init__(
-            self, 
-            cfg: MazeDatasetConfig, 
-            mazes: typing.Sequence[SolvedMaze],
-        ) -> None:
+        self,
+        cfg: MazeDatasetConfig,
+        mazes: typing.Sequence[SolvedMaze],
+    ) -> None:
         super().__init__()
         self.cfg: MazeDatasetConfig = cfg
         self.mazes: list[SolvedMaze] = list(mazes)
 
-    def get(self, index: int, fmt: SaveFormats = SaveFormats.OBJECTS) -> SolvedMaze|list[str]|np.ndarray:
+    def get(
+        self, index: int, fmt: SaveFormats = SaveFormats.OBJECTS
+    ) -> SolvedMaze | list[str] | np.ndarray:
         """get a single maze, as one of the formats"""
         if fmt == SaveFormats.OBJECTS:
             return self.mazes[index]
@@ -146,7 +141,9 @@ class MazeDataset(GPTDataset):
         elif fmt == SaveFormats.ARRAY:
             raise NotImplementedError("getting as array not implemented yet")
         else:
-            raise ValueError(f"unknown fmt {fmt}, expected an instance of `SaveFormats` enum")
+            raise ValueError(
+                f"unknown fmt {fmt}, expected an instance of `SaveFormats` enum"
+            )
 
     def __getitem__(self, index: int, pad: bool = True) -> str:
         """index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
@@ -163,10 +160,15 @@ class MazeDataset(GPTDataset):
         # else:
         #     return tokens
 
-    mazes_objs: list[SolvedMaze] = cached_property(lambda self: list(self.get_all(fmt=SaveFormats.OBJECTS)))
-    mazes_tokens: list[list[str]] = cached_property(lambda self: list(self.get_all(fmt=SaveFormats.TOKENS)))
-    mazes_array: IndexedArray = cached_property(lambda self: IndexedArray(self.get_all(fmt=SaveFormats.ARRAY)))
-    
+    mazes_objs: list[SolvedMaze] = cached_property(
+        lambda self: list(self.get_all(fmt=SaveFormats.OBJECTS))
+    )
+    mazes_tokens: list[list[str]] = cached_property(
+        lambda self: list(self.get_all(fmt=SaveFormats.TOKENS))
+    )
+    mazes_array: IndexedArray = cached_property(
+        lambda self: IndexedArray(self.get_all(fmt=SaveFormats.ARRAY))
+    )
 
     def __len__(self) -> int:
         return len(self.mazes)
@@ -179,7 +181,8 @@ class MazeDataset(GPTDataset):
     def generate(cls, cfg: MazeDatasetConfig) -> "MazeDataset":
         mazes: list[SolvedMaze] = list()
         endpoint_nodes: Int[np.int8, "maze_index 2 2"] = np.random.randint(
-            0, cfg.grid_shape, 
+            0,
+            cfg.grid_shape,
             (cfg.n_mazes, 2, 2),
         )
         # TODO: filter min distanced based on MazeDatasetConfig
@@ -187,24 +190,21 @@ class MazeDataset(GPTDataset):
 
         for i, (c_start, c_end) in enumerate(endpoint_nodes):
             m: TargetedLatticeMaze = TargetedLatticeMaze.from_lattice_maze(
-                lattice_maze = cfg.maze_ctor(cfg.grid_shape),
+                lattice_maze=cfg.maze_ctor(cfg.grid_shape),
                 start_pos=c_start,
                 end_pos=c_end,
             )
             path: CoordArray = np.array(m.find_shortest_path(c_start, c_end))
-            mazes.append(
-                SolvedMaze.from_lattice_maze(lattice_maze=m, solution=path)
-            )
+            mazes.append(SolvedMaze.from_lattice_maze(lattice_maze=m, solution=path))
 
         return cls(
             cfg=cfg,
             mazes=mazes,
         )
-    
+
     @classmethod
     def download(cls, cfg: MazeDatasetConfig, **kwargs) -> "MazeDataset":
         raise NotImplementedError("not implemented yet")
-        
 
     @classmethod
     def load(cls, data: JSONitem) -> "MazeDataset":
@@ -231,7 +231,9 @@ class MazeDataset(GPTDataset):
             DeprecationWarning,
         )
         if kwargs:
-            warnings.warn(f"kwargs to disk_load dont do anything: {kwargs = }", DeprecationWarning)
+            warnings.warn(
+                f"kwargs to disk_load dont do anything: {kwargs = }", DeprecationWarning
+            )
         return cls.read(path)
 
 
@@ -239,7 +241,8 @@ MazeDatasetConfig._dataset_class = MazeDataset
 
 
 MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
-    cfg.to_fname(): cfg for cfg in [
+    cfg.to_fname(): cfg
+    for cfg in [
         MazeDatasetConfig(
             name="test",
             grid_n=3,
@@ -248,4 +251,3 @@ MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
         ),
     ]
 }
-

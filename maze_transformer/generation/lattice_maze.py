@@ -26,7 +26,6 @@ from maze_transformer.utils.token_utils import (
     tokens_to_coords,
 )
 
-
 ConnectionListType = Bool[np.ndarray, "lattice_dim x y"]
 RGB = tuple[int, int, int]
 
@@ -63,8 +62,6 @@ def coord_str_to_tuple(coord_str: str) -> CoordTup:
 
     stripped: str = coord_str.lstrip("(").rstrip(")")
     return tuple(int(x) for x in stripped.split(","))
-
-
 
 
 @serializable_dataclass(frozen=True, kw_only=True)

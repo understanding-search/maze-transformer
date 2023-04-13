@@ -1,21 +1,21 @@
 import enum
-from functools import cached_property
 import json
-from pathlib import Path
 import typing
 import warnings
+from functools import cached_property
+from pathlib import Path
 
 import numpy as np
 import torch
 from muutils.json_serialize import (
+    JSONitem,
     SerializableDataclass,
     serializable_dataclass,
     serializable_field,
-    JSONitem,
 )
-from muutils.zanj import ZANJ
-from muutils.tensor_utils import DTYPE_MAP, ATensor
 from muutils.misc import sanitize_fname
+from muutils.tensor_utils import DTYPE_MAP, ATensor
+from muutils.zanj import ZANJ
 from torch.utils.data import Dataset
 
 from maze_transformer.utils.utils import get_device
@@ -79,8 +79,10 @@ class GPTDatasetConfig(SerializableDataclass):
     def to_fname(self) -> str:
         """convert config to a filename"""
         self_json_str: str = json.dumps(self.serialize())
-        self_json_hash: int = int(abs(hash(self_json_str))%1e10)
-        warnings.warn(f"using fallblack to_fname() method for {self.__class__.__name__}, this should be implemented by subclasses!")
+        self_json_hash: int = int(abs(hash(self_json_str)) % 1e10)
+        warnings.warn(
+            f"using fallblack to_fname() method for {self.__class__.__name__}, this should be implemented by subclasses!"
+        )
         return sanitize_fname(f"f{self.name}_{self_json_hash}")
 
 
@@ -129,6 +131,7 @@ class IndexedArray(SerializableDataclass):
         indices: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
         return cls(arr=arr, indices=indices)
 
+
 class SaveFormats(enum.Enum):
     OBJECTS: str = "objects"
     TOKENS: str = "tokens"
@@ -143,16 +146,16 @@ class GPTDataset(Dataset):
 
     @classmethod
     def from_config(
-            cls, 
-            cfg: GPTDatasetConfig,
-            do_generate: bool = True,
-            load_local: bool = True,
-            save_local: bool = True,
-            save_formats: set[SaveFormats] = {SaveFormats.OBJECTS, SaveFormats.TOKENS},
-            do_download: bool = True,
-            local_base_path: Path = Path("data/maze_dataset"),
-            **kwargs,
-        ) -> None:
+        cls,
+        cfg: GPTDatasetConfig,
+        do_generate: bool = True,
+        load_local: bool = True,
+        save_local: bool = True,
+        save_formats: set[SaveFormats] = {SaveFormats.OBJECTS, SaveFormats.TOKENS},
+        do_download: bool = True,
+        local_base_path: Path = Path("data/maze_dataset"),
+        **kwargs,
+    ) -> None:
         """base class for gpt datasets
 
         priority of loading:
@@ -186,31 +189,31 @@ class GPTDataset(Dataset):
             get the lengths of all sequences in the dataset
 
         # Parameters:
-         - `cfg : GPTDatasetConfig`   
+         - `cfg : GPTDatasetConfig`
             config for the dataset, used to generate the dataset
-         - `do_generate : bool`   
+         - `do_generate : bool`
             whether to generate the dataset if it isn't found
             (defaults to `True`)
-         - `load_local : bool`   
+         - `load_local : bool`
             whether to try finding the dataset locally
             (defaults to `True`)
-         - `save_local : bool`   
+         - `save_local : bool`
             whether to save the dataset locally if it is generated or downloaded
             (defaults to `True`)
-         - `save_formats : set[SaveFormats]`   
+         - `save_formats : set[SaveFormats]`
             which formats to save the dataset in
             (defaults to `{SaveFormats.OBJECTS, SaveFormats.TOKENS}`)
-         - `do_download : bool`   
+         - `do_download : bool`
             whether to try downloading the dataset
             (defaults to `True`)
-         - `local_base_path : Path`   
+         - `local_base_path : Path`
             where to save the dataset
             (defaults to `Path("data/maze_dataset")`)
 
         # Returns:
          - `GPTDataset`
             the dataset, as you wanted it
-        
+
         # Implements:
          - `save(self, file_path: str) -> None`
             save the dataset to a file, using ZANJ
@@ -223,11 +226,13 @@ class GPTDataset(Dataset):
 
         local_base_path = Path(local_base_path)
         fname: Path = Path(f"{cfg.to_fname()}.zanj")
-        output: GPTDataset|None = None
+        output: GPTDataset | None = None
         did_load_local: bool = False
 
         if not (load_local or do_download or do_generate):
-            raise ValueError("no way to load dataset! you said not to load local, not to download, and not to generate")
+            raise ValueError(
+                "no way to load dataset! you said not to load local, not to download, and not to generate"
+            )
 
         # try loading
         if load_local:
@@ -247,10 +252,10 @@ class GPTDataset(Dataset):
         # check and save
         if output is None:
             raise ValueError("failed to load dataset!")
-        
+
         if output.cfg != cfg:
             raise ValueError(f"config mismatch: {cfg.diff(output.cfg)}")
-        
+
         if save_local and not did_load_local:
             output.save(local_base_path / fname)
 
@@ -273,7 +278,7 @@ class GPTDataset(Dataset):
 
     def serialize(self) -> JSONitem:
         raise NotImplementedError()
-    
+
     @classmethod
     def load(cls, data: JSONitem) -> "GPTDataset":
         raise NotImplementedError()

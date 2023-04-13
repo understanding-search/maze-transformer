@@ -3,17 +3,12 @@ from pathlib import Path
 from typing import Callable
 
 import torch
-from jaxtyping import Int, Float
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from muutils.zanj import ZANJ
-from muutils.statcounter import StatCounter  # type: ignore[import]
-from muutils.tensor_utils import ATensor  # type: ignore[import]
 from torch.utils.data import DataLoader
-from transformer_lens import HookedTransformer
 from transformer_lens.HookedTransformer import Loss
 
-from maze_transformer.training.config import ConfigHolder, TrainConfig, ZanjHookedTransformer
-from maze_transformer.training.dataset import GPTDatasetConfig
+from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.maze_dataset import MazeDataset
 from maze_transformer.training.wandb_logger import WandbLogger
 
@@ -36,7 +31,11 @@ class TRAIN_SAVE_FILES:
         [int], str
     ] = lambda iteration: f"model.iter_{iteration}.zanj"
     model_final_zanj: str = "model.final.zanj"
-    model_run_dir: Callable[[ConfigHolder], str] = lambda cfg: f"{sanitize_fname(cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+    model_run_dir: Callable[
+        [ConfigHolder], str
+    ] = (
+        lambda cfg: f"{sanitize_fname(cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+    )
 
 
 def get_dataloader(
@@ -65,7 +64,7 @@ def train(
     logger: WandbLogger,
     output_dir: Path,
     device: torch.device,
-    zanj: ZANJ|None = None,
+    zanj: ZANJ | None = None,
 ) -> ZanjHookedTransformer:
     if zanj is None:
         zanj = ZANJ()

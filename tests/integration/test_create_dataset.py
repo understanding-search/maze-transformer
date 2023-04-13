@@ -1,12 +1,11 @@
-import os
-import tempfile
 from pathlib import Path
 
 from muutils.zanj import ZANJ
+
 from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
-from scripts.create_dataset import create_dataset
 
 temp_dir: Path = Path("tests/_temp/dataset")
+
 
 def test_generate_mazedataset():
     m: MazeDataset = MazeDataset.from_config(
@@ -17,6 +16,7 @@ def test_generate_mazedataset():
     )
 
     assert len(m.mazes) == 5
+
 
 def test_load_save_mazedataset_auto():
     m: MazeDataset = MazeDataset.from_config(
@@ -42,6 +42,7 @@ def test_load_save_mazedataset_auto():
     assert m.cfg == m2.cfg
     assert all([m1 == m2 for m1, m2 in zip(m.mazes, m2.mazes)])
 
+
 def test_load_save_mazedataset_manual():
     m: MazeDataset = MazeDataset.from_config(
         MazeDatasetConfig(name="my_funky_dataset", grid_n=3, n_mazes=5),
@@ -65,4 +66,3 @@ def test_load_save_mazedataset_manual():
 
     assert m.cfg == m3.cfg
     assert all([m1 == m3 for m1, m3 in zip(m.mazes, m3.mazes)])
-

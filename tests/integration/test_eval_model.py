@@ -8,35 +8,27 @@ Test that loading the model and configuration works
 from pathlib import Path
 
 import pytest
-import torch
-
 from muutils.zanj import ZANJ
-from muutils.zanj.torchutil import (
-    ConfigMismatchException,
-    assert_model_cfg_equality,
-    assert_model_exact_equality,
-)
+from muutils.zanj.torchutil import assert_model_cfg_equality
 
-from maze_transformer.evaluation.eval_model import (
-    evaluate_model,
-    load_model_with_configs,
-    predict_maze_paths,
-)
+from maze_transformer.evaluation.eval_model import evaluate_model, predict_maze_paths
 from maze_transformer.evaluation.path_evals import PathEvals
+from maze_transformer.evaluation.util import assert_model_output_equality
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
-from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.training.maze_dataset import MazeDataset
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbProject
-from scripts.create_dataset import create_dataset
-from scripts.train_model import train_model, TrainingResult
-from maze_transformer.evaluation.util import assert_model_output_equality
+from scripts.train_model import TrainingResult, train_model
 
 temp_dir: Path = Path("tests/_temp/test_eval_model")
 
+
 def test_model_loading():
-    zanj: ZANJ = ZANJ(custom_settings={
-        "_load_state_dict_wrapper": {"recover_exact": True, "fold_ln": False}
-    })
+    zanj: ZANJ = ZANJ(
+        custom_settings={
+            "_load_state_dict_wrapper": {"recover_exact": True, "fold_ln": False}
+        }
+    )
     # get config
     cfg: ConfigHolder = ConfigHolder.get_config_multisource(
         cfg_names=("test-g3-n5-a_dfs", "nano-v1", "integration-v1"),
@@ -51,7 +43,9 @@ def test_model_loading():
     model_ret: ZanjHookedTransformer = result.model
 
     # load model
-    model_load_auto: ZanjHookedTransformer = zanj.read(result.output_path / TRAIN_SAVE_FILES.model_final_zanj)
+    model_load_auto: ZanjHookedTransformer = zanj.read(
+        result.output_path / TRAIN_SAVE_FILES.model_final_zanj
+    )
 
     # Load model manually without folding
     assert cfg == model_ret.zanj_model_config

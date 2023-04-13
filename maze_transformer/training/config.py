@@ -1,27 +1,30 @@
 from __future__ import annotations
-import json
-from pathlib import Path
-import typing
 
+import json
+import typing
 import warnings
 from functools import cached_property
+from pathlib import Path
 from typing import Any, Type
 
 import torch
+from muutils.dictmagic import kwargs_to_nested_dict
 from muutils.json_serialize import (
     JSONitem,
     SerializableDataclass,
     serializable_dataclass,
     serializable_field,
 )
-from muutils.dictmagic import kwargs_to_nested_dict
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
 from muutils.zanj.torchutil import ConfiguredModel, set_config_class
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.training.maze_dataset import MAZE_DATASET_CONFIGS, MazeDatasetConfig
+from maze_transformer.training.maze_dataset import (
+    MAZE_DATASET_CONFIGS,
+    MazeDatasetConfig,
+)
 from maze_transformer.training.tokenizer import HuggingMazeTokenizer
 
 
@@ -201,7 +204,9 @@ class ConfigHolder(SerializableDataclass):
     model_cfg: BaseGPTConfig
     train_cfg: TrainConfig
     name: str = serializable_field(default="default")
-    pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(default=None)
+    pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
+        default=None
+    )
 
     @cached_property
     def tokenizer(self) -> PreTrainedTokenizer:
@@ -241,10 +246,10 @@ class ConfigHolder(SerializableDataclass):
     @classmethod
     def get_config_multisource(
         cls,
-        cfg: ConfigHolder|None = None,
-        cfg_file: str|Path|None = None,
-        cfg_names: typing.Sequence[str]|None = None,
-        kwargs_in: dict|None = None,
+        cfg: ConfigHolder | None = None,
+        cfg_file: str | Path | None = None,
+        cfg_names: typing.Sequence[str] | None = None,
+        kwargs_in: dict | None = None,
     ) -> ConfigHolder:
         """pass one of cfg object, file, or list of names. Any kwargs will be applied to the config object (and should start with 'cfg.')
         
@@ -259,10 +264,12 @@ class ConfigHolder(SerializableDataclass):
             model_cfg_names=str(list(GPT_CONFIGS.keys())),
             train_cfg_names=str(list(TRAINING_CONFIGS.keys())),
         )
-        
+
         config: ConfigHolder
-        assert sum(1 for x in (cfg, cfg_file, cfg_names) if x is not None) == 1, "Must provide exactly one of cfg, cfg_file, or cfg_names"
-        
+        assert (
+            sum(1 for x in (cfg, cfg_file, cfg_names) if x is not None) == 1
+        ), "Must provide exactly one of cfg, cfg_file, or cfg_names"
+
         if cfg is not None:
             assert cfg_names is None, "Must provide either cfg or cfg_names"
             config = cfg
@@ -270,8 +277,13 @@ class ConfigHolder(SerializableDataclass):
             with open(cfg_file) as f:
                 config = ConfigHolder.load(json.load(f))
         elif cfg_names is not None:
-            assert len(cfg_names) == 3 or len(cfg_names) == 4, "cfg_names must be (dataset_cfg_name,model_cfg_name,train_cfg_name) or the same with collective name at the end"
-            dataset_cfg_name: str; model_cfg_name: str; train_cfg_name: str; name: str
+            assert (
+                len(cfg_names) == 3 or len(cfg_names) == 4
+            ), "cfg_names must be (dataset_cfg_name,model_cfg_name,train_cfg_name) or the same with collective name at the end"
+            dataset_cfg_name: str
+            model_cfg_name: str
+            train_cfg_name: str
+            name: str
             if len(cfg_names) == 3:
                 dataset_cfg_name, model_cfg_name, train_cfg_name = cfg_names
                 name = f"multsrc_{dataset_cfg_name}_{model_cfg_name}_{train_cfg_name}"
@@ -285,13 +297,17 @@ class ConfigHolder(SerializableDataclass):
             )
 
         else:
-            raise ValueError("Must provide exactly one of cfg, cfg_file, or cfg_names. this state should be unreachable btw.")
-        
+            raise ValueError(
+                "Must provide exactly one of cfg, cfg_file, or cfg_names. this state should be unreachable btw."
+            )
+
         # update config with kwargs
         if kwargs_in:
-            kwargs_dict: dict = kwargs_to_nested_dict(kwargs_in, sep=".", strip_prefix="cfg.", when_unknown_prefix="raise")
+            kwargs_dict: dict = kwargs_to_nested_dict(
+                kwargs_in, sep=".", strip_prefix="cfg.", when_unknown_prefix="raise"
+            )
             config.update_from_nested_dict(kwargs_dict)
-        
+
         return config
 
 

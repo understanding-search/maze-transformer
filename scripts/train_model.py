@@ -1,14 +1,23 @@
 import json
+import typing
 from pathlib import Path
 from typing import Union
-import typing
 
 import torch
-from muutils.json_serialize import serializable_dataclass, SerializableDataclass, serializable_field
+from muutils.json_serialize import (
+    SerializableDataclass,
+    serializable_dataclass,
+    serializable_field,
+)
+from torch.utils.data import DataLoader
 
-from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, BaseGPTConfig, ConfigHolder, TrainConfig, ZanjHookedTransformer
-from maze_transformer.training.maze_dataset import MAZE_DATASET_CONFIGS, MazeDataset, MazeDatasetConfig
+from maze_transformer.training.config import (
+    GPT_CONFIGS,
+    TRAINING_CONFIGS,
+    ConfigHolder,
+    ZanjHookedTransformer,
+)
+from maze_transformer.training.maze_dataset import MAZE_DATASET_CONFIGS, MazeDataset
 from maze_transformer.training.training import TRAIN_SAVE_FILES, get_dataloader, train
 from maze_transformer.training.wandb_logger import (
     WandbJobType,
@@ -16,9 +25,6 @@ from maze_transformer.training.wandb_logger import (
     WandbProject,
 )
 from maze_transformer.utils.utils import get_device
-from torch.utils.data import DataLoader
-from muutils.dictmagic import kwargs_to_nested_dict
-from muutils.misc import sanitize_fname
 
 
 @serializable_dataclass(kw_only=True)
@@ -27,23 +33,22 @@ class TrainingResult(SerializableDataclass):
     model: ZanjHookedTransformer
     training_log: typing.Any = serializable_field(default=None)
 
-
     def __str__(self):
         return f"TrainingResult of training run stored at output_path='{self.output_path}', trained a model from config with name: {self.model.zanj_model_config.name}"
 
 
 def train_model(
-    base_path: str|Path,
+    base_path: str | Path,
     wandb_project: Union[WandbProject, str],
-    cfg: ConfigHolder|None = None,
-    cfg_file: str|Path|None = None,
-    cfg_names: typing.Sequence[str]|None = None,
+    cfg: ConfigHolder | None = None,
+    cfg_file: str | Path | None = None,
+    cfg_names: typing.Sequence[str] | None = None,
     do_generate_dataset: bool = False,
     help: bool = False,
     **kwargs,
 ) -> TrainingResult:
     """specifying a location, wandb project, and config, train a model
-    
+
     config be specified in one of three ways:
      - `cfg: ConfigHolder`: a ConfigHolder object (cant do this with command line)
      - `cfg_file: str|Path` path to a json file containing a config
@@ -51,7 +56,7 @@ def train_model(
      - `cfg_names: list[str]`: a 3-tuple or list of names of standard configs, optional 4th element is name for the ConfigHolder
         - dataset config names: {dataset_cfg_names}
         - model config names: {model_cfg_names}
-        - train config names: {train_cfg_names}    
+        - train config names: {train_cfg_names}
     """
     if help:
         print(train_model.__doc__)
@@ -107,7 +112,7 @@ def train_model(
     trained_model: ZanjHookedTransformer = train(
         cfg=cfg,
         dataloader=dataloader,
-        logger=logger, 
+        logger=logger,
         output_dir=output_path,
         device=device,
     )
@@ -116,7 +121,7 @@ def train_model(
         output_path=output_path,
         model=trained_model,
     )
-    
+
 
 train_model.__doc__ = train_model.__doc__.format(
     dataset_cfg_names=str(list(MAZE_DATASET_CONFIGS.keys())),
