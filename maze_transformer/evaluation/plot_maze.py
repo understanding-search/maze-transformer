@@ -143,6 +143,17 @@ class MazePlot:
         if isinstance(maze, SolvedMaze):
             self.add_true_path(maze.solution)
 
+    @property
+    def solved_maze(self) -> SolvedMaze:
+        if self.true_path is None:
+            raise ValueError(
+                "Cannot return SolvedMaze object without true path. Add true path with add_true_path method."
+            )
+        return SolvedMaze.from_lattice_maze(
+            lattice_maze=self.maze,
+            solution=self.true_path.path,
+        )
+
     def add_true_path(
         self,
         path: CoordList | CoordArray | StyledPath,
@@ -420,24 +431,9 @@ class MazePlot:
 
     def as_ascii(
         self,
-        start_pos: CoordTup = None,
-        end_pos: CoordTup = None,
-    ):
-        if start_pos is None:
-            if self.true_path is not None:
-                start_pos = self.true_path[0]
-        if end_pos is None:
-            if self.true_path is not None:
-                end_pos = self.true_path[-1]
-
-        if (start_pos is None) or (end_pos is None):
+        show_endpoints: bool = True,
+        show_true_path: bool = False,
+    ) -> str:
+        if not show_endpoints:
             return self.maze.as_ascii()
-        elif (start_pos is not None) and (end_pos is not None):
-            tgt_maze: TargetedLatticeMaze = TargetedLatticeMaze.from_lattice_maze(
-                lattice_maze=self.maze,
-                start_pos=start_pos,
-                end_pos=end_pos,
-            )
-            return tgt_maze.as_ascii()
-        else:
-            raise ValueError("start_pos and end_pos must both be None or not None.")
+        

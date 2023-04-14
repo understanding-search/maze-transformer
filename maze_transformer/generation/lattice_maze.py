@@ -458,16 +458,36 @@ class LatticeMaze(SerializableDataclass):
 
         return ascii_grid
 
-    def as_ascii(self) -> str:
+    def as_ascii(
+        self,
+        show_endpoints: bool = True,
+        show_solution: bool = True,
+    ) -> str:
         """return an ASCII grid of the maze"""
         ascii_grid: Shaped[np.ndarray, "x y"] = self._as_ascii_grid()
+        pixel_grid: Int[np.ndarray, "x y rgb"] = self.as_pixels(show_endpoints=show_endpoints, show_solution=show_solution)
+
+        chars_replace: tuple = tuple()
+        if show_endpoints:
+            chars_replace += (AsciiChars.START, AsciiChars.END)
+        if show_solution:
+            chars_replace += (AsciiChars.SOLUTION,)
+
+        for ascii_char, pixel_color in ASCII_PIXEL_PAIRINGS.items():
+            if ascii_char in chars_replace:
+                ascii_grid[(pixel_grid == pixel_color).all(axis=-1)] = ascii_char
+
         return "\n".join("".join(row) for row in ascii_grid)
 
     @classmethod
     def from_ascii(cls, ascii_str: str) -> "LatticeMaze":
-        lines: list[list[str]] = ascii_str.strip().split("\n")
-        ascii_grid = np.array([list(line) for line in lines], dtype=str)
-        pixel_grid = ascii_grid == AsciiChars.OPEN
+        lines: list[str] = ascii_str.strip().split("\n")
+        ascii_grid: Shaped[np.ndarray, "x y"] = np.array([list(line) for line in lines], dtype=str)
+        pixel_grid: Int[np.ndarray, "x y rgb"] = np.zeros((*ascii_grid.shape, 3), dtype=np.uint8)
+
+        for ascii_char, pixel_color in ASCII_PIXEL_PAIRINGS.items():
+            pixel_grid[ascii_grid == ascii_char] = pixel_color
+
         return cls.from_pixels(pixel_grid)
 
 
@@ -556,29 +576,6 @@ class TargetedLatticeMaze(LatticeMaze):
             connection_list=connection_list, start_pos=start_pos[0], end_pos=end_pos[0]
         )
 
-    def as_ascii(self) -> str:
-        """return an ASCII grid of the maze"""
-        ascii_grid: Shaped[np.ndarray, "x y"] = self._as_ascii_grid()
-        pixel_grid: Int[np.ndarray, "x y rgb"] = self.as_pixels()
-
-        # Set start and end positions
-        for ascii_char, pixel_color in ASCII_PIXEL_PAIRINGS.items():
-            if ascii_char in (AsciiChars.START, AsciiChars.END):
-                ascii_grid[(pixel_grid == pixel_color).all(axis=-1)] = ascii_char
-
-        return "\n".join("".join(row) for row in ascii_grid)
-
-    @classmethod
-    def from_ascii(cls, ascii_str: str) -> "TargetedLatticeMaze":
-        lines = ascii_str.strip().split("\n")
-        ascii_grid = np.array([list(line) for line in lines], dtype=str)
-        pixel_grid = np.full((*ascii_grid.shape, 3), PixelColors.WALL, dtype=np.uint8)
-
-        for ascii_char, pixel_color in ASCII_PIXEL_PAIRINGS.items():
-            pixel_grid[ascii_grid == ascii_char] = pixel_color
-
-        return cls.from_pixels(pixel_grid)
-
 
 @serializable_dataclass(frozen=True, kw_only=True)
 class SolvedMaze(LatticeMaze):
@@ -599,10 +596,10 @@ class SolvedMaze(LatticeMaze):
     @property
     def maze(self) -> LatticeMaze:
         warnings.warn(
-            "maze is deprecated, SolvedMaze now inherits from LatticeMaze",
+            "maze is deprecated, SolvedMaze now inherits from LatticeMaze.",
             DeprecationWarning,
         )
-        return self
+        return LatticeMaze(connection_list=self.connection_list)
 
     @classmethod
     def from_lattice_maze(
@@ -642,10 +639,6 @@ class SolvedMaze(LatticeMaze):
             raise ValueError(f"Invalid solution: {solution = }") from e
 
         return cls.from_lattice_maze(lattice_maze=maze, solution=solution_np)
-
-    def as_tuple(self) -> tuple[LatticeMaze, CoordArray]:
-        warnings.warn("as_tuple is deprecated", DeprecationWarning)
-        return self, self.solution
 
     def as_pixels(self) -> Int[np.ndarray, "x y rgb"]:
         # convert original bool pixel grid to RGB
@@ -759,26 +752,3 @@ class SolvedMaze(LatticeMaze):
             connection_list=np.array(connection_list),
             solution=np.array(solution),
         )
-
-    def as_ascii(self) -> str:
-        """return an ASCII grid of the maze"""
-        ascii_grid: Shaped[np.ndarray, "x y"] = self._as_ascii_grid()
-        pixel_grid: Int[np.ndarray, "x y rgb"] = self.as_pixels()
-
-        # set and endpoints
-        for ascii_char, pixel_color in ASCII_PIXEL_PAIRINGS.items():
-            if ascii_char in (AsciiChars.START, AsciiChars.END, AsciiChars.PATH):
-                ascii_grid[(pixel_grid == pixel_color).all(axis=-1)] = ascii_char
-
-        return "\n".join("".join(row) for row in ascii_grid)
-
-    @classmethod
-    def from_ascii(cls, ascii_str: str) -> "SolvedMaze":
-        lines = ascii_str.strip().split("\n")
-        ascii_grid = np.array([list(line) for line in lines], dtype=str)
-        pixel_grid = np.full((*ascii_grid.shape, 3), (0, 0, 0), dtype=np.uint8)
-
-        for ascii_char, pixel_color in ASCII_PIXEL_PAIRINGS.items():
-            pixel_grid[ascii_grid == ascii_char] = pixel_color
-
-        return cls.from_pixels(pixel_grid)
