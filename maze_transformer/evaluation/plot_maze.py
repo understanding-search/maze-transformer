@@ -250,12 +250,6 @@ class MazePlot:
         self.ax.set_ylabel("row")
         self.fig.suptitle(title)
 
-    def show(self, dpi: int = 100, title: str = "") -> None:
-        """Plot the maze and paths and show the plot. DONT USE THIS IN NOTEBOOKS WHICH NEED TO BE TESTED IN CI!!!"""
-        self.plot(dpi=dpi, title=title)
-        plt.show()
-        return self
-
     def _rowcol_to_coord(self, point: Coord) -> NDArray:
         """Transform Point from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
         point = np.array([point[1], point[0]])
