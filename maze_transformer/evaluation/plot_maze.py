@@ -128,7 +128,7 @@ class MazePlot:
         """
         self.unit_length: int = 14
         self.maze: LatticeMaze = maze
-        self.true_path: StyledPath = None
+        self.true_path: StyledPath|None = None
         self.predicted_paths: list[StyledPath] = []
         self.node_values: Float[np.ndarray, "grid_n grid_n"] = None
         self.custom_node_value_flag: bool = False
@@ -429,11 +429,15 @@ class MazePlot:
             ms=10,
         )
 
-    def as_ascii(
+    def to_ascii(
         self,
         show_endpoints: bool = True,
-        show_true_path: bool = False,
+        show_solution: bool = True,
     ) -> str:
-        if not show_endpoints:
-            return self.maze.as_ascii()
+        if self.true_path:
+            return self.solved_maze.as_ascii(
+                show_endpoints=show_endpoints, show_solution=show_solution
+            )
+        else:
+            return self.maze.as_ascii(show_endpoints=show_endpoints)
         

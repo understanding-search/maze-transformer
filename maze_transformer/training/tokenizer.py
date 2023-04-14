@@ -157,4 +157,4 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             str_sequence = self.batch_decode(sequence)
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence)
-        return MazePlot(lattice_maze).as_ascii(start_pos=start_post, end_pos=end_pos)
+        return MazePlot(lattice_maze).to_ascii()
