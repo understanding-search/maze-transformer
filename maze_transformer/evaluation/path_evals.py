@@ -143,43 +143,25 @@ class PathEvals:
     @register_method(evals)
     @staticmethod
     def corner_jumps(prediction: MazePath, **_) -> float:
-        """Lookes for corner jumps in the predicted path. A corner jump is if the transformer predicts predicts
+        """Looks for corner jumps in the predicted path. A corner jump is if the transformer predicts predicts
         (0,0) <> (1,1), instead of  (0,0) <> (0,1) <> (1,1)"""
         if len(prediction) <= 1:
             return 0.0
 
-        pred_shift = np.insert(pred, 0, [0, 0], axis=0)
-        pred = np.append(pred, [[0, 0]], axis=0)
-
-        distance_between_nodes = pred - pred_shift
-        normed_distances = np.linalg.norm(distance_between_nodes[1:-1], axis=1)
-        return np.count_nonzero(normed_distances == np.sqrt(2))
-
-    @register_method(evals)
-    @staticmethod
-    def corner_jumps(prediction: MazePath, **_) -> float:
-        """Lookes for corner jumps in the predicted path. A corner jump is if the transformer predicts predicts
-        (0,0) <> (1,1), instead of  (0,0) <> (0,1) <> (1,1)"""
-        if len(prediction) <= 1:
-            return 0.0
-
-        pred_shift = np.insert(prediction, 0, [0, 0], axis=0)
-        pred = np.append(prediction, [[0, 0]], axis=0)
-
-        distance_between_nodes = pred - pred_shift
-        normed_distances = np.linalg.norm(distance_between_nodes[1:-1], axis=1)
+        pred_shift_R = prediction[1:]
+        pred_shift_L = prediction[:-1]
+        distance_between_nodes = pred_shift_R - pred_shift_L
+        normed_distances = np.linalg.norm(distance_between_nodes, axis=1)
         return np.count_nonzero(normed_distances == np.sqrt(2))
 
     @register_method(evals)
     @staticmethod
     def average_predicted_step_size(prediction: MazePath, **_) -> float:
-        """Lookes for corner jumps in the predicted path. A corner jump is if the transformer predicts predicts
-        (0,0) <> (1,1), instead of  (0,0) <> (0,1) <> (1,1)"""
+        """Returns average step size in the predicted path."""
         if len(prediction) <= 1:
             return 0.0
 
-        pred_shift = np.insert(prediction, 0, [0, 0], axis=0)
-        pred = np.append(prediction, [[0, 0]], axis=0)
-
-        distance_between_nodes = pred - pred_shift
-        return np.linalg.norm(distance_between_nodes[1:-1], axis=1).mean()
+        pred_shift_R = prediction[1:]
+        pred_shift_L = prediction[:-1]
+        distance_between_nodes = pred_shift_R - pred_shift_L
+        return np.linalg.norm(distance_between_nodes, axis=1).mean()
