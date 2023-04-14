@@ -11,7 +11,7 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
-from maze_transformer.generation.constants import Coord, CoordArray, CoordList, CoordTup
+from maze_transformer.generation.constants import Coord, CoordArray, CoordList
 from maze_transformer.generation.lattice_maze import (
     Coord,
     CoordArray,
@@ -128,7 +128,7 @@ class MazePlot:
         """
         self.unit_length: int = 14
         self.maze: LatticeMaze = maze
-        self.true_path: StyledPath|None = None
+        self.true_path: StyledPath | None = None
         self.predicted_paths: list[StyledPath] = []
         self.node_values: Float[np.ndarray, "grid_n grid_n"] = None
         self.custom_node_value_flag: bool = False
@@ -440,4 +440,3 @@ class MazePlot:
             )
         else:
             return self.maze.as_ascii(show_endpoints=show_endpoints)
-        
