@@ -54,9 +54,7 @@ class GPTDatasetConfig(SerializableDataclass):
     seq_len_min: int = serializable_field(default=1)
     seq_len_max: int = serializable_field(default=512)
     seed: int|None = serializable_field(default=DEFAULT_SEED)
-    applied_filters: list[dict[typing.Literal["name", "kwargs"], str|dict]] = serializable_field(
-        default_factory=list, serialization_fn=lambda x: x, loading_fn=lambda x: x,
-    )
+    applied_filters: list[dict[typing.Literal["name", "kwargs"], str|dict]] = serializable_field(default_factory=list)
 
     def __post_init__(self):
         assert self.seq_len_min <= self.seq_len_max
@@ -283,7 +281,7 @@ class GPTDataset(Dataset):
         if do_generate:
             output = cls.generate(cfg, **kwargs)
             # only if we generated it, apply filters
-            output = output._apply_filters_from_config()
+            output._apply_filters_from_config()
 
         # check and save
         if output is None:
@@ -345,10 +343,28 @@ class GPTDataset(Dataset):
         """
         pass
 
+    class FilterBy:
+        """thanks GPT-4"""
+        def __init__(self, dataset: 'GPTDataset'):
+            self.dataset: "GPTDataset" = dataset
 
-    def filter_by(self) -> type:
-        """return a namespace class for filtering the dataset"""
-        return self._FILTER_NAMESPACE
+        def __getattr__(self, name: str) -> typing.Callable[..., "GPTDataset"]:
+            filter_func: DatasetFilterProtocol = getattr(self.dataset._FILTER_NAMESPACE, name)
+
+            def wrapped_filter_func(**kwargs):
+                return filter_func(self.dataset, **kwargs)
+
+            return wrapped_filter_func
+        
+        def __call__(self):
+            return self.FilterBy(self.dataset)
+
+    @property
+    def filter_by(self) -> "FilterBy":
+        return self.FilterBy(self)
+
+        
+        
 
     def _apply_filters_from_config(self) -> None:
         """apply filters to the dataset, as specified in the config. used in `from_config()`"""
@@ -370,12 +386,23 @@ def register_filter_namespace_for_dataset(dataset_cls: type[GPTDataset]) -> type
     dataset_cls.FILTER_MAP = dict()
     filter_namespace_cls._BASE_DATASET = dataset_cls
     ```
+    and also adds a `_filter_namespace_cls` attribute to every static method in the namespace class for use in `register_wrap_dataset_filter`
     """
 
     def decorator(filter_namespace_cls: type) -> type:
         dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
         dataset_cls.FILTER_MAP = dict()
         filter_namespace_cls._BASE_DATASET = dataset_cls
+
+        # TODO: remove this? it's only useful for checking
+        for method_name, method in filter_namespace_cls.__dict__.items():
+            if (
+                    isinstance(method, typing.Callable) 
+                    and isinstance(method, types.FunctionType)
+                    and not method.__name__.startswith("_")
+            ):
+                setattr(method, "_filter_namespace_cls", filter_namespace_cls)
+
         return filter_namespace_cls
 
     return decorator
@@ -389,23 +416,29 @@ class DatasetFilterProtocol(typing.Protocol):
         ...
 
     
-def register_wrap_dataset_filter(method: DatasetFilterProtocol) -> DatasetFilterProtocol:
+def register_wrap_dataset_filter(base_dataset_cls: type) -> type:
     """register a dataset filter, copying the underlying dataset and updating the config
     
-    method should be a staticmethod of a namespace class registerd with `register_filter_namespace_for_dataset`
+    - the dataset class this is a filter for should be passed to this decorator
+    - method should be a staticmethod of a namespace class registered with `register_filter_namespace_for_dataset`
 
     """
-    method_dict: dict[str, DatasetFilterProtocol] = method.__class__._BASE_DATASET.FILTER_MAP
-    assert method.__name__ not in method_dict, f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
-    method_dict[method.__name__] = method
 
-    @functools.wraps(method)
-    def wrapper(dataset: GPTDataset, **kwargs):
-        # copy and filter
-        new_dataset: GPTDataset = copy.deepcopy(dataset)
-        new_dataset = method(dataset, **kwargs)
-        # update the config
-        new_dataset.cfg.applied_filters.append(dict(name=method.__name__, kwargs=kwargs))
-        new_dataset.update_self_config()
+    def decorator(method: DatasetFilterProtocol) -> DatasetFilterProtocol:
+        method_dict: dict[str, DatasetFilterProtocol] = base_dataset_cls.FILTER_MAP
+        assert method.__name__ not in method_dict, f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
+        method_dict[method.__name__] = method
 
-    return wrapper
+        @functools.wraps(method)
+        def wrapper(dataset: GPTDataset, **kwargs):
+            # copy and filter
+            new_dataset: GPTDataset = copy.deepcopy(dataset)
+            new_dataset = method(dataset, **kwargs)
+            # update the config
+            new_dataset.cfg.applied_filters.append(dict(name=method.__name__, kwargs=kwargs))
+            new_dataset.update_self_config()
+            return new_dataset
+
+        return wrapper
+    
+    return decorator
