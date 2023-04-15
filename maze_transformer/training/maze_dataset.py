@@ -143,6 +143,8 @@ def _maze_gen_init_worker(config: MazeDatasetConfig):
 class MazeDataset(GPTDataset):
     """maze dataset"""
 
+    FILTER_MAP: dict[str, "DatasetFilterProtocol"] = dict()
+
     def __init__(
         self,
         cfg: MazeDatasetConfig,
@@ -286,6 +288,9 @@ class MazeDataset(GPTDataset):
             )
         return cls.read(path)
 
+    def update_self_config(self):
+        """update the config to match the current state of the dataset"""
+        self.cfg.n_mazes = len(self.mazes)
 
 MazeDatasetConfig._dataset_class = MazeDataset
 
@@ -304,16 +309,32 @@ MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
 
 
 
-MAZE_DATASET_FILTERS: dict[str, DatasetFilterProtocol] = dict()
+
 
 
 class MazeDatasetFilters:
 
-    @register_wrap_dataset_filter(MAZE_DATASET_FILTERS)    
+    _BASE_DATASET: type[GPTDataset] = MazeDataset
+
+    @register_wrap_dataset_filter
     def path_length(dataset: MazeDataset, min_length: int) -> MazeDataset:
+        """filter out mazes with a path length less than `min_length`"""
         return MazeDataset(
             cfg=dataset.cfg,
             mazes=list(filter(lambda m: len(m.path) >= min_length, dataset.mazes)),
+        )
+
+    @register_wrap_dataset_filter
+    def start_end_distance(dataset: MazeDataset, min_distance: int) -> MazeDataset:
+        """filter out datasets where the start and end pos are less than `min_distance` apart on the manhattan distance (ignoring walls)"""
+        return MazeDataset(
+            cfg=dataset.cfg,
+            mazes=list(
+                filter(
+                    lambda m: np.linalg.norm(m.start - m.end) >= min_distance,
+                    dataset.mazes,
+                )
+            ),
         )
 
 

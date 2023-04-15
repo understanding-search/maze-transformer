@@ -39,6 +39,7 @@ class GPTDatasetConfig(SerializableDataclass):
     """base GPTDatasetConfig class"""
 
     name: str
+    # TODO: get rid of device here? belongs in training config
     device: torch.device = serializable_field(
         default_factory=lambda: torch.device(get_device()),
         serialization_fn=lambda x: str(x),
@@ -52,7 +53,7 @@ class GPTDatasetConfig(SerializableDataclass):
     seq_len_min: int = serializable_field(default=1)
     seq_len_max: int = serializable_field(default=512)
     seed: int|None = serializable_field(default=DEFAULT_SEED)
-    applied_filters: list[dict[str, str|dict]] = serializable_field(
+    applied_filters: list[dict[typing.Literal["name", "kwargs"], str|dict]] = serializable_field(
         default_factory=list, serialization_fn=lambda x: x, loading_fn=lambda x: x,
     )
 
@@ -161,6 +162,8 @@ class GPTDataset(Dataset):
     (meaning the functionality should be inherited in downstream classes)
     """
 
+    FILTER_MAP: dict[str, "DatasetFilterProtocol"] = "this isn't a filter map! you have to initialize this in subclasses!" # type: ignore
+
     @classmethod
     def from_config(
         cls,
@@ -205,6 +208,10 @@ class GPTDataset(Dataset):
             return the ith item in the dataset, required for `torch.utils.data.Dataset`
          - `get_all_lengths(self) -> list[int]`
             get the lengths of all sequences in the dataset
+         -  `update_self_config(self) -> None`
+            update the config of the dataset to match the current state of the dataset, used primarily in filtering and validation
+         -  `FILTER_MAP: dict[str, "DatasetFilterProtocol"]` (class attribute)
+            if you want to use filters, you need to define an empty filter map which will be populated when you call `register_wrap_dataset_filter`
 
         # Parameters:
          - `cfg : GPTDatasetConfig`
@@ -239,6 +246,12 @@ class GPTDataset(Dataset):
             read the dataset from a file, using ZANJ
          - `get_all(self, fmt: SaveFormats) -> Iterator[Any]`
             get all items in the dataset, in the specified format
+         - `filter_by(self)`
+            returns a namespace class 
+         -  `_filter_namespace(self) -> Class`
+            returns a namespace class for filtering the dataset, checking that method.__class__ matches for everything in the FILTER_MAP
+         - `_apply_filters_from_config(self) -> None`
+            apply filters to the dataset, as specified in the config. used in `from_config()` but only when generating
 
         """
 
@@ -268,6 +281,8 @@ class GPTDataset(Dataset):
 
         if do_generate:
             output = cls.generate(cfg, **kwargs)
+            # only if we generated it, apply filters
+            output = output._apply_filters_from_config()
 
         # check and save
         if output is None:
@@ -280,23 +295,22 @@ class GPTDataset(Dataset):
             output.save(local_base_path / fname, zanj=zanj)
 
         return output
-
-    def update_self_config(self):
-        """update the config of the dataset to match the actual data, if needed
-        
-        for example, adjust number of mazes after filtering
-        """
-        pass
-
+    
+    # getting data
     def get_all(self, fmt: SaveFormats) -> typing.Iterator[typing.Any]:
         for idx in range(len(self)):
             yield self.get(idx, fmt)
+    
+    def get_all_lengths(self) -> list[int]:
+        """get the lengths of all sequences"""
+        raise NotImplementedError()
 
     def save(self, file_path: str, zanj: ZANJ | None = None):
         if zanj is None:
             zanj = ZANJ()
         zanj.save(self.serialize(), file_path)
-
+    
+    # serialization & loading
     @classmethod
     def read(cls, file_path: str, zanj: ZANJ | None = None) -> "GPTDataset":
         if zanj is None:
@@ -313,6 +327,7 @@ class GPTDataset(Dataset):
     def load(cls, data: JSONitem) -> "GPTDataset":
         raise NotImplementedError()
 
+    # generating & downloading
     @classmethod
     def generate(cls, cfg: GPTDatasetConfig, **kwargs) -> "GPTDataset":
         raise NotImplementedError()
@@ -320,11 +335,38 @@ class GPTDataset(Dataset):
     @classmethod
     def download(cls, cfg: GPTDatasetConfig, **kwargs) -> "GPTDataset":
         raise NotImplementedError()
+    
+    # filtering
+    def update_self_config(self):
+        """update the config of the dataset to match the actual data, if needed
+        
+        for example, adjust number of mazes after filtering
+        """
+        pass
 
-    def get_all_lengths(self) -> list[int]:
-        """get the lengths of all sequences"""
-        raise NotImplementedError()
+    def _filter_namespace(self) -> type:
+        """get a namespace class for filtering the dataset"""
+        # get an item from the `FILTER_MAP` to get the class
+        filter_namespace: type = next(iter(self.FILTER_MAP.values())).__class__
+        assert all(
+            isinstance(method, classmethod) and method.__class__ == filter_namespace
+            for method in self.FILTER_MAP.values()
+        ), "all methods in FILTER_MAP should be classmethods of the same namespace class"
+        return filter_namespace
+    
+    def filter_by(self) -> type:
+        """return a namespace class for filtering the dataset"""
+        return self._filter_namespace()
 
+    def _apply_filters_from_config(self) -> None:
+        """apply filters to the dataset, as specified in the config. used in `from_config()`"""
+        
+        for filter_info in self.cfg.applied_filters:
+            filter_name: str = filter_info["name"]
+            filter_kwargs: dict = filter_info["kwargs"]
+            filter_method: DatasetFilterProtocol = self.FILTER_MAP[filter_name]
+            self = filter_method(self, **filter_kwargs)
+        self.update_self_config()
 
 class DatasetFilterProtocol(typing.Protocol):
     def __call__(
@@ -335,22 +377,26 @@ class DatasetFilterProtocol(typing.Protocol):
         ...
 
     
-def register_wrap_dataset_filter(method_dict: DatasetFilterProtocol) -> DatasetFilterProtocol:
-    """given a filter function and a dict to put it in, add it to the dict, and augment it to adjust the config"""
-
-    def decorator(method: DatasetFilterProtocol) -> DatasetFilterProtocol:
-        assert method.__name__ not in method_dict, f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
-        method_dict[method.__name__] = method
+def register_wrap_dataset_filter(method: DatasetFilterProtocol) -> DatasetFilterProtocol:
+    """register a dataset filter, copying the underlying dataset and updating the config
     
-        @functools.wraps(method)
-        def wrapper(dataset: GPTDataset, **kwargs):
-            # copy and filter
-            new_dataset: GPTDataset = copy.deepcopy(dataset)
-            new_dataset = method(dataset, **kwargs)
-            # update the config
-            new_dataset.cfg.applied_filters.append(dict(name=method.__name__, kwargs=kwargs))
-            new_dataset.update_self_config()
+    gets the method_dict to add the filter to from method.__class__._BASE_DATASET.FILTER_MAP
+    this means that: 
+    - method should be a classmethod of a namespace class
+    - the namespace class of filters should have a _BASE_DATASET attribute which is a subclass of GPTDataset
+    - the subclass of GPTDataset should have a FILTER_MAP attribute which is a dict[str, DatasetFilterProtocol]
+    """
+    method_dict: dict[str, DatasetFilterProtocol] = method.__class__._BASE_DATASET.FILTER_MAP
+    assert method.__name__ not in method_dict, f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
+    method_dict[method.__name__] = method
 
-        return wrapper
-    
-    return decorator
+    @functools.wraps(method)
+    def wrapper(dataset: GPTDataset, **kwargs):
+        # copy and filter
+        new_dataset: GPTDataset = copy.deepcopy(dataset)
+        new_dataset = method(dataset, **kwargs)
+        # update the config
+        new_dataset.cfg.applied_filters.append(dict(name=method.__name__, kwargs=kwargs))
+        new_dataset.update_self_config()
+
+    return wrapper
