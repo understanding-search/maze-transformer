@@ -22,6 +22,7 @@ from maze_transformer.training.dataset import (
     GPTDatasetConfig,
     IndexedArray,
     SaveFormats,
+    register_filter_namespace_for_dataset,
     register_wrap_dataset_filter,
 )
 from maze_transformer.training.tokenizer import maze_to_tokens
@@ -311,12 +312,11 @@ MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
 
 
 
-
+@register_filter_namespace_for_dataset(MazeDataset)
 class MazeDatasetFilters:
 
-    _BASE_DATASET: type[GPTDataset] = MazeDataset
-
     @register_wrap_dataset_filter
+    @staticmethod
     def path_length(dataset: MazeDataset, min_length: int) -> MazeDataset:
         """filter out mazes with a path length less than `min_length`"""
         return MazeDataset(
@@ -325,6 +325,7 @@ class MazeDatasetFilters:
         )
 
     @register_wrap_dataset_filter
+    @staticmethod
     def start_end_distance(dataset: MazeDataset, min_distance: int) -> MazeDataset:
         """filter out datasets where the start and end pos are less than `min_distance` apart on the manhattan distance (ignoring walls)"""
         return MazeDataset(
@@ -336,5 +337,3 @@ class MazeDatasetFilters:
                 )
             ),
         )
-
-

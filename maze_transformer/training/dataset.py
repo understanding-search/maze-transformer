@@ -2,6 +2,7 @@ import copy
 import enum
 import functools
 import json
+import types
 import typing
 import warnings
 from functools import cached_property
@@ -162,7 +163,8 @@ class GPTDataset(Dataset):
     (meaning the functionality should be inherited in downstream classes)
     """
 
-    FILTER_MAP: dict[str, "DatasetFilterProtocol"] = "this isn't a filter map! you have to initialize this in subclasses!" # type: ignore
+    FILTER_MAP: dict[str, "DatasetFilterProtocol"] = "this isn't a filter map! you have to initialize this by registering with `register_filter_namespace_for_dataset`" # type: ignore
+    _FILTER_NAMESPACE: type = "this isn't a filter namespace! you have to initialize this by registering with `register_filter_namespace_for_dataset`" # type: ignore
 
     @classmethod
     def from_config(
@@ -210,8 +212,7 @@ class GPTDataset(Dataset):
             get the lengths of all sequences in the dataset
          -  `update_self_config(self) -> None`
             update the config of the dataset to match the current state of the dataset, used primarily in filtering and validation
-         -  `FILTER_MAP: dict[str, "DatasetFilterProtocol"]` (class attribute)
-            if you want to use filters, you need to define an empty filter map which will be populated when you call `register_wrap_dataset_filter`
+         -  decorating the appropriate filter namespace with `register_filter_namespace_for_dataset(your_dataset_class)` if you want to use filters
 
         # Parameters:
          - `cfg : GPTDatasetConfig`
@@ -344,19 +345,10 @@ class GPTDataset(Dataset):
         """
         pass
 
-    def _filter_namespace(self) -> type:
-        """get a namespace class for filtering the dataset"""
-        # get an item from the `FILTER_MAP` to get the class
-        filter_namespace: type = next(iter(self.FILTER_MAP.values())).__class__
-        assert all(
-            isinstance(method, classmethod) and method.__class__ == filter_namespace
-            for method in self.FILTER_MAP.values()
-        ), "all methods in FILTER_MAP should be classmethods of the same namespace class"
-        return filter_namespace
-    
+
     def filter_by(self) -> type:
         """return a namespace class for filtering the dataset"""
-        return self._filter_namespace()
+        return self._FILTER_NAMESPACE
 
     def _apply_filters_from_config(self) -> None:
         """apply filters to the dataset, as specified in the config. used in `from_config()`"""
@@ -367,6 +359,26 @@ class GPTDataset(Dataset):
             filter_method: DatasetFilterProtocol = self.FILTER_MAP[filter_name]
             self = filter_method(self, **filter_kwargs)
         self.update_self_config()
+
+
+def register_filter_namespace_for_dataset(dataset_cls: type[GPTDataset]) -> type:
+    """register the namespace class with the given dataset class
+    
+    sets:
+    ```python
+    dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
+    dataset_cls.FILTER_MAP = dict()
+    filter_namespace_cls._BASE_DATASET = dataset_cls
+    ```
+    """
+
+    def decorator(filter_namespace_cls: type) -> type:
+        dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
+        dataset_cls.FILTER_MAP = dict()
+        filter_namespace_cls._BASE_DATASET = dataset_cls
+        return filter_namespace_cls
+
+    return decorator
 
 class DatasetFilterProtocol(typing.Protocol):
     def __call__(
@@ -380,11 +392,8 @@ class DatasetFilterProtocol(typing.Protocol):
 def register_wrap_dataset_filter(method: DatasetFilterProtocol) -> DatasetFilterProtocol:
     """register a dataset filter, copying the underlying dataset and updating the config
     
-    gets the method_dict to add the filter to from method.__class__._BASE_DATASET.FILTER_MAP
-    this means that: 
-    - method should be a classmethod of a namespace class
-    - the namespace class of filters should have a _BASE_DATASET attribute which is a subclass of GPTDataset
-    - the subclass of GPTDataset should have a FILTER_MAP attribute which is a dict[str, DatasetFilterProtocol]
+    method should be a staticmethod of a namespace class registerd with `register_filter_namespace_for_dataset`
+
     """
     method_dict: dict[str, DatasetFilterProtocol] = method.__class__._BASE_DATASET.FILTER_MAP
     assert method.__name__ not in method_dict, f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
