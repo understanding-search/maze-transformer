@@ -317,7 +317,7 @@ MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
 
 @register_filter_namespace_for_dataset(MazeDataset)
 class MazeDatasetFilters:
-    @register_wrap_dataset_filter(MazeDataset)
+    @register_wrap_dataset_filter
     @staticmethod
     def path_length(dataset: MazeDataset, min_length: int) -> MazeDataset:
         """filter out mazes with a solution length less than `min_length`"""
@@ -326,7 +326,7 @@ class MazeDatasetFilters:
             mazes=list(filter(lambda m: len(m.solution) >= min_length, dataset.mazes)),
         )
 
-    @register_wrap_dataset_filter(MazeDataset)
+    @register_wrap_dataset_filter
     @staticmethod
     def start_end_distance(dataset: MazeDataset, min_distance: int) -> MazeDataset:
         """filter out datasets where the start and end pos are less than `min_distance` apart on the manhattan distance (ignoring walls)"""

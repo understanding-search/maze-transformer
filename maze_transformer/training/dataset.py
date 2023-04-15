@@ -430,27 +430,24 @@ class DatasetFilterProtocol(typing.Protocol):
         ...
 
 
-def register_wrap_dataset_filter(base_dataset_cls: type) -> type:
+def register_wrap_dataset_filter(
+    method: DatasetFilterProtocol,
+) -> DatasetFilterProtocol:
     """register a dataset filter, copying the underlying dataset and updating the config
 
-    - the dataset class this is a filter for should be passed to this decorator
-    - method should be a staticmethod of a namespace class registered with `register_filter_namespace_for_dataset`
-
+    method should be a staticmethod of a namespace class registered with `register_filter_namespace_for_dataset`
     """
 
-    def decorator(method: DatasetFilterProtocol) -> DatasetFilterProtocol:
-        @functools.wraps(method)
-        def wrapper(dataset: GPTDataset, **kwargs):
-            # copy and filter
-            new_dataset: GPTDataset = copy.deepcopy(dataset)
-            new_dataset = method(dataset, **kwargs)
-            # update the config
-            new_dataset.cfg.applied_filters.append(
-                dict(name=method.__name__, kwargs=kwargs)
-            )
-            new_dataset.update_self_config()
-            return new_dataset
+    @functools.wraps(method)
+    def wrapper(dataset: GPTDataset, **kwargs):
+        # copy and filter
+        new_dataset: GPTDataset = copy.deepcopy(dataset)
+        new_dataset = method(dataset, **kwargs)
+        # update the config
+        new_dataset.cfg.applied_filters.append(
+            dict(name=method.__name__, kwargs=kwargs)
+        )
+        new_dataset.update_self_config()
+        return new_dataset
 
-        return wrapper
-
-    return decorator
+    return wrapper
