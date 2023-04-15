@@ -7,7 +7,7 @@ import numpy as np
 from maze_transformer.generation.constants import CoordArray
 from maze_transformer.generation.lattice_maze import (
     NEIGHBORS_MASK,
-    ConnectionListType,
+    ConnectionList,
     Coord,
     CoordTup,
     LatticeMaze,
@@ -39,7 +39,7 @@ class LatticeMazeGenerators:
         grid_shape = np.array(grid_shape)
 
         # initialize the maze with no connections
-        connection_list: ConnectionListType = np.zeros(
+        connection_list: ConnectionList = np.zeros(
             (lattice_dim, grid_shape[0], grid_shape[1]), dtype=np.bool_
         )
         start_coord: Coord = np.random.randint(0, grid_shape - 1, size=2)

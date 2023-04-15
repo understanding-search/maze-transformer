@@ -11,7 +11,7 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
-from maze_transformer.generation.constants import Coord, CoordArray, CoordList, CoordTup
+from maze_transformer.generation.constants import Coord, CoordArray, CoordList
 from maze_transformer.generation.lattice_maze import (
     Coord,
     CoordArray,
@@ -119,16 +119,16 @@ class MazePlot:
         "slategrey",
     ]
 
-    def __init__(self, maze: LatticeMaze) -> None:
+    def __init__(self, maze: LatticeMaze, unit_length: int = 14) -> None:
         """
         UNIT_LENGTH: Set ratio between node size and wall thickness in image.
         Wall thickness is fixed to 1px
         A "unit" consists of a single node and the right and lower connection/wall.
         Example: ul = 14 yields 13:1 ratio between node size and wall thickness
         """
-        self.unit_length: int = 14
+        self.unit_length: int = unit_length
         self.maze: LatticeMaze = maze
-        self.true_path: StyledPath = None
+        self.true_path: StyledPath | None = None
         self.predicted_paths: list[StyledPath] = []
         self.node_values: Float[np.ndarray, "grid_n grid_n"] = None
         self.custom_node_value_flag: bool = False
@@ -142,6 +142,17 @@ class MazePlot:
 
         if isinstance(maze, SolvedMaze):
             self.add_true_path(maze.solution)
+
+    @property
+    def solved_maze(self) -> SolvedMaze:
+        if self.true_path is None:
+            raise ValueError(
+                "Cannot return SolvedMaze object without true path. Add true path with add_true_path method."
+            )
+        return SolvedMaze.from_lattice_maze(
+            lattice_maze=self.maze,
+            solution=self.true_path.path,
+        )
 
     def add_true_path(
         self,
@@ -238,12 +249,6 @@ class MazePlot:
         self.ax.set_xlabel("col")
         self.ax.set_ylabel("row")
         self.fig.suptitle(title)
-
-    def show(self, dpi: int = 100, title: str = "") -> None:
-        """Plot the maze and paths and show the plot. DONT USE THIS IN NOTEBOOKS WHICH NEED TO BE TESTED IN CI!!!"""
-        self.plot(dpi=dpi, title=title)
-        plt.show()
-        return self
 
     def _rowcol_to_coord(self, point: Coord) -> NDArray:
         """Transform Point from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
@@ -418,26 +423,14 @@ class MazePlot:
             ms=10,
         )
 
-    def as_ascii(
+    def to_ascii(
         self,
-        start_pos: CoordTup = None,
-        end_pos: CoordTup = None,
-    ):
-        if start_pos is None:
-            if self.true_path is not None:
-                start_pos = self.true_path[0]
-        if end_pos is None:
-            if self.true_path is not None:
-                end_pos = self.true_path[-1]
-
-        if (start_pos is None) or (end_pos is None):
-            return self.maze.as_ascii()
-        elif (start_pos is not None) and (end_pos is not None):
-            tgt_maze: TargetedLatticeMaze = TargetedLatticeMaze.from_lattice_maze(
-                lattice_maze=self.maze,
-                start_pos=start_pos,
-                end_pos=end_pos,
+        show_endpoints: bool = True,
+        show_solution: bool = True,
+    ) -> str:
+        if self.true_path:
+            return self.solved_maze.as_ascii(
+                show_endpoints=show_endpoints, show_solution=show_solution
             )
-            return tgt_maze.as_ascii()
         else:
-            raise ValueError("start_pos and end_pos must both be None or not None.")
+            return self.maze.as_ascii(show_endpoints=show_endpoints)

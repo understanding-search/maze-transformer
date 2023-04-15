@@ -4,11 +4,187 @@ import pytest
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import (
     LatticeMaze,
+    PixelColors,
     SolvedMaze,
     TargetedLatticeMaze,
 )
 from maze_transformer.generation.utils import bool_array_from_string
-from tests.helpers import utils
+from tests.helpers.utils import adj_list_to_nested_set
+
+
+# thanks to gpt for these tests of _from_pixel_grid
+@pytest.fixture
+def example_pixel_grid():
+    return ~np.array(
+        [
+            [1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 1],
+            [1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1],
+        ],
+        dtype=bool,
+    )
+
+
+@pytest.fixture
+def example_rgb_pixel_grid():
+    return np.array(
+        [
+            [
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+            ],
+            [
+                PixelColors.WALL,
+                PixelColors.OPEN,
+                PixelColors.OPEN,
+                PixelColors.OPEN,
+                PixelColors.WALL,
+            ],
+            [
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+            ],
+            [
+                PixelColors.WALL,
+                PixelColors.OPEN,
+                PixelColors.WALL,
+                PixelColors.OPEN,
+                PixelColors.WALL,
+            ],
+            [
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+            ],
+        ],
+        dtype=np.uint8,
+    )
+
+
+def test_from_pixel_grid_bw(example_pixel_grid):
+    connection_list, grid_shape = LatticeMaze._from_pixel_grid_bw(example_pixel_grid)
+
+    assert isinstance(connection_list, np.ndarray)
+    assert connection_list.shape == (2, 2, 2)
+    assert np.all(connection_list[0] == np.array([[False, True], [False, False]]))
+    assert np.all(connection_list[1] == np.array([[True, False], [True, False]]))
+    assert grid_shape == (2, 2)
+
+
+def test_from_pixel_grid_with_positions(example_rgb_pixel_grid):
+    marked_positions = {
+        "start": PixelColors.START,
+        "end": PixelColors.END,
+        "path": PixelColors.PATH,
+    }
+
+    (
+        connection_list,
+        grid_shape,
+        out_positions,
+    ) = LatticeMaze._from_pixel_grid_with_positions(
+        example_rgb_pixel_grid, marked_positions
+    )
+
+    assert isinstance(connection_list, np.ndarray)
+    assert connection_list.shape == (2, 2, 2)
+    assert np.all(connection_list[0] == np.array([[False, False], [False, False]]))
+    assert np.all(connection_list[1] == np.array([[True, False], [False, False]]))
+    assert grid_shape == (2, 2)
+
+    assert isinstance(out_positions, dict)
+    assert len(out_positions) == 3
+    assert "start" in out_positions and "end" in out_positions
+    assert (
+        isinstance(out_positions["start"], np.ndarray)
+        and isinstance(out_positions["end"], np.ndarray)
+        and isinstance(out_positions["path"], np.ndarray)
+    )
+    assert out_positions["start"].shape == (0,)
+    assert out_positions["end"].shape == (0,)
+    assert out_positions["path"].shape == (0,)
+
+
+def test_find_start_end_points_in_rgb_pixel_grid():
+    rgb_pixel_grid_with_positions = np.array(
+        [
+            [
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+            ],
+            [
+                PixelColors.WALL,
+                PixelColors.START,
+                PixelColors.OPEN,
+                PixelColors.END,
+                PixelColors.WALL,
+            ],
+            [
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+            ],
+            [
+                PixelColors.WALL,
+                PixelColors.OPEN,
+                PixelColors.WALL,
+                PixelColors.OPEN,
+                PixelColors.WALL,
+            ],
+            [
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+                PixelColors.WALL,
+            ],
+        ],
+        dtype=np.uint8,
+    )
+
+    marked_positions = {
+        "start": PixelColors.START,
+        "end": PixelColors.END,
+        "path": PixelColors.PATH,
+    }
+
+    (
+        connection_list,
+        grid_shape,
+        out_positions,
+    ) = LatticeMaze._from_pixel_grid_with_positions(
+        rgb_pixel_grid_with_positions, marked_positions
+    )
+
+    print(f"{out_positions = }")
+
+    assert isinstance(out_positions, dict)
+    assert len(out_positions) == 3
+    assert "start" in out_positions and "end" in out_positions
+    assert (
+        isinstance(out_positions["start"], np.ndarray)
+        and isinstance(out_positions["end"], np.ndarray)
+        and isinstance(out_positions["path"], np.ndarray)
+    )
+
+    assert np.all(out_positions["start"] == np.array([[0, 0]]))
+    assert np.all(out_positions["end"] == np.array([[0, 1]]))
+    assert out_positions["path"].shape == (0,)
 
 
 def test_pixels_ascii_roundtrip():
@@ -23,10 +199,10 @@ def test_pixels_ascii_roundtrip():
         assert maze == LatticeMaze.from_pixels(maze_pixels)
         assert maze == LatticeMaze.from_ascii(maze_ascii)
 
-        assert maze_pixels.shape == (
-            n * 2 + 1,
-            n * 2 + 1,
-        ), f"{maze_pixels.shape} != {(n*2+1, n*2+1)}"
+        expected_shape: tuple = (n * 2 + 1, n * 2 + 1, 3)
+        assert (
+            maze_pixels.shape == expected_shape
+        ), f"{maze_pixels.shape} != {expected_shape}"
         assert all(
             n * 2 + 1 == len(line) for line in maze_ascii.splitlines()
         ), f"{maze_ascii}"
@@ -47,11 +223,10 @@ def test_targeted_solved_maze():
         assert tgt_maze == TargetedLatticeMaze.from_pixels(tgt_maze_pixels)
         assert tgt_maze == TargetedLatticeMaze.from_ascii(tgt_maze_ascii)
 
-        assert tgt_maze_pixels.shape == (
-            n * 2 + 1,
-            n * 2 + 1,
-            3,
-        ), f"{tgt_maze_pixels.shape} != {(n*2+1, n*2+1, 3)}"
+        expected_shape: tuple = (n * 2 + 1, n * 2 + 1, 3)
+        assert (
+            tgt_maze_pixels.shape == expected_shape
+        ), f"{tgt_maze_pixels.shape} != {expected_shape}"
         assert all(
             n * 2 + 1 == len(line) for line in tgt_maze_ascii.splitlines()
         ), f"{tgt_maze_ascii}"
@@ -64,11 +239,10 @@ def test_targeted_solved_maze():
         assert solved_maze == SolvedMaze.from_pixels(solved_maze_pixels)
         assert solved_maze == SolvedMaze.from_ascii(solved_maze_ascii)
 
-        assert solved_maze_pixels.shape == (
-            n * 2 + 1,
-            n * 2 + 1,
-            3,
-        ), f"{solved_maze_pixels.shape} != {(n*2+1, n*2+1, 3)}"
+        expected_shape: tuple = (n * 2 + 1, n * 2 + 1, 3)
+        assert (
+            tgt_maze_pixels.shape == expected_shape
+        ), f"{tgt_maze_pixels.shape} != {expected_shape}"
         assert all(
             n * 2 + 1 == len(line) for line in solved_maze_ascii.splitlines()
         ), f"{solved_maze_ascii}"
@@ -92,9 +266,7 @@ def test_as_adj_list():
 
     expected = [[[0, 1], [1, 1]], [[0, 0], [0, 1]], [[1, 0], [1, 1]]]
 
-    assert utils.adj_list_to_nested_set(expected) == utils.adj_list_to_nested_set(
-        adj_list
-    )
+    assert adj_list_to_nested_set(expected) == adj_list_to_nested_set(adj_list)
 
 
 def test_get_nodes():
