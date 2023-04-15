@@ -1,8 +1,10 @@
+import functools
 import multiprocessing
 import typing
 import warnings
 from functools import cached_property
 from typing import Callable
+import copy
 
 import numpy as np
 from jaxtyping import Int
@@ -15,12 +17,15 @@ from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordAr
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze, TargetedLatticeMaze
 from maze_transformer.training.dataset import (
+    DatasetFilterProtocol,
     GPTDataset,
     GPTDatasetConfig,
     IndexedArray,
     SaveFormats,
+    register_wrap_dataset_filter,
 )
 from maze_transformer.training.tokenizer import maze_to_tokens
+from maze_transformer.utils.utils import register_method
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",
@@ -296,3 +301,19 @@ MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
         ),
     ]
 }
+
+
+
+MAZE_DATASET_FILTERS: dict[str, DatasetFilterProtocol] = dict()
+
+
+class MazeDatasetFilters:
+
+    @register_wrap_dataset_filter(MAZE_DATASET_FILTERS)    
+    def path_length(dataset: MazeDataset, min_length: int) -> MazeDataset:
+        return MazeDataset(
+            cfg=dataset.cfg,
+            mazes=list(filter(lambda m: len(m.path) >= min_length, dataset.mazes)),
+        )
+
+

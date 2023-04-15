@@ -1,4 +1,6 @@
+import copy
 import enum
+import functools
 import json
 import typing
 import warnings
@@ -50,6 +52,9 @@ class GPTDatasetConfig(SerializableDataclass):
     seq_len_min: int = serializable_field(default=1)
     seq_len_max: int = serializable_field(default=512)
     seed: int|None = serializable_field(default=DEFAULT_SEED)
+    applied_filters: list[dict[str, str|dict]] = serializable_field(
+        default_factory=list, serialization_fn=lambda x: x, loading_fn=lambda x: x,
+    )
 
     def __post_init__(self):
         assert self.seq_len_min <= self.seq_len_max
@@ -276,6 +281,13 @@ class GPTDataset(Dataset):
 
         return output
 
+    def update_self_config(self):
+        """update the config of the dataset to match the actual data, if needed
+        
+        for example, adjust number of mazes after filtering
+        """
+        pass
+
     def get_all(self, fmt: SaveFormats) -> typing.Iterator[typing.Any]:
         for idx in range(len(self)):
             yield self.get(idx, fmt)
@@ -312,3 +324,33 @@ class GPTDataset(Dataset):
     def get_all_lengths(self) -> list[int]:
         """get the lengths of all sequences"""
         raise NotImplementedError()
+
+
+class DatasetFilterProtocol(typing.Protocol):
+    def __call__(
+        self,
+        dataset: GPTDataset,
+        **kwargs,
+    ) -> GPTDataset:
+        ...
+
+    
+def register_wrap_dataset_filter(method_dict: DatasetFilterProtocol) -> DatasetFilterProtocol:
+    """given a filter function and a dict to put it in, add it to the dict, and augment it to adjust the config"""
+
+    def decorator(method: DatasetFilterProtocol) -> DatasetFilterProtocol:
+        assert method.__name__ not in method_dict, f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
+        method_dict[method.__name__] = method
+    
+        @functools.wraps(method)
+        def wrapper(dataset: GPTDataset, **kwargs):
+            # copy and filter
+            new_dataset: GPTDataset = copy.deepcopy(dataset)
+            new_dataset = method(dataset, **kwargs)
+            # update the config
+            new_dataset.cfg.applied_filters.append(dict(name=method.__name__, kwargs=kwargs))
+            new_dataset.update_self_config()
+
+        return wrapper
+    
+    return decorator
