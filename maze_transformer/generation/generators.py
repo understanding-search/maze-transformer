@@ -42,7 +42,11 @@ class LatticeMazeGenerators:
         connection_list: ConnectionList = np.zeros(
             (lattice_dim, grid_shape[0], grid_shape[1]), dtype=np.bool_
         )
-        start_coord: Coord = np.random.randint(0, grid_shape - 1, size=2)
+        start_coord: Coord = np.random.randint(
+            0, 
+            np.maximum(grid_shape - 1, 1),
+            size=2,
+        )
 
         # initialize the stack with the target coord
         visited_cells: set[tuple[int, int]] = set()
@@ -205,4 +209,4 @@ GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
 def get_maze_with_solution(gen_name: str, grid_shape: Coord) -> SolvedMaze:
         maze: LatticeMaze = GENERATORS_MAP[gen_name](grid_shape)
         solution: CoordArray = np.array(maze.generate_random_path())
-        return SolvedMaze(maze, solution)
+        return SolvedMaze.from_lattice_maze(lattice_maze=maze, solution=solution)
