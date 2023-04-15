@@ -26,6 +26,7 @@ from maze_transformer.training.maze_dataset import (
     MazeDatasetConfig,
 )
 from maze_transformer.training.tokenizer import HuggingMazeTokenizer
+from maze_transformer.utils.utils import DEFAULT_SEED, set_reproducibility
 
 
 @serializable_dataclass(kw_only=True)
@@ -207,6 +208,10 @@ class ConfigHolder(SerializableDataclass):
     pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
         default=None
     )
+
+    @property
+    def seed(self) -> int:
+        return self.dataset_cfg.seed
 
     @cached_property
     def tokenizer(self) -> PreTrainedTokenizer:

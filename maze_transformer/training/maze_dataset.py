@@ -1,3 +1,4 @@
+import multiprocessing
 import typing
 import warnings
 from functools import cached_property
@@ -8,10 +9,11 @@ from jaxtyping import Int
 from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field
 from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import sanitize_fname
+import tqdm
 
-from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordArray, CoordTup
+from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordArray, CoordTup
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
-from maze_transformer.generation.lattice_maze import SolvedMaze, TargetedLatticeMaze
+from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze, TargetedLatticeMaze
 from maze_transformer.training.dataset import (
     GPTDataset,
     GPTDatasetConfig,
@@ -80,8 +82,12 @@ class MazeDatasetConfig(GPTDatasetConfig):
     # p_min_tgt_dist: float = 0.2,
 
     @property
-    def grid_shape(self) -> tuple[int, int]:
+    def grid_shape(self) -> CoordTup:
         return (self.grid_n, self.grid_n)
+    
+    @property
+    def grid_shape_np(self) -> Coord:
+        return np.array(self.grid_shape)
 
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:
@@ -118,6 +124,17 @@ class MazeDatasetConfig(GPTDatasetConfig):
         )
 
 
+def _generate_maze_helper(positions: CoordArray) -> SolvedMaze:
+    maze: LatticeMaze = _GLOBAL_WORKER_CONFIG.maze_ctor(grid_shape=_GLOBAL_WORKER_CONFIG.grid_shape_np)
+    return SolvedMaze.from_lattice_maze(
+        lattice_maze=maze, 
+        solution=np.array(maze.find_shortest_path(positions[0], positions[1])),
+    )
+
+def _maze_gen_init_worker(config: MazeDatasetConfig):
+    global _GLOBAL_WORKER_CONFIG
+    _GLOBAL_WORKER_CONFIG = config
+
 class MazeDataset(GPTDataset):
     """maze dataset"""
 
@@ -129,6 +146,9 @@ class MazeDataset(GPTDataset):
         super().__init__()
         self.cfg: MazeDatasetConfig = cfg
         self.mazes: list[SolvedMaze] = list(mazes)
+
+    def data_hash(self) -> int:
+        return hash(tuple(self.mazes))
 
     def get(
         self, index: int, fmt: SaveFormats = SaveFormats.OBJECTS
@@ -178,7 +198,12 @@ class MazeDataset(GPTDataset):
         # return [len(m) for m in self.mazes_tokens]
 
     @classmethod
-    def generate(cls, cfg: MazeDatasetConfig) -> "MazeDataset":
+    def generate(
+            cls, 
+            cfg: MazeDatasetConfig,
+            do_parallel: bool = True,
+            verbose: bool = False,
+        ) -> "MazeDataset":
         mazes: list[SolvedMaze] = list()
         endpoint_nodes: Int[np.int8, "maze_index 2 2"] = np.random.randint(
             0,
@@ -186,20 +211,40 @@ class MazeDataset(GPTDataset):
             (cfg.n_mazes, 2, 2),
         )
         # TODO: filter min distanced based on MazeDatasetConfig
-        # TODO: parallelize
 
-        for i, (c_start, c_end) in enumerate(endpoint_nodes):
-            m: TargetedLatticeMaze = TargetedLatticeMaze.from_lattice_maze(
-                lattice_maze=cfg.maze_ctor(cfg.grid_shape),
-                start_pos=c_start,
-                end_pos=c_end,
+        solved_mazes: list[SolvedMaze]
+        tqdm_kwargs: dict = dict(
+            total=cfg.n_mazes,
+            unit="maze",
+            desc="generating & solving mazes",
+            disable=not verbose,
+        )
+        if do_parallel:
+            with multiprocessing.Pool(initializer=_maze_gen_init_worker, initargs=(cfg,)) as pool:
+                solved_mazes = list(
+                    tqdm.tqdm(
+                        pool.imap(
+                            _generate_maze_helper,
+                            endpoint_nodes,
+                        ),
+                        **tqdm_kwargs,
+                    )
+                )
+        else:
+            _maze_gen_init_worker(cfg)
+            solved_mazes = list(
+                tqdm.tqdm(
+                    map(
+                        _generate_maze_helper,
+                        endpoint_nodes,
+                    ),
+                    **tqdm_kwargs,
+                )
             )
-            path: CoordArray = np.array(m.find_shortest_path(c_start, c_end))
-            mazes.append(SolvedMaze.from_lattice_maze(lattice_maze=m, solution=path))
 
         return cls(
             cfg=cfg,
-            mazes=mazes,
+            mazes=solved_mazes,
         )
 
     @classmethod

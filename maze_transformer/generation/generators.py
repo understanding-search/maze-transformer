@@ -6,6 +6,7 @@ import numpy as np
 from maze_transformer.generation.constants import CoordArray
 from maze_transformer.generation.lattice_maze import (
     NEIGHBORS_MASK,
+    ConnectionListType,
     Coord,
     CoordTup,
     LatticeMaze,
@@ -18,8 +19,7 @@ class LatticeMazeGenerators:
 
     @staticmethod
     def gen_dfs(
-        grid_shape: Coord | CoordTup,
-        start_coord: Coord | None = None,
+        grid_shape: Coord,
         lattice_dim: int = 2,
     ) -> LatticeMaze:
         """generate a lattice maze using depth first search, iterative
@@ -35,20 +35,11 @@ class LatticeMazeGenerators:
                         4. Mark the chosen cell as visited and push it to the stack
         """
 
-        grid_shape = np.array(grid_shape)
-
         # initialize the maze with no connections
-        connection_list: np.ndarray = np.zeros(
+        connection_list: ConnectionListType = np.zeros(
             (lattice_dim, grid_shape[0], grid_shape[1]), dtype=np.bool_
         )
-
-        if start_coord is None:
-            start_coord: Coord = (
-                random.randint(0, grid_shape[0] - 1),
-                random.randint(0, grid_shape[1] - 1),
-            )
-
-        # print(f"{grid_shape = } {start_coord = }")
+        start_coord: Coord = np.random.randint(0, grid_shape - 1, size=2)
 
         # initialize the stack with the target coord
         visited_cells: set[tuple[int, int]] = set()
@@ -100,13 +91,6 @@ class LatticeMazeGenerators:
                 start_coord=start_coord,
             ),
         )
-
-    @classmethod
-    def gen_dfs_with_solution(cls, grid_shape: Coord) -> SolvedMaze:
-        maze: LatticeMaze = cls.gen_dfs(grid_shape)
-        solution: CoordArray = np.array(maze.generate_random_path())
-
-        return SolvedMaze.from_lattice_maze(lattice_maze=maze, solution=solution)
 
     @staticmethod
     def gen_wilson(
@@ -200,7 +184,6 @@ class LatticeMazeGenerators:
                 grid_shape=grid_shape,
             ),
         )
-
 
 # TODO: use the thing @valedan wrote for the evals function to make this automatic?
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {

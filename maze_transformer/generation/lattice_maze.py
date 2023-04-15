@@ -227,7 +227,7 @@ class LatticeMaze(SerializableDataclass):
         ]
 
     def generate_random_path(self) -> list[Coord]:
-        """ "return a path between randomly chosen start and end nodes"""
+        """return a path between randomly chosen start and end nodes"""
 
         # we can't create a "path" in a single-node maze
         assert self.grid_shape[0] > 1 and self.grid_shape[1] > 1

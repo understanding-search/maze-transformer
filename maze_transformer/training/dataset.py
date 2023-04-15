@@ -18,7 +18,7 @@ from muutils.tensor_utils import DTYPE_MAP, ATensor
 from muutils.zanj import ZANJ
 from torch.utils.data import Dataset
 
-from maze_transformer.utils.utils import get_device
+from maze_transformer.utils.utils import DEFAULT_SEED, GLOBAL_SEED, get_device, set_reproducibility
 
 
 def _dtype_serialization_fn(datatype: torch.dtype | np.dtype) -> str:
@@ -34,7 +34,7 @@ def _dtype_serialization_fn(datatype: torch.dtype | np.dtype) -> str:
     properties_to_serialize=["token_arr", "padding_token_index", "tokenizer_map"],
 )
 class GPTDatasetConfig(SerializableDataclass):
-    """base config class"""
+    """base GPTDatasetConfig class"""
 
     name: str
     device: torch.device = serializable_field(
@@ -49,6 +49,18 @@ class GPTDatasetConfig(SerializableDataclass):
     )
     seq_len_min: int = serializable_field(default=1)
     seq_len_max: int = serializable_field(default=512)
+    seed: int|None = serializable_field(default=DEFAULT_SEED)
+
+    def __post_init__(self):
+        assert self.seq_len_min <= self.seq_len_max
+        # if seed set to None, then generate a new random seed 
+        if self.seed is None:
+            self.seed = torch.random.seed() % 2**31
+
+        if (DEFAULT_SEED != self.seed) and (GLOBAL_SEED != self.seed):
+            warnings.warn(f"in GPTDatasetConfig {self.name=}, {self.seed=} is trying to override {GLOBAL_SEED=} which has already been changed elsewhere from {DEFAULT_SEED=}")
+
+        set_reproducibility(self.seed)
 
     @cached_property
     def token_arr(self) -> list[str]:
@@ -152,6 +164,7 @@ class GPTDataset(Dataset):
         load_local: bool = True,
         save_local: bool = True,
         save_formats: set[SaveFormats] = {SaveFormats.OBJECTS, SaveFormats.TOKENS},
+        zanj: ZANJ|None = None,
         do_download: bool = True,
         local_base_path: Path = Path("data/maze_dataset"),
         **kwargs,
@@ -228,6 +241,8 @@ class GPTDataset(Dataset):
         fname: Path = Path(f"{cfg.to_fname()}.zanj")
         output: GPTDataset | None = None
         did_load_local: bool = False
+        if zanj is None:
+            zanj = ZANJ()
 
         if not (load_local or do_download or do_generate):
             raise ValueError(
@@ -237,7 +252,7 @@ class GPTDataset(Dataset):
         # try loading
         if load_local:
             if (local_base_path / fname).exists():
-                output = cls.read(local_base_path / fname)
+                output = cls.read(local_base_path / fname, zanj=zanj)
                 did_load_local = True
 
         if do_download:
@@ -257,7 +272,7 @@ class GPTDataset(Dataset):
             raise ValueError(f"config mismatch: {cfg.diff(output.cfg)}")
 
         if save_local and not did_load_local:
-            output.save(local_base_path / fname)
+            output.save(local_base_path / fname, zanj=zanj)
 
         return output
 
@@ -277,6 +292,9 @@ class GPTDataset(Dataset):
         return cls.load(zanj.read(file_path))
 
     def serialize(self) -> JSONitem:
+        raise NotImplementedError()
+
+    def data_hash(self) -> int:
         raise NotImplementedError()
 
     @classmethod
