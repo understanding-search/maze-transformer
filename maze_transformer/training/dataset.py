@@ -278,13 +278,9 @@ class GPTDataset(Dataset):
                 pass
 
         if do_generate:
-            print("generating...")
             output = cls.generate(cfg, **kwargs)
-            print("done generating, filtering...")
             # only if we generated it, apply filters
             output = output._apply_filters_from_config()
-
-        print("done filtering, updating config...")
 
         # check and save
         if output is None:
@@ -366,19 +362,16 @@ class GPTDataset(Dataset):
 
     def _apply_filters_from_config(self):
         """apply filters to the dataset, as specified in the config. used in `from_config()`"""
-        print(f"applying filters to dataset of length {len(self)}...")
         output: GPTDataset = self
         # copy the list, and then clear it in the config
         applied_filters_old: list[dict[typing.Literal["name", "kwargs"], typing.Any]] = copy.deepcopy(self.cfg.applied_filters)
         self.cfg.applied_filters = list()
+        # apply the filters
         for filter_info in applied_filters_old:
-            print(f"applying filter {filter_info}")
             filter_name: str = filter_info["name"]
             filter_kwargs: dict = filter_info["kwargs"]
             output = getattr(self.filter_by, filter_name)(**filter_kwargs)
-            print(f"done applying filter {filter_info}")
-        print("done applying filters, updating config...")
-        print(f"dataset now has length {len(output)}")
+        # update the config
         self.update_self_config()
         assert self.cfg.applied_filters == applied_filters_old, f"config mismatch: {self.cfg.applied_filters} != {applied_filters_old}"
         return output
