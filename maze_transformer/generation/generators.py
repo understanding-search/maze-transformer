@@ -1,5 +1,6 @@
 import random
 from typing import Any, Callable
+import warnings
 
 import numpy as np
 
@@ -34,6 +35,8 @@ class LatticeMazeGenerators:
                         3. Remove the wall between the current cell and the chosen cell
                         4. Mark the chosen cell as visited and push it to the stack
         """
+
+        grid_shape = np.array(grid_shape)
 
         # initialize the maze with no connections
         connection_list: ConnectionListType = np.zeros(
@@ -185,8 +188,21 @@ class LatticeMazeGenerators:
             ),
         )
 
+    @classmethod
+    def gen_dfs_with_solution(cls, grid_shape: Coord):
+        warnings.warn(
+            "gen_dfs_with_solution is deprecated, use get_maze_with_solution instead",
+            DeprecationWarning,
+        )
+        return get_maze_with_solution("gen_dfs", grid_shape)
+
 # TODO: use the thing @valedan wrote for the evals function to make this automatic?
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
     "gen_dfs": LatticeMazeGenerators.gen_dfs,
     "gen_wilson": LatticeMazeGenerators.gen_wilson,
 }
+
+def get_maze_with_solution(gen_name: str, grid_shape: Coord) -> SolvedMaze:
+        maze: LatticeMaze = GENERATORS_MAP[gen_name](grid_shape)
+        solution: CoordArray = np.array(maze.generate_random_path())
+        return SolvedMaze(maze, solution)
