@@ -161,7 +161,6 @@ class GPTDataset(Dataset):
     (meaning the functionality should be inherited in downstream classes)
     """
 
-    FILTER_MAP: dict[str, "DatasetFilterProtocol"] = "this isn't a filter map! you have to initialize this by registering with `register_filter_namespace_for_dataset`" # type: ignore
     _FILTER_NAMESPACE: type = "this isn't a filter namespace! you have to initialize this by registering with `register_filter_namespace_for_dataset`" # type: ignore
 
     @classmethod
@@ -279,9 +278,13 @@ class GPTDataset(Dataset):
                 pass
 
         if do_generate:
+            print("generating...")
             output = cls.generate(cfg, **kwargs)
+            print("done generating, filtering...")
             # only if we generated it, apply filters
-            output._apply_filters_from_config()
+            output = output._apply_filters_from_config()
+
+        print("done filtering, updating config...")
 
         # check and save
         if output is None:
@@ -355,26 +358,30 @@ class GPTDataset(Dataset):
                 return filter_func(self.dataset, **kwargs)
 
             return wrapped_filter_func
-        
-        def __call__(self):
-            return self.FilterBy(self.dataset)
 
     @property
     def filter_by(self) -> "FilterBy":
         return self.FilterBy(self)
 
-        
-        
 
-    def _apply_filters_from_config(self) -> None:
+    def _apply_filters_from_config(self):
         """apply filters to the dataset, as specified in the config. used in `from_config()`"""
-        
-        for filter_info in self.cfg.applied_filters:
+        print(f"applying filters to dataset of length {len(self)}...")
+        output: GPTDataset = self
+        # copy the list, and then clear it in the config
+        applied_filters_old: list[dict[typing.Literal["name", "kwargs"], typing.Any]] = copy.deepcopy(self.cfg.applied_filters)
+        self.cfg.applied_filters = list()
+        for filter_info in applied_filters_old:
+            print(f"applying filter {filter_info}")
             filter_name: str = filter_info["name"]
             filter_kwargs: dict = filter_info["kwargs"]
-            filter_method: DatasetFilterProtocol = self.FILTER_MAP[filter_name]
-            self = filter_method(self, **filter_kwargs)
+            output = getattr(self.filter_by, filter_name)(**filter_kwargs)
+            print(f"done applying filter {filter_info}")
+        print("done applying filters, updating config...")
+        print(f"dataset now has length {len(output)}")
         self.update_self_config()
+        assert self.cfg.applied_filters == applied_filters_old, f"config mismatch: {self.cfg.applied_filters} != {applied_filters_old}"
+        return output
 
 
 def register_filter_namespace_for_dataset(dataset_cls: type[GPTDataset]) -> type:
@@ -383,7 +390,6 @@ def register_filter_namespace_for_dataset(dataset_cls: type[GPTDataset]) -> type
     sets:
     ```python
     dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
-    dataset_cls.FILTER_MAP = dict()
     filter_namespace_cls._BASE_DATASET = dataset_cls
     ```
     and also adds a `_filter_namespace_cls` attribute to every static method in the namespace class for use in `register_wrap_dataset_filter`
@@ -391,7 +397,6 @@ def register_filter_namespace_for_dataset(dataset_cls: type[GPTDataset]) -> type
 
     def decorator(filter_namespace_cls: type) -> type:
         dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
-        dataset_cls.FILTER_MAP = dict()
         filter_namespace_cls._BASE_DATASET = dataset_cls
 
         # TODO: remove this? it's only useful for checking
@@ -425,9 +430,6 @@ def register_wrap_dataset_filter(base_dataset_cls: type) -> type:
     """
 
     def decorator(method: DatasetFilterProtocol) -> DatasetFilterProtocol:
-        method_dict: dict[str, DatasetFilterProtocol] = base_dataset_cls.FILTER_MAP
-        assert method.__name__ not in method_dict, f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
-        method_dict[method.__name__] = method
 
         @functools.wraps(method)
         def wrapper(dataset: GPTDataset, **kwargs):

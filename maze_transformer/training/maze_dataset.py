@@ -144,8 +144,6 @@ def _maze_gen_init_worker(config: MazeDatasetConfig):
 class MazeDataset(GPTDataset):
     """maze dataset"""
 
-    FILTER_MAP: dict[str, "DatasetFilterProtocol"] = dict()
-
     def __init__(
         self,
         cfg: MazeDatasetConfig,
@@ -209,7 +207,7 @@ class MazeDataset(GPTDataset):
     def generate(
             cls, 
             cfg: MazeDatasetConfig,
-            do_parallel: bool = True,
+            do_parallel: bool = False,
             verbose: bool = False,
         ) -> "MazeDataset":
         mazes: list[SolvedMaze] = list()
