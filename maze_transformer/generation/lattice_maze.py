@@ -733,9 +733,13 @@ class SolvedMaze(TargetedLatticeMaze):
         self.__dict__["solution"] = solution
 
         if start_pos is not None:
-            assert np.array_equal(np.array(start_pos), self.start_pos), f"when trying to create a SolvedMaze, the given start_pos does not match the one in the solution: given={start_pos}, solution={self.start_pos}"
+            assert np.array_equal(
+                np.array(start_pos), self.start_pos
+            ), f"when trying to create a SolvedMaze, the given start_pos does not match the one in the solution: given={start_pos}, solution={self.start_pos}"
         if end_pos is not None:
-            assert np.array_equal(np.array(end_pos), self.end_pos), f"when trying to create a SolvedMaze, the given end_pos does not match the one in the solution: given={end_pos}, solution={self.end_pos}"
+            assert np.array_equal(
+                np.array(end_pos), self.end_pos
+            ), f"when trying to create a SolvedMaze, the given end_pos does not match the one in the solution: given={end_pos}, solution={self.end_pos}"
 
     # for backwards compatibility
     @property

@@ -21,7 +21,12 @@ from muutils.tensor_utils import DTYPE_MAP, ATensor
 from muutils.zanj import ZANJ
 from torch.utils.data import Dataset
 
-from maze_transformer.utils.utils import DEFAULT_SEED, GLOBAL_SEED, get_device, set_reproducibility
+from maze_transformer.utils.utils import (
+    DEFAULT_SEED,
+    GLOBAL_SEED,
+    get_device,
+    set_reproducibility,
+)
 
 
 def _dtype_serialization_fn(datatype: torch.dtype | np.dtype) -> str:
@@ -53,17 +58,21 @@ class GPTDatasetConfig(SerializableDataclass):
     )
     seq_len_min: int = serializable_field(default=1)
     seq_len_max: int = serializable_field(default=512)
-    seed: int|None = serializable_field(default=DEFAULT_SEED)
-    applied_filters: list[dict[typing.Literal["name", "kwargs"], str|dict]] = serializable_field(default_factory=list)
+    seed: int | None = serializable_field(default=DEFAULT_SEED)
+    applied_filters: list[
+        dict[typing.Literal["name", "kwargs"], str | dict]
+    ] = serializable_field(default_factory=list)
 
     def __post_init__(self):
         assert self.seq_len_min <= self.seq_len_max
-        # if seed set to None, then generate a new random seed 
+        # if seed set to None, then generate a new random seed
         if self.seed is None:
             self.seed = torch.random.seed() % 2**31
 
         if (DEFAULT_SEED != self.seed) and (GLOBAL_SEED != self.seed):
-            warnings.warn(f"in GPTDatasetConfig {self.name=}, {self.seed=} is trying to override {GLOBAL_SEED=} which has already been changed elsewhere from {DEFAULT_SEED=}")
+            warnings.warn(
+                f"in GPTDatasetConfig {self.name=}, {self.seed=} is trying to override {GLOBAL_SEED=} which has already been changed elsewhere from {DEFAULT_SEED=}"
+            )
 
         set_reproducibility(self.seed)
 
@@ -161,7 +170,7 @@ class GPTDataset(Dataset):
     (meaning the functionality should be inherited in downstream classes)
     """
 
-    _FILTER_NAMESPACE: type = "this isn't a filter namespace! you have to initialize this by registering with `register_filter_namespace_for_dataset`" # type: ignore
+    _FILTER_NAMESPACE: type = "this isn't a filter namespace! you have to initialize this by registering with `register_filter_namespace_for_dataset`"  # type: ignore
 
     @classmethod
     def from_config(
@@ -171,7 +180,7 @@ class GPTDataset(Dataset):
         load_local: bool = True,
         save_local: bool = True,
         save_formats: set[SaveFormats] = {SaveFormats.OBJECTS, SaveFormats.TOKENS},
-        zanj: ZANJ|None = None,
+        zanj: ZANJ | None = None,
         do_download: bool = True,
         local_base_path: Path = Path("data/maze_dataset"),
         **kwargs,
@@ -245,7 +254,7 @@ class GPTDataset(Dataset):
          - `get_all(self, fmt: SaveFormats) -> Iterator[Any]`
             get all items in the dataset, in the specified format
          - `filter_by(self)`
-            returns a namespace class 
+            returns a namespace class
          -  `_filter_namespace(self) -> Class`
             returns a namespace class for filtering the dataset, checking that method.__class__ matches for everything in the FILTER_MAP
          - `_apply_filters_from_config(self) -> None`
@@ -293,12 +302,12 @@ class GPTDataset(Dataset):
             output.save(local_base_path / fname, zanj=zanj)
 
         return output
-    
+
     # getting data
     def get_all(self, fmt: SaveFormats) -> typing.Iterator[typing.Any]:
         for idx in range(len(self)):
             yield self.get(idx, fmt)
-    
+
     def get_all_lengths(self) -> list[int]:
         """get the lengths of all sequences"""
         raise NotImplementedError()
@@ -307,7 +316,7 @@ class GPTDataset(Dataset):
         if zanj is None:
             zanj = ZANJ()
         zanj.save(self.serialize(), file_path)
-    
+
     # serialization & loading
     @classmethod
     def read(cls, file_path: str, zanj: ZANJ | None = None) -> "GPTDataset":
@@ -333,22 +342,25 @@ class GPTDataset(Dataset):
     @classmethod
     def download(cls, cfg: GPTDatasetConfig, **kwargs) -> "GPTDataset":
         raise NotImplementedError()
-    
+
     # filtering
     def update_self_config(self):
         """update the config of the dataset to match the actual data, if needed
-        
+
         for example, adjust number of mazes after filtering
         """
         pass
 
     class FilterBy:
         """thanks GPT-4"""
-        def __init__(self, dataset: 'GPTDataset'):
+
+        def __init__(self, dataset: "GPTDataset"):
             self.dataset: "GPTDataset" = dataset
 
         def __getattr__(self, name: str) -> typing.Callable[..., "GPTDataset"]:
-            filter_func: DatasetFilterProtocol = getattr(self.dataset._FILTER_NAMESPACE, name)
+            filter_func: DatasetFilterProtocol = getattr(
+                self.dataset._FILTER_NAMESPACE, name
+            )
 
             def wrapped_filter_func(**kwargs):
                 return filter_func(self.dataset, **kwargs)
@@ -359,12 +371,13 @@ class GPTDataset(Dataset):
     def filter_by(self) -> "FilterBy":
         return self.FilterBy(self)
 
-
     def _apply_filters_from_config(self):
         """apply filters to the dataset, as specified in the config. used in `from_config()`"""
         output: GPTDataset = self
         # copy the list, and then clear it in the config
-        applied_filters_old: list[dict[typing.Literal["name", "kwargs"], typing.Any]] = copy.deepcopy(self.cfg.applied_filters)
+        applied_filters_old: list[
+            dict[typing.Literal["name", "kwargs"], typing.Any]
+        ] = copy.deepcopy(self.cfg.applied_filters)
         self.cfg.applied_filters = list()
         # apply the filters
         for filter_info in applied_filters_old:
@@ -373,13 +386,15 @@ class GPTDataset(Dataset):
             output = getattr(self.filter_by, filter_name)(**filter_kwargs)
         # update the config
         self.update_self_config()
-        assert self.cfg.applied_filters == applied_filters_old, f"config mismatch: {self.cfg.applied_filters} != {applied_filters_old}"
+        assert (
+            self.cfg.applied_filters == applied_filters_old
+        ), f"config mismatch: {self.cfg.applied_filters} != {applied_filters_old}"
         return output
 
 
 def register_filter_namespace_for_dataset(dataset_cls: type[GPTDataset]) -> type:
     """register the namespace class with the given dataset class
-    
+
     sets:
     ```python
     dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
@@ -395,15 +410,16 @@ def register_filter_namespace_for_dataset(dataset_cls: type[GPTDataset]) -> type
         # TODO: remove this? it's only useful for checking
         for method_name, method in filter_namespace_cls.__dict__.items():
             if (
-                    isinstance(method, typing.Callable) 
-                    and isinstance(method, types.FunctionType)
-                    and not method.__name__.startswith("_")
+                isinstance(method, typing.Callable)
+                and isinstance(method, types.FunctionType)
+                and not method.__name__.startswith("_")
             ):
                 setattr(method, "_filter_namespace_cls", filter_namespace_cls)
 
         return filter_namespace_cls
 
     return decorator
+
 
 class DatasetFilterProtocol(typing.Protocol):
     def __call__(
@@ -413,27 +429,28 @@ class DatasetFilterProtocol(typing.Protocol):
     ) -> GPTDataset:
         ...
 
-    
+
 def register_wrap_dataset_filter(base_dataset_cls: type) -> type:
     """register a dataset filter, copying the underlying dataset and updating the config
-    
+
     - the dataset class this is a filter for should be passed to this decorator
     - method should be a staticmethod of a namespace class registered with `register_filter_namespace_for_dataset`
 
     """
 
     def decorator(method: DatasetFilterProtocol) -> DatasetFilterProtocol:
-
         @functools.wraps(method)
         def wrapper(dataset: GPTDataset, **kwargs):
             # copy and filter
             new_dataset: GPTDataset = copy.deepcopy(dataset)
             new_dataset = method(dataset, **kwargs)
             # update the config
-            new_dataset.cfg.applied_filters.append(dict(name=method.__name__, kwargs=kwargs))
+            new_dataset.cfg.applied_filters.append(
+                dict(name=method.__name__, kwargs=kwargs)
+            )
             new_dataset.update_self_config()
             return new_dataset
 
         return wrapper
-    
+
     return decorator

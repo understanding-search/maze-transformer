@@ -1,6 +1,6 @@
 import random
-from typing import Any, Callable
 import warnings
+from typing import Any, Callable
 
 import numpy as np
 
@@ -9,7 +9,6 @@ from maze_transformer.generation.lattice_maze import (
     NEIGHBORS_MASK,
     ConnectionList,
     Coord,
-    CoordTup,
     LatticeMaze,
     SolvedMaze,
 )
@@ -43,7 +42,7 @@ class LatticeMazeGenerators:
             (lattice_dim, grid_shape[0], grid_shape[1]), dtype=np.bool_
         )
         start_coord: Coord = np.random.randint(
-            0, 
+            0,
             np.maximum(grid_shape - 1, 1),
             size=2,
         )
@@ -200,13 +199,15 @@ class LatticeMazeGenerators:
         )
         return get_maze_with_solution("gen_dfs", grid_shape)
 
+
 # TODO: use the thing @valedan wrote for the evals function to make this automatic?
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
     "gen_dfs": LatticeMazeGenerators.gen_dfs,
     "gen_wilson": LatticeMazeGenerators.gen_wilson,
 }
 
+
 def get_maze_with_solution(gen_name: str, grid_shape: Coord) -> SolvedMaze:
-        maze: LatticeMaze = GENERATORS_MAP[gen_name](grid_shape)
-        solution: CoordArray = np.array(maze.generate_random_path())
-        return SolvedMaze.from_lattice_maze(lattice_maze=maze, solution=solution)
+    maze: LatticeMaze = GENERATORS_MAP[gen_name](grid_shape)
+    solution: CoordArray = np.array(maze.generate_random_path())
+    return SolvedMaze.from_lattice_maze(lattice_maze=maze, solution=solution)

@@ -6,7 +6,10 @@ from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfi
 
 temp_dir: Path = Path("tests/_temp/dataset")
 
-dataset_cfg: MazeDatasetConfig = MazeDatasetConfig(name="test_create_dataset", grid_n=3, n_mazes=5)
+dataset_cfg: MazeDatasetConfig = MazeDatasetConfig(
+    name="test_create_dataset", grid_n=3, n_mazes=5
+)
+
 
 def test_generate_mazedataset():
     m: MazeDataset = MazeDataset.from_config(

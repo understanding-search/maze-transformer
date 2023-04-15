@@ -71,7 +71,9 @@ def register_method(method_dict: dict[str, Callable[..., Any]]) -> Callable[[F],
     """Decorator to add a method to the method_dict"""
 
     def decorator(method: F) -> F:
-        assert method.__name__ not in method_dict, f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
+        assert (
+            method.__name__ not in method_dict
+        ), f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
         method_dict[method.__name__] = method
         return method
 

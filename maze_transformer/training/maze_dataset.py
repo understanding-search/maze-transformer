@@ -1,23 +1,25 @@
-import functools
 import multiprocessing
 import typing
 import warnings
 from functools import cached_property
 from typing import Callable
-import copy
 
 import numpy as np
+import tqdm
 from jaxtyping import Int
 from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field
 from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import sanitize_fname
-import tqdm
 
-from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordArray, CoordTup
+from maze_transformer.generation.constants import (
+    SPECIAL_TOKENS,
+    Coord,
+    CoordArray,
+    CoordTup,
+)
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
-from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze, TargetedLatticeMaze
+from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
 from maze_transformer.training.dataset import (
-    DatasetFilterProtocol,
     GPTDataset,
     GPTDatasetConfig,
     IndexedArray,
@@ -26,7 +28,6 @@ from maze_transformer.training.dataset import (
     register_wrap_dataset_filter,
 )
 from maze_transformer.training.tokenizer import maze_to_tokens
-from maze_transformer.utils.utils import register_method
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",
@@ -90,7 +91,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
     @property
     def grid_shape(self) -> CoordTup:
         return (self.grid_n, self.grid_n)
-    
+
     @property
     def grid_shape_np(self) -> Coord:
         return np.array(self.grid_shape)
@@ -131,15 +132,19 @@ class MazeDatasetConfig(GPTDatasetConfig):
 
 
 def _generate_maze_helper(positions: CoordArray) -> SolvedMaze:
-    maze: LatticeMaze = _GLOBAL_WORKER_CONFIG.maze_ctor(grid_shape=_GLOBAL_WORKER_CONFIG.grid_shape_np)
+    maze: LatticeMaze = _GLOBAL_WORKER_CONFIG.maze_ctor(
+        grid_shape=_GLOBAL_WORKER_CONFIG.grid_shape_np
+    )
     return SolvedMaze.from_lattice_maze(
-        lattice_maze=maze, 
+        lattice_maze=maze,
         solution=np.array(maze.find_shortest_path(positions[0], positions[1])),
     )
+
 
 def _maze_gen_init_worker(config: MazeDatasetConfig):
     global _GLOBAL_WORKER_CONFIG
     _GLOBAL_WORKER_CONFIG = config
+
 
 class MazeDataset(GPTDataset):
     """maze dataset"""
@@ -205,11 +210,11 @@ class MazeDataset(GPTDataset):
 
     @classmethod
     def generate(
-            cls, 
-            cfg: MazeDatasetConfig,
-            do_parallel: bool = False,
-            verbose: bool = False,
-        ) -> "MazeDataset":
+        cls,
+        cfg: MazeDatasetConfig,
+        do_parallel: bool = False,
+        verbose: bool = False,
+    ) -> "MazeDataset":
         mazes: list[SolvedMaze] = list()
         endpoint_nodes: Int[np.int8, "maze_index 2 2"] = np.random.randint(
             0,
@@ -226,7 +231,9 @@ class MazeDataset(GPTDataset):
             disable=not verbose,
         )
         if do_parallel:
-            with multiprocessing.Pool(initializer=_maze_gen_init_worker, initargs=(cfg,)) as pool:
+            with multiprocessing.Pool(
+                initializer=_maze_gen_init_worker, initargs=(cfg,)
+            ) as pool:
                 solved_mazes = list(
                     tqdm.tqdm(
                         pool.imap(
@@ -291,6 +298,7 @@ class MazeDataset(GPTDataset):
         """update the config to match the current state of the dataset"""
         self.cfg.n_mazes = len(self.mazes)
 
+
 MazeDatasetConfig._dataset_class = MazeDataset
 
 
@@ -307,12 +315,8 @@ MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
 }
 
 
-
-
-
 @register_filter_namespace_for_dataset(MazeDataset)
 class MazeDatasetFilters:
-
     @register_wrap_dataset_filter(MazeDataset)
     @staticmethod
     def path_length(dataset: MazeDataset, min_length: int) -> MazeDataset:

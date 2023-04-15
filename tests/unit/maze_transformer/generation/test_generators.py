@@ -1,6 +1,9 @@
 import numpy as np
 
-from maze_transformer.generation.generators import LatticeMazeGenerators, get_maze_with_solution
+from maze_transformer.generation.generators import (
+    LatticeMazeGenerators,
+    get_maze_with_solution,
+)
 from maze_transformer.generation.lattice_maze import Coord, SolvedMaze
 
 
