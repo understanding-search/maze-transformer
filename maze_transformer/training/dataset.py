@@ -256,7 +256,7 @@ class GPTDataset(Dataset):
          - `filter_by(self)`
             returns a namespace class
          -  `_filter_namespace(self) -> Class`
-            returns a namespace class for filtering the dataset, checking that method.__class__ matches for everything in the FILTER_MAP
+            returns a namespace class for filtering the dataset, checking that method
          - `_apply_filters_from_config(self) -> None`
             apply filters to the dataset, as specified in the config. used in `from_config()` but only when generating
 
@@ -382,6 +382,11 @@ class GPTDataset(Dataset):
         # apply the filters
         for filter_info in applied_filters_old:
             filter_name: str = filter_info["name"]
+            if filter_name not in self._FILTER_NAMESPACE.__dict__:
+                if filter_name.startswith("__custom__:"):
+                    raise ValueError(f"the dataset {self.cfg.to_fname()} was filtering using a custom filter: '{filter_name}', which we don't know about. add it to MazeDatasetFilters")
+                else:
+                    raise ValueError(f"the dataset {self.cfg.to_fname()} was filtering using an unknown filter: '{filter_name}'")
             filter_kwargs: dict = filter_info["kwargs"]
             output = getattr(self.filter_by, filter_name)(**filter_kwargs)
         # update the config

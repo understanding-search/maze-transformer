@@ -1,3 +1,5 @@
+import copy
+import functools
 import multiprocessing
 import typing
 import warnings
@@ -20,6 +22,7 @@ from maze_transformer.generation.constants import (
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
 from maze_transformer.training.dataset import (
+    DatasetFilterProtocol,
     GPTDataset,
     GPTDatasetConfig,
     IndexedArray,
@@ -298,6 +301,23 @@ class MazeDataset(GPTDataset):
         """update the config to match the current state of the dataset"""
         self.cfg.n_mazes = len(self.mazes)
 
+    def custom_maze_filter(
+            self, 
+            method: typing.Callable[[SolvedMaze], bool], 
+            **kwargs,
+        ) -> "MazeDataset":
+        """filter the dataset using a custom method"""
+        output: MazeDataset = MazeDataset(
+            cfg=copy.deepcopy(self.cfg),
+            mazes=[m for m in self.mazes if method(m, **kwargs)],
+        )
+        output.cfg.applied_filters.append({
+            "name": f"__custom__:{method.__name__}",
+            "kwargs": kwargs,
+        })
+        output.update_self_config()
+        return output
+
 
 MazeDatasetConfig._dataset_class = MazeDataset
 
@@ -315,27 +335,58 @@ MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
 }
 
 
+def register_wrap_solved_maze_filter(
+    method: typing.Callable[[SolvedMaze, typing.Any], bool]
+) -> DatasetFilterProtocol:
+    """register a maze filter, casting it to operate over the whole list of mazes
+
+    method should be a staticmethod of a namespace class registered with `register_filter_namespace_for_dataset`
+
+    this is a more restricted version of `register_wrap_dataset_filter` that removes the need for boilerplate for operating over the arrays
+    """
+
+    @functools.wraps(method)
+    def wrapper(dataset: GPTDataset, **kwargs):
+        # copy and filter
+        new_dataset: GPTDataset = MazeDataset(
+            cfg=dataset.cfg,
+            mazes=list(filter(lambda m: method(maze=m, **kwargs), dataset.mazes)),
+        )
+        # update the config
+        new_dataset.cfg.applied_filters.append(
+            dict(name=method.__name__, kwargs=kwargs)
+        )
+        new_dataset.update_self_config()
+        return new_dataset
+
+    return wrapper
+
+
 @register_filter_namespace_for_dataset(MazeDataset)
 class MazeDatasetFilters:
-    @register_wrap_dataset_filter
+    @register_wrap_solved_maze_filter
     @staticmethod
-    def path_length(dataset: MazeDataset, min_length: int) -> MazeDataset:
+    def path_length(maze: SolvedMaze, min_length: int) -> bool:
         """filter out mazes with a solution length less than `min_length`"""
-        return MazeDataset(
-            cfg=dataset.cfg,
-            mazes=list(filter(lambda m: len(m.solution) >= min_length, dataset.mazes)),
-        )
+        return len(maze.solution) >= min_length
+
+    @register_wrap_solved_maze_filter
+    @staticmethod
+    def start_end_distance(maze: SolvedMaze, min_distance: int) -> bool:
+        """filter out datasets where the start and end pos are less than `min_distance` apart on the manhattan distance (ignoring walls)"""
+        return np.linalg.norm(maze.start_pos - maze.end_pos, 1) >= min_distance,
 
     @register_wrap_dataset_filter
     @staticmethod
-    def start_end_distance(dataset: MazeDataset, min_distance: int) -> MazeDataset:
-        """filter out datasets where the start and end pos are less than `min_distance` apart on the manhattan distance (ignoring walls)"""
-        return MazeDataset(
+    def cut_percentile_shortest(dataset: MazeDataset, percentile: float=0.1) -> MazeDataset:
+        """cut the shortest `percentile` of mazes from the dataset"""
+        # get the lengths of all solutions
+        lengths: np.ndarray = np.array(len(m.solution) for m in dataset.mazes)
+        # get the cutoff
+        cutoff: int = int(np.percentile(lengths, percentile))
+        # filter
+        new_dataset: MazeDataset = MazeDataset(
             cfg=dataset.cfg,
-            mazes=list(
-                filter(
-                    lambda m: np.linalg.norm(m.start_pos - m.end_pos) >= min_distance,
-                    dataset.mazes,
-                )
-            ),
+            mazes=list(filter(lambda m: len(m.solution) >= cutoff, dataset.mazes)),
         )
+        return new_dataset
