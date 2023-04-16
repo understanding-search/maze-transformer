@@ -302,19 +302,21 @@ class MazeDataset(GPTDataset):
         self.cfg.n_mazes = len(self.mazes)
 
     def custom_maze_filter(
-            self, 
-            method: typing.Callable[[SolvedMaze], bool], 
-            **kwargs,
-        ) -> "MazeDataset":
+        self,
+        method: typing.Callable[[SolvedMaze], bool],
+        **kwargs,
+    ) -> "MazeDataset":
         """filter the dataset using a custom method"""
         output: MazeDataset = MazeDataset(
             cfg=copy.deepcopy(self.cfg),
             mazes=[m for m in self.mazes if method(m, **kwargs)],
         )
-        output.cfg.applied_filters.append({
-            "name": f"__custom__:{method.__name__}",
-            "kwargs": kwargs,
-        })
+        output.cfg.applied_filters.append(
+            {
+                "name": f"__custom__:{method.__name__}",
+                "kwargs": kwargs,
+            }
+        )
         output.update_self_config()
         return output
 
@@ -374,11 +376,13 @@ class MazeDatasetFilters:
     @staticmethod
     def start_end_distance(maze: SolvedMaze, min_distance: int) -> bool:
         """filter out datasets where the start and end pos are less than `min_distance` apart on the manhattan distance (ignoring walls)"""
-        return np.linalg.norm(maze.start_pos - maze.end_pos, 1) >= min_distance,
+        return (np.linalg.norm(maze.start_pos - maze.end_pos, 1) >= min_distance,)
 
     @register_wrap_dataset_filter
     @staticmethod
-    def cut_percentile_shortest(dataset: MazeDataset, percentile: float=0.1) -> MazeDataset:
+    def cut_percentile_shortest(
+        dataset: MazeDataset, percentile: float = 0.1
+    ) -> MazeDataset:
         """cut the shortest `percentile` of mazes from the dataset"""
         # get the lengths of all solutions
         lengths: np.ndarray = np.array(len(m.solution) for m in dataset.mazes)

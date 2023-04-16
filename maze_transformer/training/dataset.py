@@ -384,9 +384,13 @@ class GPTDataset(Dataset):
             filter_name: str = filter_info["name"]
             if filter_name not in self._FILTER_NAMESPACE.__dict__:
                 if filter_name.startswith("__custom__:"):
-                    raise ValueError(f"the dataset {self.cfg.to_fname()} was filtering using a custom filter: '{filter_name}', which we don't know about. add it to MazeDatasetFilters")
+                    raise ValueError(
+                        f"the dataset {self.cfg.to_fname()} was filtering using a custom filter: '{filter_name}', which we don't know about. add it to MazeDatasetFilters"
+                    )
                 else:
-                    raise ValueError(f"the dataset {self.cfg.to_fname()} was filtering using an unknown filter: '{filter_name}'")
+                    raise ValueError(
+                        f"the dataset {self.cfg.to_fname()} was filtering using an unknown filter: '{filter_name}'"
+                    )
             filter_kwargs: dict = filter_info["kwargs"]
             output = getattr(self.filter_by, filter_name)(**filter_kwargs)
         # update the config
