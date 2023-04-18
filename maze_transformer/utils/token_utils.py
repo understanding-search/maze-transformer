@@ -20,6 +20,8 @@ def get_adj_list_tokens(tokens: list[str]) -> list[str]:
 
 def get_path_tokens(tokens: list[str]) -> list[str]:
     """The path is considered everything from the first path coord to the end of the list, including the path_end token (ie everything we are asking the model to predict)"""
+    if not SPECIAL_TOKENS["path_start"] in tokens:
+        return []
     start_idx = tokens.index(SPECIAL_TOKENS["path_start"]) + 1
     return tokens[start_idx:]
 
@@ -83,3 +85,11 @@ def coords_to_tokens(
     when_noncoord: Literal["except", "skip", "include"] = "skip",
 ) -> list[str]:
     return apply_mapping(coords, maze_data_cfg.node_token_map, when_noncoord)
+
+
+def remove_padding_from_token_str(token_str: str) -> str:
+    token_str = token_str.replace(f"{SPECIAL_TOKENS['padding']} ", "")
+    token_str = token_str.replace(f"{SPECIAL_TOKENS['padding']}", "")
+    return token_str
+
+

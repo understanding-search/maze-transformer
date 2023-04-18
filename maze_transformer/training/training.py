@@ -1,36 +1,19 @@
-from datetime import datetime
 from pathlib import Path
-from typing import Callable
 
 import torch
-from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
+from jaxtyping import Float
 from muutils.statcounter import StatCounter  # type: ignore[import]
 from muutils.tensor_utils import ATensor  # type: ignore[import]
 from torch.utils.data import DataLoader
 from transformer_lens import HookedTransformer
 
-from maze_transformer.training.config import ConfigHolder, TrainConfig
-from maze_transformer.training.dataset import GPTDatasetConfig
+from maze_transformer.evaluation.eval_model import evaluate_logits
+from maze_transformer.evaluation.path_evals import PathEvals
+from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.maze_dataset import MazeDataset
+from maze_transformer.training.tokenizer import HuggingMazeTokenizer
+from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbLogger
-
-
-@freeze
-class TRAIN_SAVE_FILES:
-    """namespace for filenames/formats for saving training data"""
-
-    data_cfg: str = "data_config.json"
-    train_cfg: str = "train_config.json"
-    config_holder: str = "config.json"
-    log: str = "log.jsonl"
-    checkpoints: str = "checkpoints"
-    train_dir_format: Callable[
-        [GPTDatasetConfig, TrainConfig], str
-    ] = (
-        lambda d_cfg, t_cfg: f"{sanitize_fname(d_cfg.name)}_{sanitize_fname(t_cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
-    )
-    model_checkpt: Callable[[int], str] = lambda iteration: f"model.iter_{iteration}.pt"
-    model_final: str = "model.final.pt"
 
 
 def get_dataloader(
@@ -63,8 +46,15 @@ def train(
     logger.progress("Initializing model")
     model: HookedTransformer = cfg.create_model()
     logger.summary({"device": str(device), "model.device": model.cfg.device})
-
     logger.progress("Initializing optimizer")
+
+    # Only the HuggingMazeTokenizer has token decoding implemented, which is required for evals
+    evals_enabled = type(model.tokenizer) == HuggingMazeTokenizer
+    if not evals_enabled:
+        logger.progress(
+            "Using a tokenizer that cannot decode. Disabling evals for this run"
+        )
+
     optimizer: torch.optim.Optimizer = cfg.train_cfg.optimizer(
         model.parameters(),
         **cfg.train_cfg.optimizer_kwargs,
@@ -76,22 +66,67 @@ def train(
     n_batches: int = len(dataloader)
     logger.summary({"n_batches": n_batches})
 
+    # TODO: These interval calculations are a bit confusing. May need some love.
     checkpoint_interval_iters: int = int(
         cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size
     )
+    fast_eval_interval_iters: int = int(
+        getattr(cfg.train_cfg, "fast_eval_interval", 0) // cfg.train_cfg.batch_size
+    )
+    slow_eval_interval_iters: int = int(
+        getattr(cfg.train_cfg, "slow_eval_interval", 0) // cfg.train_cfg.batch_size
+    )
+
+    # TODO: check what happens in final batch where remaining mazes in dataset is less than batch size
     for iteration, batch in enumerate(dataloader):
+        breakpoint()
         # compute loss
         batch_on_device: ATensor[("batch", "sequence")] = batch.type(
             dtype=torch.LongTensor
         ).to(model.cfg.device)
 
-        loss = model(batch_on_device[:, :-1], return_type="loss")
+        loss: Float[torch.Tensor, ""]
+        logits: Float[torch.Tensor, "batch pos d_vocab"]
+        batch_without_last_token = batch_on_device[:, :-1]
+        logits, loss = model(batch_without_last_token, return_type="both")
         loss.backward()
 
         optimizer.step()
         optimizer.zero_grad()
 
-        logger.log_metric({"loss": loss})
+        # TODO: tidy this up
+        metrics: dict[str, dict[str, float | int] | float] = {"loss": float(loss)}
+        if evals_enabled:
+            if (
+                fast_eval_interval_iters > 0
+                and iteration % fast_eval_interval_iters == 0
+            ):
+                scores = evaluate_logits(
+                    logits,
+                    batch,
+                    cfg,
+                    model.tokenizer,
+                    path_evals=PathEvals.fast,
+                )
+                for eval, stats in scores.items():
+                    metrics[eval] = stats.summary()
+
+            if (
+                slow_eval_interval_iters > 0
+                and iteration % slow_eval_interval_iters == 0
+            ):
+                scores = evaluate_logits(
+                    logits,
+                    batch,
+                    cfg,
+                    model.tokenizer,
+                    path_evals=PathEvals.slow,
+                )
+                for eval, stats in scores.items():
+                    metrics[eval] = stats.summary()
+
+        print("logging metrics")
+        logger.log_metric(metrics)
 
         del loss
 

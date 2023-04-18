@@ -72,8 +72,12 @@ class TrainConfig(SerializableDataclass):
         )
     )
 
+    # TODO - check how often these run... modulo might make it less than expected
     print_loss_interval: int = serializable_field(default=1000)
     checkpoint_interval: int = serializable_field(default=50000)
+    # training loop evals are disabled by default until their performance impact can be assessed
+    fast_eval_interval: int = serializable_field(default=0)
+    slow_eval_interval: int = serializable_field(default=0)
 
 
 # actual configuration setups

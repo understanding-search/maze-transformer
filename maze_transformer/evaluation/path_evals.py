@@ -40,9 +40,11 @@ def is_adjacent(node1: Coord, node2: Coord) -> bool:
 class PathEvals:
     """array path based eval functions"""
 
-    evals: dict[str, PathEvalFunction] = {}
+    # We split evals into fast and slow. Fast ones can be used more frequently during training
+    fast: dict[str, PathEvalFunction] = {}
+    slow: dict[str, PathEvalFunction] = {}
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def node_overlap(solution: MazePath, prediction: MazePath, **_) -> float:
         """number of shared nodes (any order) / total number of (unique) nodes in solution"""
@@ -52,7 +54,7 @@ class PathEvals:
 
         return len(prediction_set & solution_set) / len(solution_set)
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def num_connections_adjacent_lattice(prediction: MazePath, **_) -> float:
         """number of the connections in prediction which actually connect nodes that are adjacent on the lattice, ignoring if they are adjacent on the maze"""
@@ -63,14 +65,16 @@ class PathEvals:
 
         return n_adj
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def fraction_connections_adjacent_lattice(prediction: MazePath, **_) -> float:
         """fraction of the connections in prediction which actually connect nodes that are adjacent on the lattice, ignoring if they are adjacent on the maze"""
+        if len(prediction) == 0:
+            return 0
 
         return PathEvals.num_connections_adjacent_lattice(prediction) / len(prediction)
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def num_connections_adjacent(maze: LatticeMaze, prediction: MazePath, **_) -> float:
         """number of connections in prediction which are are valid paths on the maze"""
@@ -81,7 +85,7 @@ class PathEvals:
 
         return n_connected
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def fraction_connections_adjacent(
         maze: LatticeMaze, prediction: MazePath, **_
@@ -93,18 +97,18 @@ class PathEvals:
             num_connections, 1.0
         )
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def exact_path_predicted(solution: MazePath, prediction: MazePath, **_) -> float:
         """Was the maze successfully solved?"""
         return float(np.array_equal(solution, prediction))
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def solution_length(solution: MazePath, **_) -> float:
         return float(len(solution))
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def streak_length_until_incorrect(
         solution: MazePath,

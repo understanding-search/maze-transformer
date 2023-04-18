@@ -4,19 +4,24 @@ from typing import cast
 
 import numpy as np
 import torch
+from jaxtyping import Float
 from muutils.statcounter import StatCounter
 from muutils.tensor_utils import ATensor
 from transformer_lens import HookedTransformer
+from transformer_lens import utils as tl_utils
 
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.generation.constants import SPECIAL_TOKENS
+from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
-from maze_transformer.training.training import TRAIN_SAVE_FILES
+from maze_transformer.training.tokenizer import HuggingMazeTokenizer
+from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.utils.token_utils import (
     get_path_tokens,
     get_tokens_up_to_path_start,
+    remove_padding_from_token_str,
     tokens_to_coords,
 )
 from maze_transformer.utils.utils import chunks
@@ -133,27 +138,47 @@ def predict_maze_paths(
     return paths
 
 
+def evaluate_path_predictions(
+    solved_mazes: list[SolvedMaze],
+    predictions: list[list[tuple[int, int]]],
+    path_evals: dict[str, PathEvalFunction],
+) -> dict[str, StatCounter]:
+    path_scores: dict[str, StatCounter] = {
+        name: StatCounter() for name in path_evals.keys()
+    }
+    for name, func in path_evals.items():
+        path_scores[name].update(
+            func(
+                maze=solved_maze.maze,
+                solution=np.array(solved_maze.solution),
+                prediction=np.array(prediction),
+            )
+            for solved_maze, prediction in zip(solved_mazes, predictions)
+        )
+
+    return path_scores
+
+
 def evaluate_model(
     model: HookedTransformer,
     dataset: MazeDataset,
-    eval_functions: dict[str, PathEvalFunction] | None = None,
+    path_evals: dict[str, PathEvalFunction] | None = None,
     max_new_tokens: int = 8,
     batch_size: int = 64,
     verbose: bool = False,
 ) -> dict[str, StatCounter]:
     """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function."""
-    if not eval_functions:
-        eval_functions = PathEvals.evals
+    if not path_evals:
+        path_evals = PathEvals.fast
 
-    score_counters: dict[str, StatCounter] = {
-        name: StatCounter() for name in eval_functions.keys()
+    path_scores: dict[str, StatCounter] = {
+        name: StatCounter() for name in path_evals.keys()
     }
 
     for batch in chunks(dataset.mazes_tokens, batch_size):
         # TODO: This won't be needed after #124, then we can call mazes_objs instead
         # https://github.com/orgs/AISC-understanding-search/projects/1/views/1?pane=issue&itemId=23879308
         solved_mazes = [SolvedMaze.from_tokens(tokens, dataset.cfg) for tokens in batch]
-        mazes, solutions = zip(*solved_mazes)
 
         predictions = predict_maze_paths(
             tokens_batch=batch,
@@ -163,15 +188,48 @@ def evaluate_model(
             verbose=verbose,
         )
 
-        for name, func in eval_functions.items():
-            score_counters[name].update(
-                func(
-                    maze=maze,
-                    solution=np.array(solution),
-                    prediction=np.array(prediction),
-                    model=model,
-                )
-                for maze, solution, prediction in zip(mazes, solutions, predictions)
-            )
+        batch_scores = evaluate_path_predictions(solved_mazes, predictions, path_evals)
+        # update the running totals with the batch results
+        for path_score in path_scores.keys():
+            path_scores[path_score] += batch_scores[path_score]
 
-    return score_counters
+    return path_scores
+
+
+def evaluate_logits(
+    logits: Float[torch.Tensor, "batch pos d_vocab"],
+    batch: list[int],
+    config: ConfigHolder,
+    tokenizer: HuggingMazeTokenizer,
+    path_evals: dict[str, PathEvalFunction] | None = None,
+) -> dict[str, StatCounter]:
+    """Runs a set of eval functions on the provided logits. For path evals, an attempt will be made to extract a predicted path from the logits (it is assumed that the logits are an entire sequence output from training, so they contain the adj_list plus path)"""
+
+    scores: dict[str, StatCounter] = {}
+
+    if path_evals:
+        sampled_logits = tl_utils.sample_logits(logits)
+        prediction_tokens = tokenizer.batch_decode(sampled_logits)
+        predicted_paths = []
+        for tokens in prediction_tokens:
+            # this returns first path_start to end of list. Early in training there may be multiple path_start tokens, so results should be treated with caution
+            path_tokens = get_path_tokens(tokens.split(" "))
+            path_coords = tokens_to_coords(
+                path_tokens, maze_data_cfg=config.dataset_cfg, when_noncoord="skip"
+            )
+            predicted_paths.append(cast(list[tuple[int, int]], path_coords))
+
+        maze_tokens = [
+            remove_padding_from_token_str(token_str)
+            for token_str in tokenizer.batch_decode(batch)
+        ]
+
+        # This won't work until #180 is resolved because right now the batch does not contain valid mazes
+        # solved_mazes = [SolvedMaze.from_tokens(tokens.split(" "), config.dataset_cfg) for tokens in maze_tokens]
+        # so for now use some dummy data for testing
+        solved_mazes = [
+            LatticeMazeGenerators.gen_dfs_with_solution((3, 3)) for _ in range(5)
+        ]
+        scores |= evaluate_path_predictions(solved_mazes, predicted_paths, path_evals)
+
+    return scores
