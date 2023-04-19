@@ -255,30 +255,40 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
         state_dict: dict[str, Any],
         **kwargs,
     ) -> None:
-        """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict"""
+        """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict
+        
+        # kwargs:
+        - `recover_exact = False` disables `center_writing_weights` and `center_unembed` if set to true
+        - `fold_ln = False` folds the layernorms if set to true
+        - `refactor_factored_attn_matrices = False` refactors the factored attention matrices if set to true, this might cause accuracy issues according to @valedan
+
+        """
 
         recover_exact: bool = kwargs.get("recover_exact", False)
-        fold_ln: bool = kwargs.get("fold_ln", True)
+        fold_ln: bool = kwargs.get("fold_ln", False)
+        refactor_factored_attn_matrices: bool = kwargs.get(
+            "refactor_factored_attn_matrices", False
+        )
 
         if self.zanj_model_config.model_cfg.are_layernorms_folded and fold_ln:
             raise ValueError(
-                "Cannot fold layernorms twice! the saved model already has layernorms folded"
+                f"Cannot fold layernorms twice! the saved model already has layernorms folded\n{kwargs = }"
             )
 
-        if recover_exact and fold_ln:
+        if recover_exact and (fold_ln or refactor_factored_attn_matrices):
             raise ValueError(
-                "Can't recover exact weights if the layernorm is to be folded!"
+                "Can't recover exact weights if the layernorm is to be folded, or the attention matrices are to be refactored\n{kwargs = }"
             )
 
-        self.zanj_model_config.model_cfg.are_layernorms_folded = fold_ln
-        self.zanj_model_config.model_cfg.are_weights_processed = not recover_exact
+        self.zanj_model_config.model_cfg.are_layernorms_folded = fold_ln or self.zanj_model_config.model_cfg.are_layernorms_folded
+        self.zanj_model_config.model_cfg.are_weights_processed = recover_exact or self.zanj_model_config.model_cfg.are_weights_processed
 
         self.load_and_process_state_dict(
             state_dict,
             fold_ln=False,
             center_writing_weights=not recover_exact,
             center_unembed=not recover_exact,
-            refactor_factored_attn_matrices=not recover_exact,
+            refactor_factored_attn_matrices=refactor_factored_attn_matrices,
         )
         # We're folding layernorm, but not using HookedTransformer.from_pretrained
         # This means when torch.load_state_dict is invoked by transformer_lens, it

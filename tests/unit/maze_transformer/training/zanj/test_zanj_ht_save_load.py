@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import torch
+from jaxtyping import Int
 from muutils.zanj import ZANJ
 from muutils.zanj.torchutil import (
     ConfigMismatchException,
@@ -29,12 +30,15 @@ ZANJ_MODEL_CFG: ConfigHolder = ConfigHolder(
 )
 
 MODEL: ZanjHookedTransformer = ZanjHookedTransformer(ZANJ_MODEL_CFG)
-MODEL_C: ZanjHookedTransformer = ZANJ_MODEL_CFG.create_model_zanj()
+MODEL_FROM_CFG_CREATE: ZanjHookedTransformer = ZANJ_MODEL_CFG.create_model_zanj()
 
 
 def _assert_model_output_equality(
-    model_a: ZanjHookedTransformer, model_b: ZanjHookedTransformer
+    model_a: ZanjHookedTransformer, model_b: ZanjHookedTransformer,
+    test_sequence_length: int = 10,
+    output_atol: float = 1e-7,
 ):
+    """checks that configs are equal (modulo weight processing) and that the models output the same thing"""
     try:
         assert_model_cfg_equality(model_a, model_b)
     except ConfigMismatchException as e:
@@ -51,11 +55,11 @@ def _assert_model_output_equality(
             raise e
 
     # Random input tokens
-    dataset_cfg = model_a.zanj_model_config.dataset_cfg
-    input_sequence = torch.randint(
+    dataset_cfg: BaseGPTConfig = model_a.zanj_model_config.dataset_cfg
+    input_sequence: Int[torch.Tensor, "1 test_sequence_length"] = torch.randint(
         low=0,
         high=len(dataset_cfg.token_arr),
-        size=(1, min(dataset_cfg.seq_len_max, 10)),
+        size=(1, min(dataset_cfg.seq_len_max, test_sequence_length)),
     )
 
     # (copied from `test_eval_model.py`)
@@ -66,39 +70,57 @@ def _assert_model_output_equality(
     )
     # apply normalization (e.g. softmax) and check with atol v-small
     # (roughly 1E-7 for float error on logexp I think)
-    output_a = torch.nn.functional.softmax(model_a(input_sequence.clone()), dim=-1)
-    output_b = torch.nn.functional.softmax(model_b(input_sequence.clone()), dim=-1)
+    output_a: torch.Tensor = torch.nn.functional.softmax(model_a(input_sequence.clone()), dim=-1)
+    output_b: torch.Tensor = torch.nn.functional.softmax(model_b(input_sequence.clone()), dim=-1)
 
-    assert torch.allclose(output_a, output_b, atol=1e-7)
+    assert torch.allclose(output_a, output_b, atol=output_atol)
 
 
 def test_configs_setup_correct():
     assert MODEL.zanj_model_config == ZANJ_MODEL_CFG
     assert MODEL.cfg == ZANJ_MODEL_CFG.hooked_transformer_cfg
 
-    assert MODEL_C.zanj_model_config == ZANJ_MODEL_CFG
-    assert MODEL_C.cfg == ZANJ_MODEL_CFG.hooked_transformer_cfg
+    assert MODEL_FROM_CFG_CREATE.zanj_model_config == ZANJ_MODEL_CFG
+    assert MODEL_FROM_CFG_CREATE.cfg == ZANJ_MODEL_CFG.hooked_transformer_cfg
 
-
-def test_model_save():
-    fname: Path = Path("tests/_temp/test_model_save.zanj")
-    fname.parent.mkdir(parents=True, exist_ok=True)
-    zanj: ZANJ = ZANJ()
-    zanj.save(MODEL, fname)
-    model_load = zanj.read(fname)
-
-    _assert_model_output_equality(MODEL, model_load)
-
-
-def test_model_save_nofold():
+def test_model_save_exact():
     fname: Path = Path("tests/_temp/test_model_save_nofold.zanj")
     fname.parent.mkdir(parents=True, exist_ok=True)
     zanj: ZANJ = ZANJ(
         custom_settings={
-            "_load_state_dict_wrapper": {"recover_exact": True, "fold_ln": False}
+            "_load_state_dict_wrapper": {"recover_exact": True}
         },
     )
     zanj.save(MODEL, fname)
     model_load = zanj.read(fname)
 
     assert_model_exact_equality(MODEL, model_load)
+
+def test_model_save_fold_ln():
+    fname: Path = Path("tests/_temp/test_model_save.zanj")
+    fname.parent.mkdir(parents=True, exist_ok=True)
+    zanj: ZANJ = ZANJ(
+        custom_settings={
+            "_load_state_dict_wrapper": {"fold_ln": True}
+        },
+    )
+    zanj.save(MODEL, fname)
+    model_load = zanj.read(fname)
+
+    _assert_model_output_equality(MODEL, model_load)
+
+
+
+def test_model_save_refactored_attn_matrices():
+    fname: Path = Path("tests/_temp/test_model_save.zanj")
+    fname.parent.mkdir(parents=True, exist_ok=True)
+    zanj: ZANJ = ZANJ(
+        custom_settings={
+            "_load_state_dict_wrapper": {"fold_ln": True, "refactor_factored_attn_matrices": True}
+        },
+    )
+    zanj.save(MODEL, fname)
+    model_load = zanj.read(fname)
+
+    _assert_model_output_equality(MODEL, model_load)
+
