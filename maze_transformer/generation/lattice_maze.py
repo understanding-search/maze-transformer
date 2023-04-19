@@ -52,7 +52,7 @@ class AsciiChars:
     PATH: str = "X"
 
 
-ASCII_PIXEL_PAIRINGS: dict[RGB, str] = {
+ASCII_PIXEL_PAIRINGS: dict[str, RGB] = {
     AsciiChars.WALL: PixelColors.WALL,
     AsciiChars.OPEN: PixelColors.OPEN,
     AsciiChars.START: PixelColors.START,
