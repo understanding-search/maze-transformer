@@ -34,7 +34,8 @@ MODEL_FROM_CFG_CREATE: ZanjHookedTransformer = ZANJ_MODEL_CFG.create_model_zanj(
 
 
 def _assert_model_output_equality(
-    model_a: ZanjHookedTransformer, model_b: ZanjHookedTransformer,
+    model_a: ZanjHookedTransformer,
+    model_b: ZanjHookedTransformer,
     test_sequence_length: int = 10,
     output_atol: float = 1e-7,
 ):
@@ -70,8 +71,12 @@ def _assert_model_output_equality(
     )
     # apply normalization (e.g. softmax) and check with atol v-small
     # (roughly 1E-7 for float error on logexp I think)
-    output_a: torch.Tensor = torch.nn.functional.softmax(model_a(input_sequence.clone()), dim=-1)
-    output_b: torch.Tensor = torch.nn.functional.softmax(model_b(input_sequence.clone()), dim=-1)
+    output_a: torch.Tensor = torch.nn.functional.softmax(
+        model_a(input_sequence.clone()), dim=-1
+    )
+    output_b: torch.Tensor = torch.nn.functional.softmax(
+        model_b(input_sequence.clone()), dim=-1
+    )
 
     assert torch.allclose(output_a, output_b, atol=output_atol)
 
@@ -83,32 +88,29 @@ def test_configs_setup_correct():
     assert MODEL_FROM_CFG_CREATE.zanj_model_config == ZANJ_MODEL_CFG
     assert MODEL_FROM_CFG_CREATE.cfg == ZANJ_MODEL_CFG.hooked_transformer_cfg
 
+
 def test_model_save_exact():
     fname: Path = Path("tests/_temp/test_model_save_nofold.zanj")
     fname.parent.mkdir(parents=True, exist_ok=True)
     zanj: ZANJ = ZANJ(
-        custom_settings={
-            "_load_state_dict_wrapper": {"recover_exact": True}
-        },
+        custom_settings={"_load_state_dict_wrapper": {"recover_exact": True}},
     )
     zanj.save(MODEL, fname)
     model_load = zanj.read(fname)
 
     assert_model_exact_equality(MODEL, model_load)
 
+
 def test_model_save_fold_ln():
     fname: Path = Path("tests/_temp/test_model_save.zanj")
     fname.parent.mkdir(parents=True, exist_ok=True)
     zanj: ZANJ = ZANJ(
-        custom_settings={
-            "_load_state_dict_wrapper": {"fold_ln": True}
-        },
+        custom_settings={"_load_state_dict_wrapper": {"fold_ln": True}},
     )
     zanj.save(MODEL, fname)
     model_load = zanj.read(fname)
 
     _assert_model_output_equality(MODEL, model_load)
-
 
 
 def test_model_save_refactored_attn_matrices():
@@ -116,11 +118,13 @@ def test_model_save_refactored_attn_matrices():
     fname.parent.mkdir(parents=True, exist_ok=True)
     zanj: ZANJ = ZANJ(
         custom_settings={
-            "_load_state_dict_wrapper": {"fold_ln": True, "refactor_factored_attn_matrices": True}
+            "_load_state_dict_wrapper": {
+                "fold_ln": True,
+                "refactor_factored_attn_matrices": True,
+            }
         },
     )
     zanj.save(MODEL, fname)
     model_load = zanj.read(fname)
 
     _assert_model_output_equality(MODEL, model_load)
-

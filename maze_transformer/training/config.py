@@ -256,7 +256,7 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
         **kwargs,
     ) -> None:
         """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict
-        
+
         # kwargs:
         - `recover_exact = False` disables `center_writing_weights` and `center_unembed` if set to true
         - `fold_ln = False` folds the layernorms if set to true
@@ -280,8 +280,12 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
                 "Can't recover exact weights if the layernorm is to be folded, or the attention matrices are to be refactored\n{kwargs = }"
             )
 
-        self.zanj_model_config.model_cfg.are_layernorms_folded = fold_ln or self.zanj_model_config.model_cfg.are_layernorms_folded
-        self.zanj_model_config.model_cfg.are_weights_processed = recover_exact or self.zanj_model_config.model_cfg.are_weights_processed
+        self.zanj_model_config.model_cfg.are_layernorms_folded = (
+            fold_ln or self.zanj_model_config.model_cfg.are_layernorms_folded
+        )
+        self.zanj_model_config.model_cfg.are_weights_processed = (
+            recover_exact or self.zanj_model_config.model_cfg.are_weights_processed
+        )
 
         self.load_and_process_state_dict(
             state_dict,
