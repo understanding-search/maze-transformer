@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from functools import cached_property
 from typing import Any, Type
 
@@ -11,6 +12,7 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
+from muutils.zanj.torchutil import ConfiguredModel, set_config_class
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
@@ -30,6 +32,13 @@ class BaseGPTConfig(SerializableDataclass):
     d_model: int
     d_head: int
     n_layers: int
+
+    weight_processing: dict[str, bool] = serializable_field(
+        default_factory=lambda: dict(
+            are_layernorms_folded=False,
+            are_weights_processed=False,
+        )
+    )
 
 
 # ==================================================
@@ -200,7 +209,8 @@ class ConfigHolder(SerializableDataclass):
         else:
             return HuggingMazeTokenizer(self.dataset_cfg)
 
-    def transformer_config(self) -> HookedTransformerConfig:
+    @cached_property
+    def hooked_transformer_cfg(self) -> HookedTransformerConfig:
         return HookedTransformerConfig(
             act_fn=self.model_cfg.act_fn,
             d_model=self.model_cfg.d_model,
@@ -210,7 +220,103 @@ class ConfigHolder(SerializableDataclass):
             d_vocab=len(self.dataset_cfg.token_arr),
         )
 
+    def transformer_config(self) -> HookedTransformerConfig:
+        warnings.warn(
+            "transformer_config is deprecated, use hooked_transformer_cfg instead",
+            DeprecationWarning,
+        )
+        return self.hooked_transformer_cfg
+
     def create_model(self) -> HookedTransformer:
         return HookedTransformer(
-            cfg=self.transformer_config(), tokenizer=self.tokenizer
+            cfg=self.hooked_transformer_cfg,
+            tokenizer=self.tokenizer,
         )
+
+    def create_model_zanj(self) -> ZanjHookedTransformer:
+        return ZanjHookedTransformer(self)
+
+
+@set_config_class(ConfigHolder)
+class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
+    """A hooked transformer that is configured by a ConfigHolder
+
+    the inheritance order is critical here -- super() does not call parent, but calls the next class in the MRO
+    So, we need ConfiguredModel to take the ConfigHolder and pass kwargs to HookedTransformer
+    """
+
+    def __init__(self, cfg_holder: ConfigHolder) -> None:
+        super().__init__(
+            # for ConfiguredModel
+            zanj_model_config=cfg_holder,
+            # for HookedTransformer
+            cfg=cfg_holder.hooked_transformer_cfg,
+            tokenizer=cfg_holder.tokenizer,
+        )
+
+    def _load_state_dict_wrapper(
+        self,
+        state_dict: dict[str, Any],
+        **kwargs,
+    ) -> None:
+        """this is a wrapper around the _load_state_dict function that allows us to do extra things when loading a state dict
+
+        # kwargs:
+        - `recover_exact = False` disables `center_writing_weights` and `center_unembed` if set to true
+        - `fold_ln = False` folds the layernorms if set to true
+        - `refactor_factored_attn_matrices = False` refactors the factored attention matrices if set to true, this might cause accuracy issues according to @valedan
+
+        """
+
+        recover_exact: bool = kwargs.get("recover_exact", False)
+        fold_ln: bool = kwargs.get("fold_ln", False)
+        refactor_factored_attn_matrices: bool = kwargs.get(
+            "refactor_factored_attn_matrices", False
+        )
+
+        if (
+            self.zanj_model_config.model_cfg.weight_processing["are_layernorms_folded"]
+            and fold_ln
+        ):
+            raise ValueError(
+                f"Cannot fold layernorms twice! the saved model already has layernorms folded\n{kwargs = }"
+            )
+
+        if recover_exact and (fold_ln or refactor_factored_attn_matrices):
+            raise ValueError(
+                "Can't recover exact weights if the layernorm is to be folded, or the attention matrices are to be refactored\n{kwargs = }"
+            )
+
+        self.zanj_model_config.model_cfg.weight_processing["are_layernorms_folded"] = (
+            self.zanj_model_config.model_cfg.weight_processing["are_layernorms_folded"]
+            or fold_ln
+        )
+        self.zanj_model_config.model_cfg.weight_processing[
+            "are_weights_processed"
+        ] = self.zanj_model_config.model_cfg.weight_processing[
+            "are_weights_processed"
+        ] or (
+            not recover_exact
+        )
+
+        self.load_and_process_state_dict(
+            state_dict,
+            fold_ln=False,
+            center_writing_weights=not recover_exact,
+            center_unembed=not recover_exact,
+            refactor_factored_attn_matrices=refactor_factored_attn_matrices,
+        )
+        # We're folding layernorm, but not using HookedTransformer.from_pretrained
+        # This means when torch.load_state_dict is invoked by transformer_lens, it
+        # will complain about the fact that we deleted layernorm from the state_dict
+        # NOTE temporary fix until https://github.com/neelnanda-io/TransformerLens/issues/219 is resolved
+
+        self.process_weights_(
+            fold_ln=fold_ln,
+            center_writing_weights=not recover_exact,
+            center_unembed=not recover_exact,
+            refactor_factored_attn_matrices=False,
+            move_state_dict_to_device=not recover_exact,
+        )
+        self.setup()  # Re-attach layernorm hooks by calling setup
+        self.eval()

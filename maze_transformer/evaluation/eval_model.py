@@ -50,6 +50,7 @@ def find_config(folder: Path) -> Path | tuple[Path, Path] | None:
 def load_model_with_configs(
     model_path: Path,
     verbose: bool = False,
+    fold_ln: bool = True,
 ) -> tuple[HookedTransformer, ConfigHolder]:
     """
     Load a model and associated config files from a path.
@@ -89,7 +90,7 @@ def load_model_with_configs(
     # will complain about the fact that we deleted layernorm from the state_dict
     # NOTE temporary fix until https://github.com/neelnanda-io/TransformerLens/issues/219 is resolved
 
-    model.process_weights_(fold_ln=True)
+    model.process_weights_(fold_ln=fold_ln)
     model.setup()  # Re-attach layernorm hooks by calling setup
     model.eval()
 
