@@ -1,11 +1,12 @@
 import pytest
 import numpy as np
+from maze_transformer.generation.constants import CoordArray
 
 from maze_transformer.training.tokenizer import maze_to_tokens
 from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
 from maze_transformer.generation.utils import bool_array_from_string
-from maze_transformer.training.dataset import SaveFormats
-from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.training.dataset import SaveFormats, register_filter_namespace_for_dataset
+from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig, register_wrap_solved_maze_filter
 
 
 class TestMazeDatasetConfig:
@@ -113,8 +114,23 @@ class TestMazeDatasetFilters:
 
 
     def test_register_wrap_solved_maze_filter(self):
-        # TODO
-        pass
+        class TestDataset(MazeDataset):
+            ...
+
+        @register_filter_namespace_for_dataset(TestDataset)
+        class TestFilters:
+            @register_wrap_solved_maze_filter
+            @staticmethod
+            def solution_match(maze:SolvedMaze, solution:CoordArray) -> bool:
+                """Test for solution equality"""
+                return (maze.solution == solution).all()
+
+        maze1 = SolvedMaze(connection_list=self.connection_list, solution=np.array([[0, 0]]))
+        maze2 = SolvedMaze(connection_list=self.connection_list, solution=np.array([[0, 1]]))
+
+        dataset = TestDataset(self.config, [maze1, maze2])
+        filtered = dataset.filter_by.solution_match(solution=np.array([[0, 0]]))
+        assert filtered.mazes_objs == [maze1]
 
     def test_path_length(self):
         long_maze = SolvedMaze(connection_list=self.connection_list, solution=np.array([[0, 0], [0, 1], [1, 1]]))
