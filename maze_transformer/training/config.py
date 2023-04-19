@@ -33,8 +33,12 @@ class BaseGPTConfig(SerializableDataclass):
     d_head: int
     n_layers: int
 
-    are_layernorms_folded: bool = serializable_field(default=False)
-    are_weights_processed: bool = serializable_field(default=False)
+    weight_processing: dict[str, bool] = serializable_field(
+        default_factory=lambda: dict(
+            are_layernorms_folded=False,
+            are_weights_processed=False,
+        )
+    )
 
 
 # ==================================================
@@ -270,7 +274,10 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
             "refactor_factored_attn_matrices", False
         )
 
-        if self.zanj_model_config.model_cfg.are_layernorms_folded and fold_ln:
+        if (
+            self.zanj_model_config.model_cfg.weight_processing["are_layernorms_folded"]
+            and fold_ln
+        ):
             raise ValueError(
                 f"Cannot fold layernorms twice! the saved model already has layernorms folded\n{kwargs = }"
             )
@@ -280,11 +287,16 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
                 "Can't recover exact weights if the layernorm is to be folded, or the attention matrices are to be refactored\n{kwargs = }"
             )
 
-        self.zanj_model_config.model_cfg.are_layernorms_folded = (
-            fold_ln or self.zanj_model_config.model_cfg.are_layernorms_folded
+        self.zanj_model_config.model_cfg.weight_processing["are_layernorms_folded"] = (
+            self.zanj_model_config.model_cfg.weight_processing["are_layernorms_folded"]
+            or fold_ln
         )
-        self.zanj_model_config.model_cfg.are_weights_processed = (
-            recover_exact or self.zanj_model_config.model_cfg.are_weights_processed
+        self.zanj_model_config.model_cfg.weight_processing[
+            "are_weights_processed"
+        ] = self.zanj_model_config.model_cfg.weight_processing[
+            "are_weights_processed"
+        ] or (
+            not recover_exact
         )
 
         self.load_and_process_state_dict(

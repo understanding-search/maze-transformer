@@ -33,6 +33,24 @@ MODEL: ZanjHookedTransformer = ZanjHookedTransformer(ZANJ_MODEL_CFG)
 MODEL_FROM_CFG_CREATE: ZanjHookedTransformer = ZANJ_MODEL_CFG.create_model_zanj()
 
 
+def _check_except_config_equality_modulo_weight_processing(
+    diff: dict, model_cfg_keys_allowed_diff: list[str]
+) -> bool:
+    """given the diff between two configs, return True if the only difference is the specified keys under model_cfg"""
+    return all(
+        [
+            set(diff.keys()) == {"model_cfg"},
+            set(diff["model_cfg"].keys()) == {"weight_processing"},
+            set(diff["model_cfg"]["weight_processing"]["self"].keys())
+            == diff["model_cfg"]["weight_processing"]["other"].keys(),
+            all(
+                k in model_cfg_keys_allowed_diff
+                for k in diff["model_cfg"]["weight_processing"]["self"].keys()
+            ),
+        ]
+    )
+
+
 def _assert_model_output_equality(
     model_a: ZanjHookedTransformer,
     model_b: ZanjHookedTransformer,
@@ -43,14 +61,9 @@ def _assert_model_output_equality(
     try:
         assert_model_cfg_equality(model_a, model_b)
     except ConfigMismatchException as e:
-        if e.diff == {
-            "model_cfg": {"are_weights_processed": {"self": False, "other": True}}
-        } or e.diff == {
-            "model_cfg": {
-                "are_layernorms_folded": {"self": False, "other": True},
-                "are_weights_processed": {"self": False, "other": True},
-            }
-        }:
+        if _check_except_config_equality_modulo_weight_processing(
+            e.diff, ["are_weights_processed", "are_layernorms_folded"]
+        ):
             pass
         else:
             raise e
