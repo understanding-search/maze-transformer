@@ -376,7 +376,7 @@ class MazeDatasetFilters:
     @staticmethod
     def start_end_distance(maze: SolvedMaze, min_distance: int) -> bool:
         """filter out datasets where the start and end pos are less than `min_distance` apart on the manhattan distance (ignoring walls)"""
-        return (np.linalg.norm(maze.start_pos - maze.end_pos, 1) >= min_distance,)
+        return np.linalg.norm(maze.start_pos - maze.end_pos, 1) >= min_distance
 
     @register_wrap_dataset_filter
     @staticmethod
