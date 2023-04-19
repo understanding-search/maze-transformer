@@ -75,7 +75,27 @@ class TestMazeDataset:
 
     # TODO: do this after testing default filters
     def test_custom_maze_filter(self):
-        pass
+        connection_list = bool_array_from_string(
+            """
+            F T
+            F F
+
+            T F
+            T F
+            """,
+            shape=[2, 2, 2],
+        )
+        solutions = [
+            [[0, 0], [0, 1], [1, 1]],
+            [[0, 0], [0, 1]],
+            [[0, 0]],
+        ]
+
+
+        mazes = [SolvedMaze(connection_list, solution) for solution in solutions]
+        dataset = MazeDataset(self.config, mazes)
+        filtered = dataset.custom_maze_filter(lambda m: len(m.solution) == 1)
+        assert filtered.mazes_objs == [mazes[2]]
 
 
 class TestMazeDatasetFilters:
