@@ -1,25 +1,27 @@
-from typing import Iterable, Optional, Protocol
+import typing
 
 import numpy as np
+from jaxtyping import Int
 
 from maze_transformer.generation.constants import Coord, CoordArray, CoordTup
 from maze_transformer.generation.lattice_maze import LatticeMaze
 from maze_transformer.utils.utils import register_method
 
 # pylint: disable=unused-argument
+MazePath = CoordArray
 
 
-class PathEvalFunction(Protocol):
+class PathEvalFunction(typing.Protocol):
     def __call__(
         self,
-        maze: Optional[LatticeMaze] = None,
-        solution: Optional[CoordArray] = None,
-        prediction: Optional[CoordArray] = None,
+        maze: LatticeMaze|None = None,
+        solution: CoordArray|None = None,
+        prediction: CoordArray|None = None,
     ) -> float:
         ...
 
 
-def path_as_segments_iter(path: CoordArray) -> Iterable[tuple]:
+def path_as_segments_iter(path: CoordArray) -> typing.Iterable[tuple]:
     """
     Iterate over the segments of a path (ie each consecutive pair).
     """
