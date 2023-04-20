@@ -32,8 +32,10 @@ def test_load_missing_fields():
         "d_model": 1,
         "d_head": 1,
         "n_layers": 1,
-        "are_layernorms_folded": False,
-        "are_weights_processed": False,
+        "weight_processing": {
+            "are_layernorms_folded": False,
+            "are_weights_processed": False,
+        },
         "__format__": "BaseGPTConfig(SerializableDataclass)",
     }
     config = BaseGPTConfig.load(serialized)
@@ -59,7 +61,9 @@ def _custom_serialized_config():
         "d_model": 1,
         "d_head": 1,
         "n_layers": 1,
-        "are_layernorms_folded": False,
-        "are_weights_processed": False,
+        "weight_processing": {
+            "are_layernorms_folded": False,
+            "are_weights_processed": False,
+        },
         "__format__": "BaseGPTConfig(SerializableDataclass)",
     }

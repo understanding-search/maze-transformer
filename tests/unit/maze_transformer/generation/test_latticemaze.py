@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from maze_transformer.generation.generators import GENERATORS_MAP
+from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import (
     LatticeMaze,
     PixelColors,

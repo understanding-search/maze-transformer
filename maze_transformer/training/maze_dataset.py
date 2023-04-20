@@ -224,7 +224,6 @@ class MazeDataset(GPTDataset):
             cfg.grid_shape,
             (cfg.n_mazes, 2, 2),
         )
-        # TODO: filter min distanced based on MazeDatasetConfig
 
         solved_mazes: list[SolvedMaze]
         tqdm_kwargs: dict = dict(
