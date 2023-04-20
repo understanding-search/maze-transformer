@@ -73,8 +73,9 @@ class PathEvals:
     @register_method(evals)
     @staticmethod
     def num_connections_adjacent(maze: LatticeMaze, prediction: MazePath, **_) -> float:
-        """number of connections in prediction which are are valid paths on the maze"""
-        n_connected: float = 0.0
+        """number of connections in prediction which are valid paths on the maze"""
+
+        n_connected: int = 0
         for step_start, step_end in path_as_segments_iter(prediction):
             if maze.nodes_connected(step_start, step_end):
                 n_connected += 1
@@ -127,3 +128,40 @@ class PathEvals:
                 streak_length += 1
 
         return streak_length
+
+    @register_method(evals)
+    @staticmethod
+    def distance_between_end_nodes(
+        solution: MazePath, prediction: MazePath, **_
+    ) -> float:
+        """Euclidean distance between the end nodes of the valid and predicted paths"""
+        if len(prediction) <= 1:
+            return 0.0
+
+        return np.linalg.norm(solution[-1] - prediction[-1])
+
+    @register_method(evals)
+    @staticmethod
+    def corner_jumps(prediction: MazePath, **_) -> float:
+        """Looks for corner jumps in the predicted path. A corner jump is if the transformer predicts predicts
+        (0,0) <> (1,1), instead of  (0,0) <> (0,1) <> (1,1)"""
+        if len(prediction) <= 1:
+            return 0.0
+
+        pred_shift_R = prediction[1:]
+        pred_shift_L = prediction[:-1]
+        distance_between_nodes = pred_shift_R - pred_shift_L
+        normed_distances = np.linalg.norm(distance_between_nodes, axis=1)
+        return np.count_nonzero(normed_distances == np.sqrt(2))
+
+    @register_method(evals)
+    @staticmethod
+    def average_predicted_step_size(prediction: MazePath, **_) -> float:
+        """Returns average step size in the predicted path."""
+        if len(prediction) <= 1:
+            return 0.0
+
+        pred_shift_R = prediction[1:]
+        pred_shift_L = prediction[:-1]
+        distance_between_nodes = pred_shift_R - pred_shift_L
+        return np.linalg.norm(distance_between_nodes, axis=1).mean()
