@@ -387,7 +387,7 @@ class MazeDatasetFilters:
         # get the lengths of all solutions
         lengths: np.ndarray = np.array([len(m.solution) for m in dataset.mazes])
         # get the cutoff
-        cutoff: int = int(np.percentile(lengths, percentile))
+        cutoff: float = np.percentile(lengths, percentile)
         # filter
         new_dataset: MazeDataset = MazeDataset(
             cfg=dataset.cfg,

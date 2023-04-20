@@ -3,7 +3,6 @@ from pathlib import Path
 from muutils.zanj import ZANJ
 from muutils.zanj.torchutil import assert_model_exact_equality
 
-from tests.helpers.assertions import assert_model_output_equality
 from maze_transformer.training.config import (
     BaseGPTConfig,
     ConfigHolder,
@@ -11,6 +10,7 @@ from maze_transformer.training.config import (
     TrainConfig,
     ZanjHookedTransformer,
 )
+from tests.helpers.assertions import assert_model_output_equality
 
 ZANJ_MODEL_CFG: ConfigHolder = ConfigHolder(
     train_cfg=TrainConfig(name="test_cfg_save-train"),
