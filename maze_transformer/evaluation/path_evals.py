@@ -1,7 +1,6 @@
 import typing
 
 import numpy as np
-from jaxtyping import Int
 
 from maze_transformer.generation.constants import Coord, CoordArray, CoordTup
 from maze_transformer.generation.lattice_maze import LatticeMaze
@@ -14,9 +13,9 @@ MazePath = CoordArray
 class PathEvalFunction(typing.Protocol):
     def __call__(
         self,
-        maze: LatticeMaze|None = None,
-        solution: CoordArray|None = None,
-        prediction: CoordArray|None = None,
+        maze: LatticeMaze | None = None,
+        solution: CoordArray | None = None,
+        prediction: CoordArray | None = None,
     ) -> float:
         ...
 
