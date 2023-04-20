@@ -3,7 +3,7 @@ from pathlib import Path
 from muutils.zanj import ZANJ
 from muutils.zanj.torchutil import assert_model_exact_equality
 
-from maze_transformer.evaluation.util import assert_model_output_equality
+from tests.helpers.assertions import assert_model_output_equality
 from maze_transformer.training.config import (
     BaseGPTConfig,
     ConfigHolder,

@@ -13,7 +13,7 @@ from muutils.zanj.torchutil import assert_model_cfg_equality
 
 from maze_transformer.evaluation.eval_model import evaluate_model, predict_maze_paths
 from maze_transformer.evaluation.path_evals import PathEvals
-from maze_transformer.evaluation.util import assert_model_output_equality
+from tests.helpers.assertions import assert_model_output_equality
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.maze_dataset import MazeDataset
 from maze_transformer.training.training import TRAIN_SAVE_FILES
