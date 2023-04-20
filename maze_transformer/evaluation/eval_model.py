@@ -153,8 +153,9 @@ def evaluate_model(
     for batch in chunks(dataset.mazes_tokens, batch_size):
         # TODO: This won't be needed after #124, then we can call mazes_objs instead
         # https://github.com/orgs/AISC-understanding-search/projects/1/views/1?pane=issue&itemId=23879308
-        solved_mazes = [SolvedMaze.from_tokens(tokens, dataset.cfg) for tokens in batch]
-        mazes, solutions = zip(*solved_mazes)
+        solved_mazes: SolvedMaze = [
+            SolvedMaze.from_tokens(tokens, dataset.cfg) for tokens in batch
+        ]
 
         predictions = predict_maze_paths(
             tokens_batch=batch,
@@ -167,12 +168,12 @@ def evaluate_model(
         for name, func in eval_functions.items():
             score_counters[name].update(
                 func(
-                    maze=maze,
-                    solution=np.array(solution),
+                    maze=sm.maze,
+                    solution=np.array(sm.solution),
                     prediction=np.array(prediction),
                     model=model,
                 )
-                for maze, solution, prediction in zip(mazes, solutions, predictions)
+                for sm, prediction in zip(solved_mazes, predictions)
             )
 
     return score_counters

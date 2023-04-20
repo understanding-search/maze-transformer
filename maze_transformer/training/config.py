@@ -222,7 +222,7 @@ class ConfigHolder(SerializableDataclass):
 
     def transformer_config(self) -> HookedTransformerConfig:
         warnings.warn(
-            "transformer_config is deprecated, use hooked_transformer_cfg instead",
+            "cfg.transformer_config() is deprecated, use cfg.hooked_transformer_cfg or cfg.create_model_zanj() instead",
             DeprecationWarning,
         )
         return self.hooked_transformer_cfg

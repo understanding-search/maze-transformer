@@ -149,7 +149,7 @@ class MazeDataset(GPTDataset):
             with multiprocessing.Pool() as pool:
                 self.mazes_tokens = list(
                     tqdm(
-                        pool.starmap(
+                        pool.map(
                             partial(maze_to_tokens, node_token_map=cfg.node_token_map),
                             self.mazes_objs,
                         ),
@@ -256,7 +256,9 @@ class MazeDataset(GPTDataset):
         for i, (c_start, c_end) in enumerate(endpoint_nodes):
             m: LatticeMaze = cfg.maze_ctor(cfg.grid_shape)
             path: CoordArray = np.array(m.find_shortest_path(c_start, c_end))
-            solved_mazes.append(SolvedMaze(m, path))
+            solved_mazes.append(
+                SolvedMaze.from_lattice_maze(lattice_maze=m, solution=path)
+            )
 
         return cls(
             cfg=cfg,

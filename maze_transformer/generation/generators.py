@@ -3,9 +3,11 @@ from typing import Any, Callable
 
 import numpy as np
 
+from maze_transformer.generation.constants import CoordArray
 from maze_transformer.generation.lattice_maze import (
     NEIGHBORS_MASK,
     Coord,
+    CoordTup,
     LatticeMaze,
     SolvedMaze,
 )
@@ -16,7 +18,7 @@ class LatticeMazeGenerators:
 
     @staticmethod
     def gen_dfs(
-        grid_shape: Coord,
+        grid_shape: Coord | CoordTup,
         start_coord: Coord | None = None,
         lattice_dim: int = 2,
     ) -> LatticeMaze:
@@ -33,7 +35,7 @@ class LatticeMazeGenerators:
                         4. Mark the chosen cell as visited and push it to the stack
         """
 
-        # n_directions: int = lattice_dim * 2
+        grid_shape = np.array(grid_shape)
 
         # initialize the maze with no connections
         connection_list: np.ndarray = np.zeros(
@@ -100,11 +102,11 @@ class LatticeMazeGenerators:
         )
 
     @classmethod
-    def gen_dfs_with_solution(cls, grid_shape: Coord):
-        maze = cls.gen_dfs(grid_shape)
-        solution = np.array(maze.generate_random_path())
+    def gen_dfs_with_solution(cls, grid_shape: Coord) -> SolvedMaze:
+        maze: LatticeMaze = cls.gen_dfs(grid_shape)
+        solution: CoordArray = np.array(maze.generate_random_path())
 
-        return SolvedMaze(maze, solution)
+        return SolvedMaze.from_lattice_maze(lattice_maze=maze, solution=solution)
 
     @staticmethod
     def gen_wilson(
@@ -200,6 +202,7 @@ class LatticeMazeGenerators:
         )
 
 
+# TODO: use the thing @valedan wrote for the evals function to make this automatic?
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
     "gen_dfs": LatticeMazeGenerators.gen_dfs,
     "gen_wilson": LatticeMazeGenerators.gen_wilson,
