@@ -25,7 +25,7 @@ def generate_solve_plot(
     if start and end:
         path = np.array(maze.find_shortest_path(start, end))
     else:
-        path = np.array(maze.generate_random_path())
+        path = np.array(maze.get_shortest_path_between_random_points())
 
     print(f"solving time: {time.time() - solution_start}")
 

@@ -143,7 +143,7 @@ class LatticeMaze:
         self,
         c_start: CoordTup,
         c_end: CoordTup,
-    ) -> list[Coord]:
+    ) -> list[CoordTup]:
         """find the shortest path between two coordinates, using A*"""
 
         g_score: dict[
@@ -215,7 +215,7 @@ class LatticeMaze:
             for col in range(self.grid_shape[1])
         ]
 
-    def generate_random_path(self) -> list[Coord]:
+    def get_shortest_path_between_random_points(self) -> list[CoordTup]:
         """ "return a path between randomly chosen start and end nodes"""
 
         # we can't create a "path" in a single-node maze

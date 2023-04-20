@@ -100,9 +100,9 @@ class LatticeMazeGenerators:
         )
 
     @classmethod
-    def gen_dfs_with_solution(cls, grid_shape: Coord):
+    def gen_dfs_with_solution(cls, grid_shape: Coord) -> SolvedMaze:
         maze = cls.gen_dfs(grid_shape)
-        solution = np.array(maze.generate_random_path())
+        solution = maze.get_shortest_path_between_random_points()
 
         return SolvedMaze(maze, solution)
 
@@ -198,6 +198,13 @@ class LatticeMazeGenerators:
                 grid_shape=grid_shape,
             ),
         )
+
+    @classmethod
+    def gen_wilson_with_solution(cls, grid_shape: Coord) -> SolvedMaze:
+        maze = cls.gen_wilson(grid_shape)
+        solution = maze.get_shortest_path_between_random_points()
+
+        return SolvedMaze(maze, solution)
 
 
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {

@@ -36,7 +36,7 @@ def test_get_nodes():
 
 def test_generate_random_path():
     maze = LatticeMazeGenerators.gen_dfs((2, 2))
-    path = maze.generate_random_path()
+    path = maze.get_shortest_path_between_random_points()
 
     # len > 1 ensures that we have unique start and end nodes
     assert len(path) > 1
@@ -45,4 +45,4 @@ def test_generate_random_path():
 def test_generate_random_path_size_1():
     maze = LatticeMazeGenerators.gen_dfs((1, 1))
     with pytest.raises(AssertionError):
-        maze.generate_random_path()
+        maze.get_shortest_path_between_random_points()
