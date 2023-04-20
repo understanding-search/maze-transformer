@@ -9,7 +9,6 @@ from maze_transformer.generation.lattice_maze import (
     NEIGHBORS_MASK,
     ConnectionList,
     Coord,
-    CoordTup,
     LatticeMaze,
     SolvedMaze,
 )
@@ -99,16 +98,6 @@ class LatticeMazeGenerators:
             ),
         )
 
-<<<<<<< HEAD
-=======
-    @classmethod
-    def gen_dfs_with_solution(cls, grid_shape: Coord) -> SolvedMaze:
-        maze: LatticeMaze = cls.gen_dfs(grid_shape)
-        solution: CoordArray = np.array(maze.generate_random_path())
-
-        return SolvedMaze.from_lattice_maze(lattice_maze=maze, solution=solution)
-
->>>>>>> main
     @staticmethod
     def gen_wilson(
         grid_shape: Coord,
@@ -210,10 +199,7 @@ class LatticeMazeGenerators:
         )
         return get_maze_with_solution("gen_dfs", grid_shape)
 
-<<<<<<< HEAD
 
-=======
->>>>>>> main
 # TODO: use the thing @valedan wrote for the evals function to make this automatic?
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
     "gen_dfs": LatticeMazeGenerators.gen_dfs,
