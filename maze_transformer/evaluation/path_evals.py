@@ -1,12 +1,14 @@
-from typing import Iterable, Optional, Protocol
+from typing import Iterable, Optional, Protocol, TypeAlias
 
 import numpy as np
+from jaxtyping import Int
 
 from maze_transformer.generation.constants import Coord, CoordArray, CoordTup
 from maze_transformer.generation.lattice_maze import LatticeMaze
 from maze_transformer.utils.utils import register_method
 
 # pylint: disable=unused-argument
+MazePath: TypeAlias = Int[np.ndarray, "node x_y_pos"]
 
 
 class PathEvalFunction(Protocol):
