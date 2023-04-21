@@ -65,4 +65,3 @@ if __name__ == "__main__":
     test_decisions_in_solution_score()
     test_solution_length_maze_eval()
     test_all_maze_evals_run_only()
-    
