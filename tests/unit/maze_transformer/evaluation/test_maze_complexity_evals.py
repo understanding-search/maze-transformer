@@ -42,6 +42,14 @@ def test_decisions_in_solution_score():
         ), f"Decisions in solution score {score} is greater than the solution length {len(maze.solution)}"
 
 
+def test_adj_list_length():
+    for maze in dataset.mazes:
+        result: int = MazeComplexityEvals.adj_list_length(maze=maze)
+        assert isinstance(
+            result, int
+        ), f"Evaluation {result} did not return a number, got {type(result) = } {result = }"
+
+
 def test_all_maze_evals_run_only():
     for eval_name, eval_fn in MAZE_COMPLEXITY_EVALS.items():
         for maze in dataset.mazes:
@@ -52,4 +60,9 @@ def test_all_maze_evals_run_only():
 
 
 if __name__ == "__main__":
+    test_adj_list_length()
+    test_decisions_in_solution_norm()
+    test_decisions_in_solution_score()
+    test_solution_length_maze_eval()
     test_all_maze_evals_run_only()
+    

@@ -48,3 +48,7 @@ class MazeComplexityEvals:
         """
         dec_points_in_path = MazeComplexityEvals.count_decision_points(solution, maze)
         return 1 / (1 + dec_points_in_path) * len(solution)
+
+    @register_method(MAZE_COMPLEXITY_EVALS)
+    def adj_list_length(maze: LatticeMaze, **_) -> float:
+        return len(maze.as_adj_list())
