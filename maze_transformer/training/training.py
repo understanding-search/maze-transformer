@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import Callable
 
@@ -7,9 +8,11 @@ from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from muutils.zanj import ZANJ
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import Loss
+from maze_transformer.generation.lattice_maze import SolvedMaze
 
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
-from maze_transformer.training.maze_dataset import MazeDataset
+from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.training.tokenizer import maze_to_tokens
 from maze_transformer.training.wandb_logger import WandbLogger
 
 
@@ -38,19 +41,23 @@ class TRAIN_SAVE_FILES:
     )
 
 
+def collate_batch(batch: list[SolvedMaze], config: MazeDatasetConfig) -> list[str]:
+    # Perf could be improved by vectorizing this
+    result = []
+    for maze in batch:
+        tokens = maze_to_tokens(maze, config.node_token_map)
+        result.append(" ".join(tokens))
+    return result
+
 def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
 ) -> DataLoader:
-    # length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
-    # logger.summary({"dataset_seq_len_stats_summary": length_stats.summary()})
-    # logger.summary(
-    #     {"dataset_seq_len_stats": length_stats.serialize(typecast=lambda x: str(x))}
-    # )
 
     logger.progress(f"Loaded {len(dataset)} sequences")
     logger.progress("Creating dataloader")
     dataloader: DataLoader = DataLoader(
         dataset,
+        collate_fn=partial(collate_batch, config=cfg.dataset_cfg),
         batch_size=cfg.train_cfg.batch_size,
         **cfg.train_cfg.dataloader_cfg,
     )

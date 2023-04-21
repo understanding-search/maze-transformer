@@ -179,37 +179,14 @@ class MazeDataset(GPTDataset):
                 f"unknown fmt {fmt}, expected an instance of `SaveFormats` enum"
             )
 
-    def __getitem__(self, index: int, pad: bool = True) -> str:
-        """index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
-
-        return " ".join(maze_to_tokens(self.mazes[index], self.cfg.node_token_map))
-        # tokens: list[str] = maze_to_tokens(self.mazes[index], self.cfg.node_token_map)
-
-        # if pad:
-        #     remaining_len: int = self.cfg.seq_len_max - len(tokens)
-        #     return (
-        #         [self.cfg.token_arr[self.cfg.padding_token_index] for _ in range(remaining_len)]
-        #         + tokens
-        #     )
-        # else:
-        #     return tokens
-
-    mazes_objs: list[SolvedMaze] = cached_property(
-        lambda self: list(self.get_all(fmt=SaveFormats.OBJECTS))
-    )
-    mazes_tokens: list[list[str]] = cached_property(
-        lambda self: list(self.get_all(fmt=SaveFormats.TOKENS))
-    )
-    mazes_array: IndexedArray = cached_property(
-        lambda self: IndexedArray(self.get_all(fmt=SaveFormats.ARRAY))
-    )
+    def __getitem__(self, i: int) -> SolvedMaze:
+        return self.mazes[i]
 
     def __len__(self) -> int:
         return len(self.mazes)
 
     def get_all_lengths(self) -> list[int]:
         raise NotImplementedError()
-        # return [len(m) for m in self.mazes_tokens]
 
     @classmethod
     def generate(
