@@ -2,6 +2,7 @@ import random
 import typing
 import warnings
 from dataclasses import dataclass
+from itertools import chain
 from typing import cast
 
 import numpy as np
@@ -316,10 +317,38 @@ class LatticeMaze(SerializableDataclass):
             connection_list=connection_list,
         )
 
-    # ============================================================
-    # TODO: write a to_tokens method?
-    # from tokens
-    # ============================================================
+    def as_adj_list_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
+        return [
+            SPECIAL_TOKENS["adj_list_start"],
+            *chain.from_iterable(
+                [
+                    [
+                        node_token_map[tuple(c_s.tolist())],
+                        SPECIAL_TOKENS["connector"],
+                        node_token_map[tuple(c_e.tolist())],
+                        SPECIAL_TOKENS["adjacency_endline"],
+                    ]
+                    for c_s, c_e in self.as_adj_list()
+                ]
+            ),
+            SPECIAL_TOKENS["adj_list_end"],
+        ]
+
+    def to_tokens(
+        self,
+        node_token_map: dict[CoordTup, str],
+    ) -> list[str]:
+        """serialize maze and solution to tokens"""
+        tokens: list[str] = self.as_adj_list_tokens(node_token_map)
+        if getattr(self, "start_pos", None) is not None:
+            tokens += self.get_start_pos_tokens(node_token_map)
+        if getattr(self, "end_pos", None) is not None:
+            tokens += self.get_end_pos_tokens(node_token_map)
+        if getattr(self, "solution", None) is not None:
+            tokens += self.get_solution_tokens(node_token_map)
+
+        return tokens
+
     @classmethod
     def from_tokens(cls, tokens: list[str]) -> "LatticeMaze":
         """create a LatticeMaze from a list of tokens"""
@@ -694,6 +723,20 @@ class TargetedLatticeMaze(LatticeMaze):
                 f"end_pos {self.end_pos} is out of bounds for grid shape {self.grid_shape}"
             )
 
+    def get_start_pos_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
+        return [
+            SPECIAL_TOKENS["origin_start"],
+            node_token_map[tuple(self.start_pos)],
+            SPECIAL_TOKENS["origin_end"],
+        ]
+
+    def get_end_pos_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
+        return [
+            SPECIAL_TOKENS["target_start"],
+            node_token_map[tuple(self.end_pos)],
+            SPECIAL_TOKENS["target_end"],
+        ]
+
     @classmethod
     def from_lattice_maze(
         cls,
@@ -740,6 +783,13 @@ class SolvedMaze(TargetedLatticeMaze):
             assert np.array_equal(
                 np.array(end_pos), self.end_pos
             ), f"when trying to create a SolvedMaze, the given end_pos does not match the one in the solution: given={end_pos}, solution={self.end_pos}"
+
+    def get_solution_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
+        return [
+            SPECIAL_TOKENS["path_start"],
+            *[node_token_map[tuple(c.tolist())] for c in self.solution],
+            SPECIAL_TOKENS["path_end"],
+        ]
 
     # for backwards compatibility
     @property

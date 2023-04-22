@@ -1,5 +1,4 @@
 from datetime import datetime
-from functools import partial
 from pathlib import Path
 from typing import Callable
 
@@ -8,11 +7,9 @@ from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from muutils.zanj import ZANJ
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import Loss
-from maze_transformer.generation.lattice_maze import SolvedMaze
 
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
-from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
-from maze_transformer.training.tokenizer import maze_to_tokens
+from maze_transformer.training.maze_dataset import MazeDataset
 from maze_transformer.training.wandb_logger import WandbLogger
 
 
@@ -41,23 +38,21 @@ class TRAIN_SAVE_FILES:
     )
 
 
-def collate_batch(batch: list[SolvedMaze], config: MazeDatasetConfig) -> list[str]:
-    # Perf could be improved by vectorizing this
-    result = []
-    for maze in batch:
-        tokens = maze_to_tokens(maze, config.node_token_map)
-        result.append(" ".join(tokens))
-    return result
+# def collate_batch(batch: list[SolvedMaze], config: MazeDatasetConfig) -> list[str]:
+#     # Perf could be improved by vectorizing this
+#     result = []
+#     for maze in batch:
+#         tokens = maze.to_tokens(config.node_token_map)
+
 
 def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
 ) -> DataLoader:
-
     logger.progress(f"Loaded {len(dataset)} sequences")
     logger.progress("Creating dataloader")
     dataloader: DataLoader = DataLoader(
         dataset,
-        collate_fn=partial(collate_batch, config=cfg.dataset_cfg),
+        # collate_fn=partial(collate_batch, config=cfg.dataset_cfg),
         batch_size=cfg.train_cfg.batch_size,
         **cfg.train_cfg.dataloader_cfg,
     )
@@ -101,7 +96,8 @@ def train(
         # ).to(model.cfg.device)
 
         # loss: Loss = model(batch_on_device[:, :-1], return_type="loss")
-        loss: Loss = model(batch, return_type="loss")
+        tokens = [maze.to_tokens(cfg.dataset_cfg.node_token_map) for maze in batch]
+        loss: Loss = model(tokens, return_type="loss")
         loss.backward()
 
         optimizer.step()

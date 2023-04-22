@@ -25,12 +25,10 @@ from maze_transformer.training.dataset import (
     DatasetFilterProtocol,
     GPTDataset,
     GPTDatasetConfig,
-    IndexedArray,
     SaveFormats,
     register_filter_namespace_for_dataset,
     register_wrap_dataset_filter,
 )
-from maze_transformer.training.tokenizer import maze_to_tokens
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",
@@ -171,7 +169,7 @@ class MazeDataset(GPTDataset):
         if fmt == SaveFormats.OBJECTS:
             return self.mazes[index]
         elif fmt == SaveFormats.TOKENS:
-            return maze_to_tokens(self.mazes[index], self.cfg.node_token_map)
+            return self.mazes[index].to_tokens(self.cfg.node_token_map)
         elif fmt == SaveFormats.ARRAY:
             raise NotImplementedError("getting as array not implemented yet")
         else:
@@ -181,6 +179,9 @@ class MazeDataset(GPTDataset):
 
     def __getitem__(self, i: int) -> SolvedMaze:
         return self.mazes[i]
+
+    def as_tokens(self, limit: int = 100) -> list[list[str]]:
+        return [maze.to_tokens(self.cfg.node_token_map) for maze in self.mazes[:limit]]
 
     def __len__(self) -> int:
         return len(self.mazes)

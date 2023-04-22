@@ -10,7 +10,6 @@ from transformer_lens import HookedTransformer
 
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.training import TRAIN_SAVE_FILES
@@ -150,15 +149,12 @@ def evaluate_model(
         name: StatCounter() for name in eval_functions.keys()
     }
 
-    for batch in chunks(dataset.mazes_tokens, batch_size):
-        # TODO: This won't be needed after #124, then we can call mazes_objs instead
-        # https://github.com/orgs/AISC-understanding-search/projects/1/views/1?pane=issue&itemId=23879308
-        solved_mazes: SolvedMaze = [
-            SolvedMaze.from_tokens(tokens, dataset.cfg) for tokens in batch
+    for maze_batch in chunks(dataset, batch_size):
+        tokens_batch = [
+            maze.to_tokens(dataset.cfg.node_token_map) for maze in maze_batch
         ]
-
         predictions = predict_maze_paths(
-            tokens_batch=batch,
+            tokens_batch=tokens_batch,
             data_cfg=dataset.cfg,
             model=model,
             max_new_tokens=max_new_tokens,
@@ -173,7 +169,7 @@ def evaluate_model(
                     prediction=np.array(prediction),
                     model=model,
                 )
-                for sm, prediction in zip(solved_mazes, predictions)
+                for sm, prediction in zip(maze_batch, predictions)
             )
 
     return score_counters

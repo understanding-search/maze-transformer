@@ -13,12 +13,12 @@ from muutils.zanj.torchutil import assert_model_cfg_equality
 
 from maze_transformer.evaluation.eval_model import evaluate_model, predict_maze_paths
 from maze_transformer.evaluation.path_evals import PathEvals
-from tests.helpers.assertions import assert_model_output_equality
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.maze_dataset import MazeDataset
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbProject
 from scripts.train_model import TrainingResult, train_model
+from tests.helpers.assertions import assert_model_output_equality
 
 temp_dir: Path = Path("tests/_temp/test_eval_model")
 
@@ -74,8 +74,9 @@ def test_predict_maze_paths():
     )
 
     max_new_tokens = 2
+    tokens_batch = [maze.to_tokens(cfg.dataset_cfg.node_token_map) for maze in dataset]
     paths = predict_maze_paths(
-        tokens_batch=dataset.mazes_tokens,
+        tokens_batch=tokens_batch,
         data_cfg=cfg.dataset_cfg,
         model=model,
         max_new_tokens=max_new_tokens,

@@ -184,7 +184,7 @@ class GPTDataset(Dataset):
         do_download: bool = True,
         local_base_path: Path = Path("data/maze_dataset"),
         **kwargs,
-    ) -> None:
+    ) -> "GPTDataset":
         """base class for gpt datasets
 
         priority of loading:
