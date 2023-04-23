@@ -14,7 +14,7 @@ def test_from_tokens():
 
     # See https://github.com/AISC-understanding-search/maze-transformer/issues/77
     config = MazeDatasetConfig(grid_n=maze_size, name="test", n_mazes=1)
-    tokenized_maze = maze.to_tokens(config.node_token_map)
+    tokenized_maze = maze.as_tokens(config.node_token_map)
 
     new_maze, new_solution = SolvedMaze.from_tokens(tokenized_maze, config)
     assert new_maze == maze

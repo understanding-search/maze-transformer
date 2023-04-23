@@ -7,7 +7,7 @@ from tests.helpers import utils
 
 def test_coordinate_system():
     """
-    Check that the adj_list created by to_tokens() uses the same coordinate system as the LatticeMaze adj_list.
+    Check that the adj_list created by as_tokens() uses the same coordinate system as the LatticeMaze adj_list.
 
     To test this, generate both adj_lists, sort them and convert to a common format, and check that they are equal.
     """
@@ -27,7 +27,7 @@ def test_coordinate_system():
         grid_n=maze_size, name="test", n_mazes=1
     ).node_token_map
 
-    tokenized_maze = solved_maze.to_tokens(node_token_map)
+    tokenized_maze = solved_maze.as_tokens(node_token_map)
 
     tokenizer_adj_list = tokenized_maze[
         tokenized_maze.index(SPECIAL_TOKENS["adj_list_start"])

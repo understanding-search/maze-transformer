@@ -151,7 +151,7 @@ def evaluate_model(
 
     for maze_batch in chunks(dataset, batch_size):
         tokens_batch = [
-            maze.to_tokens(dataset.cfg.node_token_map) for maze in maze_batch
+            maze.as_tokens(dataset.cfg.node_token_map) for maze in maze_batch
         ]
         predictions = predict_maze_paths(
             tokens_batch=tokens_batch,

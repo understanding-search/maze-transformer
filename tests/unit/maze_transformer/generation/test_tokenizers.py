@@ -24,7 +24,7 @@ def test_tokenization_encoding():
     node_token_map = cfg.node_token_map
 
     # Adjacency List Tokenization
-    maze_str_tokens = solved_maze.to_tokens(node_token_map)
+    maze_str_tokens = solved_maze.as_tokens(node_token_map)
 
     # Manual Tokenization
     token_to_index = {token: i for i, token in enumerate(cfg.token_arr)}

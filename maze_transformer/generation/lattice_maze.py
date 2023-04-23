@@ -334,7 +334,7 @@ class LatticeMaze(SerializableDataclass):
             SPECIAL_TOKENS["adj_list_end"],
         ]
 
-    def to_tokens(
+    def as_tokens(
         self,
         node_token_map: dict[CoordTup, str],
     ) -> list[str]:

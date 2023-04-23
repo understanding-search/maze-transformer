@@ -44,8 +44,8 @@ class TestMazeDataset:
         dataset = MazeDataset.generate(self.config)
 
         assert dataset.get(2) == dataset.mazes[2]
-        # TODO: tokens are not equal due to `get` not caching and shuffling
-        # assert dataset.get(2, SaveFormats.TOKENS) == dataset.mazes_tokens[2]
+        # TODO: This comparison does not work due to shuffling
+        # assert dataset.get(2, SaveFormats.TOKENS) == dataset[2].as_tokens(dataset.cfg.node_token_map)
 
         with pytest.raises(NotImplementedError):
             dataset.get(2, SaveFormats.ARRAY)
@@ -62,9 +62,8 @@ class TestMazeDataset:
         dataset_copy = MazeDataset.load(dataset.serialize())
 
         assert dataset.cfg == dataset_copy.cfg
-        # TODO: This is currently failing due to dataset yielding shuffled token strings. Need to decide if this is desired behaviour
-        # for maze, maze_copy in zip(dataset, dataset_copy):
-        #     assert maze == maze_copy
+        for maze, maze_copy in zip(dataset, dataset_copy):
+            assert maze == maze_copy
 
     # TODO: do this after testing default filters
     def test_custom_maze_filter(self):
@@ -154,7 +153,6 @@ class TestMazeDatasetFilters:
 
         mazes = [SolvedMaze(self.connection_list, solution) for solution in solutions]
         dataset = MazeDataset(self.config, mazes)
-        # TODO: this throws an exception
-        filtered = dataset.filter_by.cut_percentile_shortest(percentile=0.49)
+        filtered = dataset.filter_by.cut_percentile_shortest(percentile=49.0)
 
-        assert filtered.mazes == mazes[:1]
+        assert filtered.mazes == mazes[:2]

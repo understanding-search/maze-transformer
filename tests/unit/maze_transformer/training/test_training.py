@@ -22,8 +22,7 @@ def test_get_dataloader():
 
     other_batch1 = next(iter(dataloader))
     dataloader_mazes = [
-        SolvedMaze.from_tokens(tokens.split(" "), data_cfg=dataset.cfg)
-        for tokens in batch1
+        SolvedMaze.from_tokens(tokens, data_cfg=dataset.cfg) for tokens in batch1
     ]
 
     assert len(batch1) == 5

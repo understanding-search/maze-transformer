@@ -112,6 +112,7 @@ class GPTDatasetConfig(SerializableDataclass):
         return sanitize_fname(f"f{self.name}_{self_json_hash}")
 
 
+# TODO: This class is not referenced anywhere. Can we delete?
 @serializable_dataclass(kw_only=True)
 class IndexedArray(SerializableDataclass):
     """Contains a tensor made by concatenating a list of tensors, and a second tensor indicating the starting indices

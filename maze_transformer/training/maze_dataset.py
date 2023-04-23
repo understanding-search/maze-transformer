@@ -162,6 +162,8 @@ class MazeDataset(GPTDataset):
     def data_hash(self) -> int:
         return hash(tuple(self.mazes))
 
+    # TODO: Is this necessary? Objects is handled by getitem, tokens is trivial with maze.as_tokens, array seems to not be needed.
+    # Maybe we do need something to easily get a tokenized single maze without needing to pass in a node token map
     def get(
         self, index: int, fmt: SaveFormats = SaveFormats.OBJECTS
     ) -> SolvedMaze | list[str] | np.ndarray:
@@ -169,7 +171,7 @@ class MazeDataset(GPTDataset):
         if fmt == SaveFormats.OBJECTS:
             return self.mazes[index]
         elif fmt == SaveFormats.TOKENS:
-            return self.mazes[index].to_tokens(self.cfg.node_token_map)
+            return self.mazes[index].as_tokens(self.cfg.node_token_map)
         elif fmt == SaveFormats.ARRAY:
             raise NotImplementedError("getting as array not implemented yet")
         else:
@@ -181,7 +183,7 @@ class MazeDataset(GPTDataset):
         return self.mazes[i]
 
     def as_tokens(self, limit: int = 100) -> list[list[str]]:
-        return [maze.to_tokens(self.cfg.node_token_map) for maze in self.mazes[:limit]]
+        return [maze.as_tokens(self.cfg.node_token_map) for maze in self.mazes[:limit]]
 
     def __len__(self) -> int:
         return len(self.mazes)
@@ -359,16 +361,15 @@ class MazeDatasetFilters:
     @register_wrap_dataset_filter
     @staticmethod
     def cut_percentile_shortest(
-        dataset: MazeDataset, percentile: float = 0.1
+        dataset: MazeDataset, percentile: float = 10.0
     ) -> MazeDataset:
         """cut the shortest `percentile` of mazes from the dataset"""
-        # get the lengths of all solutions
-        lengths: np.ndarray = np.array([len(m.solution) for m in dataset.mazes])
-        # get the cutoff
+        lengths: np.ndarray = np.array([len(m.solution) for m in dataset])
         cutoff: int = int(np.percentile(lengths, percentile))
-        # filter
-        new_dataset: MazeDataset = MazeDataset(
-            cfg=dataset.cfg,
-            mazes=list(filter(lambda m: len(m.solution) >= cutoff, dataset.mazes)),
-        )
+
+        filtered_mazes: list[SolvedMaze] = [
+            m for m in dataset if len(m.solution) > cutoff
+        ]
+        new_dataset: MazeDataset = MazeDataset(cfg=dataset.cfg, mazes=filtered_mazes)
+
         return new_dataset

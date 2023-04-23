@@ -74,7 +74,7 @@ def test_predict_maze_paths():
     )
 
     max_new_tokens = 2
-    tokens_batch = [maze.to_tokens(cfg.dataset_cfg.node_token_map) for maze in dataset]
+    tokens_batch = [maze.as_tokens(cfg.dataset_cfg.node_token_map) for maze in dataset]
     paths = predict_maze_paths(
         tokens_batch=tokens_batch,
         data_cfg=cfg.dataset_cfg,
