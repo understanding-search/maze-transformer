@@ -7,7 +7,6 @@ from maze_transformer.generation.constants import CoordArray
 from maze_transformer.generation.lattice_maze import (
     NEIGHBORS_MASK,
     Coord,
-    CoordTup,
     LatticeMaze,
     SolvedMaze,
 )
@@ -22,7 +21,7 @@ class LatticeMazeGenerators:
         lattice_dim: int = 2,
         n_accessible_cells: int | None = None,
         max_tree_depth: int | None = None,
-        start_coord: Coord | None = None
+        start_coord: Coord | None = None,
     ) -> LatticeMaze:
         """generate a lattice maze using depth first search, iterative
 
@@ -43,7 +42,9 @@ class LatticeMazeGenerators:
         if n_accessible_cells is None:
             n_accessible_cells = grid_shape[0] * grid_shape[1]
         if max_tree_depth is None:
-            max_tree_depth = 2 * grid_shape[0] * (grid_shape[0]-1) # length of path in scroll-like maze
+            max_tree_depth = (
+                2 * grid_shape[0] * (grid_shape[0] - 1)
+            )  # length of path in scroll-like maze
         if start_coord is None:
             start_coord: Coord = np.random.randint(
                 0,
@@ -55,7 +56,7 @@ class LatticeMazeGenerators:
         connection_list: np.ndarray = np.zeros(
             (lattice_dim, grid_shape[0], grid_shape[1]), dtype=np.bool_
         )
-        
+
         # initialize the stack with the target coord
         visited_cells: set[tuple[int, int]] = set()
         visited_cells.add(tuple(start_coord))
@@ -83,7 +84,7 @@ class LatticeMazeGenerators:
             ]
 
             # don't continue if max_tree_depth/2 is already reached (divide by 2 because we can branch to multiple directions)
-            if unvisited_neighbors_deltas and (current_tree_depth < max_tree_depth/2):
+            if unvisited_neighbors_deltas and (current_tree_depth < max_tree_depth / 2):
                 stack.append(current_coord)
 
                 # choose one of the unvisited neighbors
@@ -103,13 +104,9 @@ class LatticeMazeGenerators:
                 stack.append(chosen_neighbor)
 
                 # Update current tree depth
-                #print(current_coord, '\t', current_tree_depth)
                 current_tree_depth += 1
             else:
-                #print(current_coord, '\t', current_tree_depth)
                 current_tree_depth -= 1
-                
-
 
         return LatticeMaze(
             connection_list=connection_list,
