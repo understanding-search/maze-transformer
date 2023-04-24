@@ -824,7 +824,10 @@ class SolvedMaze(TargetedLatticeMaze):
         )
 
     @classmethod
-    def from_tokens(cls, tokens: list[str], data_cfg) -> "SolvedMaze":
+    def from_tokens(cls, tokens: list[str] | str, data_cfg) -> "SolvedMaze":
+        if type(tokens) == str:
+            tokens = tokens.split(" ")
+
         maze: LatticeMaze = LatticeMaze.from_tokens(tokens)
         path_tokens: list[str] = get_path_tokens(tokens)
         solution: list[str | tuple[int, int]] = tokens_to_coords(path_tokens, data_cfg)

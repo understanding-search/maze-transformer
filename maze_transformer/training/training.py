@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Callable
 
 import torch
+from jaxtyping import Float
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from muutils.zanj import ZANJ
 from torch.utils.data import DataLoader
-from transformer_lens.HookedTransformer import Loss
 
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
@@ -44,7 +44,7 @@ def collate_batch(batch: list[SolvedMaze], config: MazeDatasetConfig) -> list[st
     # Perf could be improved by vectorizing this
     result = []
     for maze in batch:
-        tokens = maze.as_tokens(config.node_token_map)
+        tokens = " ".join(maze.as_tokens(config.node_token_map))
         result.append(tokens)
     return result
 
@@ -94,13 +94,12 @@ def train(
         cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size
     )
     for iteration, batch in enumerate(dataloader):
-        # compute loss
-        # batch_on_device: Int[torch.Tensor, "batch sequence"] = batch.type(
-        #     dtype=torch.LongTensor
-        # ).to(model.cfg.device)
-
-        # loss: Loss = model(batch_on_device[:, :-1], return_type="loss")
-        loss: Loss = model(batch, return_type="loss")
+        loss: Float[torch.Tensor, ""]
+        logits: Float[torch.Tensor, "batch pos d_vocab"]
+        logits, loss = model(batch[:1], return_type="both")
+        # Remove the last logit because it's the prediction for what comes after PATH_END (and so is meaningless)
+        # Do this after computing loss because the loss_fn already ignores the last logit
+        logits = logits[:, :-1, :]
         loss.backward()
 
         optimizer.step()
