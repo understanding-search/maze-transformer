@@ -96,7 +96,7 @@ def train(
     for iteration, batch in enumerate(dataloader):
         loss: Float[torch.Tensor, ""]
         logits: Float[torch.Tensor, "batch pos d_vocab"]
-        logits, loss = model(batch[:1], return_type="both")
+        logits, loss = model(batch, return_type="both")
         # Remove the last logit because it's the prediction for what comes after PATH_END (and so is meaningless)
         # Do this after computing loss because the loss_fn already ignores the last logit
         logits = logits[:, :-1, :]
