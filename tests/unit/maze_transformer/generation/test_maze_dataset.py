@@ -43,7 +43,7 @@ class TestMazeDataset:
     def test_get(self):
         dataset = MazeDataset.generate(self.config)
 
-        assert dataset.get(2) == dataset.mazes[2]
+        assert dataset.get(2) == dataset[2]
         # TODO: This comparison does not work due to shuffling
         # assert dataset.get(2, SaveFormats.TOKENS) == dataset[2].as_tokens(dataset.cfg.node_token_map)
 
