@@ -37,14 +37,13 @@ class LatticeMazeGenerators:
         """
 
         grid_shape = np.array(grid_shape)
+        n_total_cells: int = np.prod(grid_shape)
 
         # Default values if no constraints have been passed
         if n_accessible_cells is None:
-            n_accessible_cells = grid_shape[0] * grid_shape[1]
+            n_accessible_cells = n_total_cells
         if max_tree_depth is None:
-            max_tree_depth = (
-                2 * grid_shape[0] * (grid_shape[0] - 1)
-            )  # length of path in scroll-like maze
+            max_tree_depth = n_total_cells
         if start_coord is None:
             start_coord: Coord = np.random.randint(
                 0,
@@ -63,7 +62,7 @@ class LatticeMazeGenerators:
         stack: list[Coord] = [start_coord]
 
         # initialize tree_depth_counter
-        current_tree_depth = 1
+        current_tree_depth: int = 1
 
         # loop until the stack is empty or n_connected_cells is reached
         while stack and (len(visited_cells) < n_accessible_cells):
@@ -114,6 +113,9 @@ class LatticeMazeGenerators:
                 func_name="gen_dfs",
                 grid_shape=grid_shape,
                 start_coord=start_coord,
+                visited_cells=visited_cells,
+                n_accessible_cells=n_accessible_cells,
+                max_tree_depth=max_tree_depth,
             ),
         )
 
