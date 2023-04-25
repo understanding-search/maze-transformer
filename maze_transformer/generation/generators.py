@@ -99,6 +99,22 @@ class LatticeMazeGenerators:
         )
 
     @staticmethod
+    def gen_empty(grid_shape: Coord) -> LatticeMaze:
+        """Generate an empty maze with no walls except around the outside. Useful for testing/benchmarking"""
+
+        connection_list = np.ones((2, *grid_shape), dtype=np.bool_)
+        # Add walls
+        connection_list[0, -1, :] = False
+        connection_list[1, :, -1] = False
+        return LatticeMaze(
+            connection_list=connection_list,
+            generation_meta=dict(
+                func_name="gen_empty",
+                grid_shape=grid_shape,
+            ),
+        )
+
+    @staticmethod
     def gen_wilson(
         grid_shape: Coord,
     ) -> LatticeMaze:

@@ -13,6 +13,7 @@ from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.wandb_logger import WandbLogger
+from maze_transformer.utils.utils import get_device
 
 
 @freeze
@@ -66,14 +67,29 @@ def get_dataloader(
 
 def train(
     cfg: ConfigHolder,
-    dataloader: DataLoader,
     logger: WandbLogger,
-    output_dir: Path,
-    device: torch.device,
+    dataloader: DataLoader | None = None,
+    dataset: MazeDataset | None = None,
+    output_dir: Path | None = None,
+    device: torch.device | None = None,
     zanj: ZANJ | None = None,
+    verbose: bool = False,
 ) -> ZanjHookedTransformer:
+    assert (dataloader is None) != (
+        dataset is None
+    ), "Must provide exactly one of dataloader or dataset"
+    if dataloader is None:
+        dataloader = get_dataloader(dataset=dataset, cfg=cfg, logger=logger)
+
     if zanj is None:
         zanj = ZANJ()
+
+    if output_dir is None:
+        logger.progress("No output_dir provided. Model will not be saved.")
+
+    if device is None:
+        device = get_device()
+
     logger.progress("Initializing model")
     model: ZanjHookedTransformer = cfg.create_model_zanj()
     logger.summary({"device": str(device), "model.device": model.cfg.device})
@@ -94,6 +110,8 @@ def train(
         cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size
     )
     for iteration, batch in enumerate(dataloader):
+        if verbose:
+            logger.progress(f"Iteration {iteration}/{n_batches}")
         loss: Float[torch.Tensor, ""]
         logits: Float[torch.Tensor, "batch pos d_vocab"]
         logits, loss = model(batch, return_type="both")
@@ -109,7 +127,7 @@ def train(
 
         del loss
 
-        if iteration % checkpoint_interval_iters == 0:
+        if iteration % checkpoint_interval_iters == 0 and output_dir is not None:
             model_save_path: Path = (
                 output_dir
                 / TRAIN_SAVE_FILES.checkpoints
@@ -123,10 +141,11 @@ def train(
 
     # save the final model
     # ==================================================
-    final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final_zanj
-    logger.progress(f"Saving final model to {final_model_path.as_posix()}")
-    zanj.save(model, final_model_path)
-    logger.upload_model(final_model_path, aliases=["latest", "final"])
+    if output_dir is not None:
+        final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final_zanj
+        logger.progress(f"Saving final model to {final_model_path.as_posix()}")
+        zanj.save(model, final_model_path)
+        logger.upload_model(final_model_path, aliases=["latest", "final"])
 
     logger.progress("Done!")
 
