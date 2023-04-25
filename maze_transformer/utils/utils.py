@@ -7,10 +7,11 @@ from typing import Any, Callable, TypeVar
 import numpy as np
 import torch
 
-DEFAULT_SEED = 42
+DEFAULT_SEED: int = 42
+GLOBAL_SEED: int = DEFAULT_SEED
 
 
-def get_device():
+def get_device() -> torch.device:
     """Get the torch.device instance on which torch.Tensors should be allocated."""
 
     if torch.cuda.is_available():
@@ -21,13 +22,16 @@ def get_device():
         return torch.device("cpu")
 
 
-def set_reproducibility(seed=DEFAULT_SEED):
+def set_reproducibility(seed: int = DEFAULT_SEED):
     """
     Improve model reproducibility. See https://github.com/NVIDIA/framework-determinism for more information.
 
     Deterministic operations tend to have worse performance than nondeterministic operations, so this method trades
     off performance for reproducibility. Set use_deterministic_algorithms to True to improve performance.
     """
+    global GLOBAL_SEED
+
+    GLOBAL_SEED = seed
 
     random.seed(seed)
     np.random.seed(seed)
@@ -67,6 +71,9 @@ def register_method(method_dict: dict[str, Callable[..., Any]]) -> Callable[[F],
     """Decorator to add a method to the method_dict"""
 
     def decorator(method: F) -> F:
+        assert (
+            method.__name__ not in method_dict
+        ), f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
         method_dict[method.__name__] = method
         return method
 

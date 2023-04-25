@@ -27,6 +27,7 @@ from maze_transformer.utils.token_utils import (
     tokens_to_coords,
 )
 
+ConnectionList = Bool[np.ndarray, "lattice_dim x y"]
 RGB = tuple[int, int, int]
 
 PixelGrid = Int[np.ndarray, "x y rgb"]
@@ -231,7 +232,7 @@ class LatticeMaze(SerializableDataclass):
         ]
 
     def generate_random_path(self) -> list[Coord]:
-        """ "return a path between randomly chosen start and end nodes"""
+        """return a path between randomly chosen start and end nodes"""
 
         # we can't create a "path" in a single-node maze
         assert self.grid_shape[0] > 1 and self.grid_shape[1] > 1
@@ -288,9 +289,9 @@ class LatticeMaze(SerializableDataclass):
         # Note: This has only been tested for square mazes. Might need to change some things if rectangular mazes are needed.
         grid_n: int = adj_list.max() + 1
 
-        connection_list: NDArray["lattice_dim x y", bool] = np.zeros(
+        connection_list: ConnectionList = np.zeros(
             (2, grid_n, grid_n),
-            dtype=bool,
+            dtype=np.bool_,
         )
 
         for c_start, c_end in adj_list:
@@ -719,6 +720,8 @@ class SolvedMaze(TargetedLatticeMaze):
         solution: CoordArray,
         generation_meta: dict | None = None,
         lattice_dim: int = 2,
+        start_pos: Coord | None = None,
+        end_pos: Coord | None = None,
     ) -> None:
         super().__init__(
             connection_list=connection_list,
@@ -728,6 +731,15 @@ class SolvedMaze(TargetedLatticeMaze):
             lattice_dim=lattice_dim,
         )
         self.__dict__["solution"] = solution
+
+        if start_pos is not None:
+            assert np.array_equal(
+                np.array(start_pos), self.start_pos
+            ), f"when trying to create a SolvedMaze, the given start_pos does not match the one in the solution: given={start_pos}, solution={self.start_pos}"
+        if end_pos is not None:
+            assert np.array_equal(
+                np.array(end_pos), self.end_pos
+            ), f"when trying to create a SolvedMaze, the given end_pos does not match the one in the solution: given={end_pos}, solution={self.end_pos}"
 
     # for backwards compatibility
     @property

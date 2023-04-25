@@ -1,28 +1,19 @@
 from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.tokenizer import maze_to_tokens
 
 
 def test_dataset_construction():
-    n_mazes = 3
-    grid_n = 2
-    config = MazeDatasetConfig(
+    config: MazeDatasetConfig = MazeDatasetConfig(
         name="test",
-        grid_n=grid_n,
-        n_mazes=n_mazes,
+        grid_n=2,
+        n_mazes=3,
     )
-    solved_mazes = []
-    for _ in range(n_mazes):
-        solved_maze = LatticeMazeGenerators.gen_dfs_with_solution((grid_n, grid_n))
-        solved_mazes.append(solved_maze)
-
-    dataset = MazeDataset(cfg=config, mazes_objs=solved_mazes)
+    dataset: MazeDataset = MazeDataset.from_config(cfg=config)
 
     # check the tokenization
-
-    test_tokenizations = [
-        maze_to_tokens(sm, node_token_map=config.node_token_map) for sm in solved_mazes
+    test_tokenizations: list[list[str]] = [
+        maze_to_tokens(sm, node_token_map=config.node_token_map) for sm in dataset.mazes
     ]
 
     # the adj_list always gets shuffled, so easier to check the paths

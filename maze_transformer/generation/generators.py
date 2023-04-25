@@ -1,4 +1,5 @@
 import random
+import warnings
 from typing import Any, Callable
 
 import numpy as np
@@ -6,6 +7,7 @@ import numpy as np
 from maze_transformer.generation.constants import CoordArray
 from maze_transformer.generation.lattice_maze import (
     NEIGHBORS_MASK,
+    ConnectionList,
     Coord,
     LatticeMaze,
     SolvedMaze,
@@ -52,7 +54,7 @@ class LatticeMazeGenerators:
             )
 
         # initialize the maze with no connections
-        connection_list: np.ndarray = np.zeros(
+        connection_list: ConnectionList = np.zeros(
             (lattice_dim, grid_shape[0], grid_shape[1]), dtype=np.bool_
         )
 
@@ -119,13 +121,6 @@ class LatticeMazeGenerators:
             ),
         )
 
-    @classmethod
-    def gen_dfs_with_solution(cls, grid_shape: Coord) -> SolvedMaze:
-        maze: LatticeMaze = cls.gen_dfs(grid_shape)
-        solution: CoordArray = np.array(maze.generate_random_path())
-
-        return SolvedMaze.from_lattice_maze(lattice_maze=maze, solution=solution)
-
     @staticmethod
     def gen_wilson(
         grid_shape: Coord,
@@ -155,9 +150,9 @@ class LatticeMazeGenerators:
 
         # A connection list only contains two elements: one boolean matrix indicating all the
         # downwards connections in the maze, and one boolean matrix indicating the rightwards connections.
-        connection_list: np.ndarray = np.zeros((2, rows, cols), dtype=bool)
+        connection_list: np.ndarray = np.zeros((2, rows, cols), dtype=np.bool_)
 
-        connected = np.zeros(grid_shape, dtype=bool)
+        connected = np.zeros(grid_shape, dtype=np.bool_)
         direction_matrix = np.zeros(grid_shape, dtype=int)
 
         # Mark a random cell as connected
@@ -219,9 +214,23 @@ class LatticeMazeGenerators:
             ),
         )
 
+    @classmethod
+    def gen_dfs_with_solution(cls, grid_shape: Coord):
+        warnings.warn(
+            "gen_dfs_with_solution is deprecated, use get_maze_with_solution instead",
+            DeprecationWarning,
+        )
+        return get_maze_with_solution("gen_dfs", grid_shape)
+
 
 # TODO: use the thing @valedan wrote for the evals function to make this automatic?
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
     "gen_dfs": LatticeMazeGenerators.gen_dfs,
     "gen_wilson": LatticeMazeGenerators.gen_wilson,
 }
+
+
+def get_maze_with_solution(gen_name: str, grid_shape: Coord) -> SolvedMaze:
+    maze: LatticeMaze = GENERATORS_MAP[gen_name](grid_shape)
+    solution: CoordArray = np.array(maze.generate_random_path())
+    return SolvedMaze.from_lattice_maze(lattice_maze=maze, solution=solution)

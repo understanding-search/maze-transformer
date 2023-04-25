@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import json
+import typing
 import warnings
 from functools import cached_property
+from pathlib import Path
 from typing import Any, Type
 
 import torch
+from muutils.dictmagic import kwargs_to_nested_dict
 from muutils.json_serialize import (
     JSONitem,
     SerializableDataclass,
@@ -17,7 +21,10 @@ from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.training.maze_dataset import MazeDatasetConfig
+from maze_transformer.training.maze_dataset import (
+    MAZE_DATASET_CONFIGS,
+    MazeDatasetConfig,
+)
 from maze_transformer.training.tokenizer import HuggingMazeTokenizer
 
 
@@ -67,6 +74,10 @@ class TrainConfig(SerializableDataclass):
     optimizer_kwargs: dict[str, Any] = serializable_field(  # type: ignore
         default_factory=lambda: dict(lr=0.000001)
     )
+
+    @property
+    def get_optimizer(self, params) -> Type[torch.optim.Optimizer]:
+        return self.optimizer(params, **self.optimizer_kwargs)
 
     batch_size: int = serializable_field(default=128)
 
@@ -193,13 +204,17 @@ class ConfigHolder(SerializableDataclass):
     Handles any logic that moves data between the configs below it.
     """
 
-    name: str = serializable_field(default="default")
-    train_cfg: TrainConfig
     dataset_cfg: MazeDatasetConfig
     model_cfg: BaseGPTConfig
+    train_cfg: TrainConfig
+    name: str = serializable_field(default="default")
     pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
-        default_factory=lambda: None,
+        default=None
     )
+
+    @property
+    def seed(self) -> int:
+        return self.dataset_cfg.seed
 
     @cached_property
     def tokenizer(self) -> PreTrainedTokenizer:
@@ -235,6 +250,73 @@ class ConfigHolder(SerializableDataclass):
 
     def create_model_zanj(self) -> ZanjHookedTransformer:
         return ZanjHookedTransformer(self)
+
+    @classmethod
+    def get_config_multisource(
+        cls,
+        cfg: ConfigHolder | None = None,
+        cfg_file: str | Path | None = None,
+        cfg_names: typing.Sequence[str] | None = None,
+        kwargs_in: dict | None = None,
+    ) -> ConfigHolder:
+        """pass one of cfg object, file, or list of names. Any kwargs will be applied to the config object (and should start with 'cfg.')
+        
+        cfg_names should be either `(dataset_cfg_name,model_cfg_name,train_cfg_name)` or the same with collective name at the end
+
+        valid name keys:
+            - dataset_cfg_name: {dataset_cfg_names}
+            - model_cfg_name: {model_cfg_names}
+            - train_cfg_name: {train_cfg_names}
+        """.format(
+            dataset_cfg_names=str(list(MAZE_DATASET_CONFIGS.keys())),
+            model_cfg_names=str(list(GPT_CONFIGS.keys())),
+            train_cfg_names=str(list(TRAINING_CONFIGS.keys())),
+        )
+
+        config: ConfigHolder
+        assert (
+            sum(1 for x in (cfg, cfg_file, cfg_names) if x is not None) == 1
+        ), "Must provide exactly one of cfg, cfg_file, or cfg_names"
+
+        if cfg is not None:
+            assert cfg_names is None, "Must provide either cfg or cfg_names"
+            config = cfg
+        elif cfg_file is not None:
+            with open(cfg_file) as f:
+                config = ConfigHolder.load(json.load(f))
+        elif cfg_names is not None:
+            assert (
+                len(cfg_names) == 3 or len(cfg_names) == 4
+            ), "cfg_names must be (dataset_cfg_name,model_cfg_name,train_cfg_name) or the same with collective name at the end"
+            dataset_cfg_name: str
+            model_cfg_name: str
+            train_cfg_name: str
+            name: str
+            if len(cfg_names) == 3:
+                dataset_cfg_name, model_cfg_name, train_cfg_name = cfg_names
+                name = f"multsrc_{dataset_cfg_name}_{model_cfg_name}_{train_cfg_name}"
+            else:
+                dataset_cfg_name, model_cfg_name, train_cfg_name, name = cfg_names
+            config = ConfigHolder(
+                name=name,
+                dataset_cfg=MAZE_DATASET_CONFIGS[dataset_cfg_name],
+                model_cfg=GPT_CONFIGS[model_cfg_name],
+                train_cfg=TRAINING_CONFIGS[train_cfg_name],
+            )
+
+        else:
+            raise ValueError(
+                "Must provide exactly one of cfg, cfg_file, or cfg_names. this state should be unreachable btw."
+            )
+
+        # update config with kwargs
+        if kwargs_in:
+            kwargs_dict: dict = kwargs_to_nested_dict(
+                kwargs_in, sep=".", strip_prefix="cfg.", when_unknown_prefix="raise"
+            )
+            config.update_from_nested_dict(kwargs_dict)
+
+        return config
 
 
 @set_config_class(ConfigHolder)

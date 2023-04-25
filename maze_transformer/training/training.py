@@ -4,13 +4,11 @@ from typing import Callable
 
 import torch
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
-from muutils.statcounter import StatCounter  # type: ignore[import]
-from muutils.tensor_utils import ATensor  # type: ignore[import]
+from muutils.zanj import ZANJ
 from torch.utils.data import DataLoader
-from transformer_lens import HookedTransformer
+from transformer_lens.HookedTransformer import Loss
 
-from maze_transformer.training.config import ConfigHolder, TrainConfig
-from maze_transformer.training.dataset import GPTDatasetConfig
+from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.maze_dataset import MazeDataset
 from maze_transformer.training.wandb_logger import WandbLogger
 
@@ -19,33 +17,35 @@ from maze_transformer.training.wandb_logger import WandbLogger
 class TRAIN_SAVE_FILES:
     """namespace for filenames/formats for saving training data"""
 
+    # old
     data_cfg: str = "data_config.json"
     train_cfg: str = "train_config.json"
-    config_holder: str = "config.json"
-    log: str = "log.jsonl"
-    checkpoints: str = "checkpoints"
-    train_dir_format: Callable[
-        [GPTDatasetConfig, TrainConfig], str
-    ] = (
-        lambda d_cfg, t_cfg: f"{sanitize_fname(d_cfg.name)}_{sanitize_fname(t_cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
-    )
     model_checkpt: Callable[[int], str] = lambda iteration: f"model.iter_{iteration}.pt"
     model_final: str = "model.final.pt"
 
+    # keep these
+    config_holder: str = "config.json"
+    checkpoints: str = "checkpoints"
+    log: str = "log.jsonl"
     model_checkpt_zanj: Callable[
         [int], str
     ] = lambda iteration: f"model.iter_{iteration}.zanj"
     model_final_zanj: str = "model.final.zanj"
+    model_run_dir: Callable[
+        [ConfigHolder], str
+    ] = (
+        lambda cfg: f"{sanitize_fname(cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+    )
 
 
 def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
 ) -> DataLoader:
-    length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
-    logger.summary({"dataset_seq_len_stats_summary": length_stats.summary()})
-    logger.summary(
-        {"dataset_seq_len_stats": length_stats.serialize(typecast=lambda x: str(x))}
-    )
+    # length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
+    # logger.summary({"dataset_seq_len_stats_summary": length_stats.summary()})
+    # logger.summary(
+    #     {"dataset_seq_len_stats": length_stats.serialize(typecast=lambda x: str(x))}
+    # )
 
     logger.progress(f"Loaded {len(dataset)} sequences")
     logger.progress("Creating dataloader")
@@ -59,14 +59,17 @@ def get_dataloader(
 
 
 def train(
-    dataloader: DataLoader,
     cfg: ConfigHolder,
+    dataloader: DataLoader,
     logger: WandbLogger,
     output_dir: Path,
     device: torch.device,
-) -> None:
+    zanj: ZANJ | None = None,
+) -> ZanjHookedTransformer:
+    if zanj is None:
+        zanj = ZANJ()
     logger.progress("Initializing model")
-    model: HookedTransformer = cfg.create_model()
+    model: ZanjHookedTransformer = cfg.create_model_zanj()
     logger.summary({"device": str(device), "model.device": model.cfg.device})
 
     logger.progress("Initializing optimizer")
@@ -86,11 +89,12 @@ def train(
     )
     for iteration, batch in enumerate(dataloader):
         # compute loss
-        batch_on_device: ATensor[("batch", "sequence")] = batch.type(
-            dtype=torch.LongTensor
-        ).to(model.cfg.device)
+        # batch_on_device: Int[torch.Tensor, "batch sequence"] = batch.type(
+        #     dtype=torch.LongTensor
+        # ).to(model.cfg.device)
 
-        loss = model(batch_on_device[:, :-1], return_type="loss")
+        # loss: Loss = model(batch_on_device[:, :-1], return_type="loss")
+        loss: Loss = model(batch, return_type="loss")
         loss.backward()
 
         optimizer.step()
@@ -104,19 +108,21 @@ def train(
             model_save_path: Path = (
                 output_dir
                 / TRAIN_SAVE_FILES.checkpoints
-                / TRAIN_SAVE_FILES.model_checkpt(iteration)
+                / TRAIN_SAVE_FILES.model_checkpt_zanj(iteration)
             )
             logger.progress(f"Saving model to {model_save_path.as_posix()}")
-            torch.save(model.state_dict(), model_save_path)
+            zanj.save(model, model_save_path)
             logger.upload_model(
                 model_save_path, aliases=["latest", f"iter-{iteration}"]
             )
 
     # save the final model
     # ==================================================
-    final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final
+    final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final_zanj
     logger.progress(f"Saving final model to {final_model_path.as_posix()}")
-    torch.save(model.state_dict(), final_model_path)
+    zanj.save(model, final_model_path)
     logger.upload_model(final_model_path, aliases=["latest", "final"])
 
     logger.progress("Done!")
+
+    return model
