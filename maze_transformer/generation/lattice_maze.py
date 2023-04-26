@@ -340,11 +340,12 @@ class LatticeMaze(SerializableDataclass):
     ) -> list[str]:
         """serialize maze and solution to tokens"""
         tokens: list[str] = self.as_adj_list_tokens(node_token_map)
-        if getattr(self, "start_pos", None) is not None:
+        # if getattr(self, "start_pos", None) is not None:
+        if isinstance(self, TargetedLatticeMaze):
             tokens += self.get_start_pos_tokens(node_token_map)
-        if getattr(self, "end_pos", None) is not None:
+        if isinstance(self, TargetedLatticeMaze):
             tokens += self.get_end_pos_tokens(node_token_map)
-        if getattr(self, "solution", None) is not None:
+        if isinstance(self, SolvedMaze):
             tokens += self.get_solution_tokens(node_token_map)
 
         return tokens

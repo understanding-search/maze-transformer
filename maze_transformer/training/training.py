@@ -8,7 +8,7 @@ from jaxtyping import Float
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from muutils.zanj import ZANJ
 from torch.utils.data import DataLoader
-
+from transformer_lens.HookedTransformer import SingleLoss
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
@@ -41,13 +41,7 @@ class TRAIN_SAVE_FILES:
 
 
 def collate_batch(batch: list[SolvedMaze], config: MazeDatasetConfig) -> list[str]:
-    # Perf could be improved by vectorizing this
-    result = []
-    for maze in batch:
-        tokens = " ".join(maze.as_tokens(config.node_token_map))
-        result.append(tokens)
-    return result
-
+    return [" ".join(maze.as_tokens(config.node_token_map)) for maze in batch]
 
 def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
@@ -94,7 +88,7 @@ def train(
         cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size
     )
     for iteration, batch in enumerate(dataloader):
-        loss: Float[torch.Tensor, ""]
+        loss: SingleLoss
         logits: Float[torch.Tensor, "batch pos d_vocab"]
         logits, loss = model(batch, return_type="both")
         # Remove the last logit because it's the prediction for what comes after PATH_END (and so is meaningless)
