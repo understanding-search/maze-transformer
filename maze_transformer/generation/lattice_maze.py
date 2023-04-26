@@ -412,7 +412,7 @@ class LatticeMaze(SerializableDataclass):
             return pixel_grid
 
         # set endpoints for TargetedLatticeMaze
-        if self.__class__ == TargetedLatticeMaze:
+        if isinstance(self, TargetedLatticeMaze):
             if show_endpoints:
                 pixel_grid[
                     self.start_pos[0] * 2 + 1, self.start_pos[1] * 2 + 1
