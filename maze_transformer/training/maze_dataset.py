@@ -25,7 +25,6 @@ from maze_transformer.training.dataset import (
     DatasetFilterProtocol,
     GPTDataset,
     GPTDatasetConfig,
-    SaveFormats,
     register_filter_namespace_for_dataset,
     register_wrap_dataset_filter,
 )
@@ -162,23 +161,6 @@ class MazeDataset(GPTDataset):
     def data_hash(self) -> int:
         return hash(tuple(self.mazes))
 
-    # TODO: Is this necessary? Objects is handled by getitem, tokens is trivial with maze.as_tokens, array seems to not be needed.
-    # Maybe we do need something to easily get a tokenized single maze without needing to pass in a node token map
-    def get(
-        self, index: int, fmt: SaveFormats = SaveFormats.OBJECTS
-    ) -> SolvedMaze | list[str] | np.ndarray:
-        """get a single maze, as one of the formats"""
-        if fmt == SaveFormats.OBJECTS:
-            return self.mazes[index]
-        elif fmt == SaveFormats.TOKENS:
-            return self.mazes[index].as_tokens(self.cfg.node_token_map)
-        elif fmt == SaveFormats.ARRAY:
-            raise NotImplementedError("getting as array not implemented yet")
-        else:
-            raise ValueError(
-                f"unknown fmt {fmt}, expected an instance of `SaveFormats` enum"
-            )
-
     def __getitem__(self, i: int) -> SolvedMaze:
         return self.mazes[i]
 
@@ -188,8 +170,10 @@ class MazeDataset(GPTDataset):
     def __len__(self) -> int:
         return len(self.mazes)
 
-    def get_all_lengths(self) -> list[int]:
-        raise NotImplementedError()
+    def __eq__(self, other: typing.Any) -> bool:
+        if not isinstance(other, MazeDataset):
+            return NotImplemented
+        return self.cfg == other.cfg and self.mazes == other.mazes
 
     @classmethod
     def generate(
@@ -198,7 +182,6 @@ class MazeDataset(GPTDataset):
         do_parallel: bool = False,
         verbose: bool = False,
     ) -> "MazeDataset":
-        mazes: list[SolvedMaze] = list()
         endpoint_nodes: Int[np.int8, "maze_index 2 2"] = np.random.randint(
             0,
             cfg.grid_shape,

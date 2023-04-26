@@ -4,10 +4,7 @@ import pytest
 from maze_transformer.generation.constants import CoordArray
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.generation.utils import bool_array_from_string
-from maze_transformer.training.dataset import (
-    SaveFormats,
-    register_filter_namespace_for_dataset,
-)
+from maze_transformer.training.dataset import register_filter_namespace_for_dataset
 from maze_transformer.training.maze_dataset import (
     MazeDataset,
     MazeDatasetConfig,
@@ -39,19 +36,6 @@ class TestMazeDataset:
     def test_data_hash(self):
         dataset = MazeDataset.generate(self.config)
         # TODO: dataset.data_hash doesn't work right now
-
-    def test_get(self):
-        dataset = MazeDataset.generate(self.config)
-
-        assert dataset.get(2) == dataset[2]
-        # TODO: This comparison does not work due to shuffling
-        # assert dataset.get(2, SaveFormats.TOKENS) == dataset[2].as_tokens(dataset.cfg.node_token_map)
-
-        with pytest.raises(NotImplementedError):
-            dataset.get(2, SaveFormats.ARRAY)
-
-        with pytest.raises(ValueError):
-            dataset.get(2, "foo")  # type: ignore
 
     def test_download(self):
         with pytest.raises(NotImplementedError):
