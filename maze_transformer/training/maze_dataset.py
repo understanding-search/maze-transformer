@@ -85,6 +85,8 @@ class MazeDatasetConfig(GPTDatasetConfig):
         loading_fn=lambda data: _load_maze_ctor(data["maze_ctor"]),
     )
 
+    # TODO: add "maze_ctor_kwargs" field, for use in generators (see @canrager branch can-183-constrained-dfs)
+
     # paths_per_maze: int = 5,
     # p_min_tgt_dist: float = 0.2,
 
@@ -187,7 +189,6 @@ class MazeDataset(GPTDataset):
             cfg.grid_shape,
             (cfg.n_mazes, 2, 2),
         )
-        # TODO: filter min distanced based on MazeDatasetConfig
 
         solved_mazes: list[SolvedMaze]
         tqdm_kwargs: dict = dict(
@@ -299,6 +300,7 @@ MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
     ]
 }
 
+
 def register_maze_filter(
     method: typing.Callable[[SolvedMaze, typing.Any], bool]
 ) -> DatasetFilterProtocol:
@@ -314,7 +316,7 @@ def register_maze_filter(
         # copy and filter
         new_dataset: MazeDataset = MazeDataset(
             cfg=dataset.cfg,
-            mazes = [m for m in dataset.mazes if method(m, *args, **kwargs)],
+            mazes=[m for m in dataset.mazes if method(m, *args, **kwargs)],
         )
         # update the config
         new_dataset.cfg.applied_filters.append(
@@ -344,7 +346,8 @@ class MazeDatasetFilters:
     @staticmethod
     def cut_percentile_shortest(
         # percentile is 1-100, not 0-1, as this is what np.percentile expects
-        dataset: MazeDataset, percentile: float = 10.0
+        dataset: MazeDataset,
+        percentile: float = 10.0,
     ) -> MazeDataset:
         """cut the shortest `percentile` of mazes from the dataset"""
         lengths: np.ndarray = np.array([len(m.solution) for m in dataset])

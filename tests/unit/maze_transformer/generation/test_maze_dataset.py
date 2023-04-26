@@ -4,7 +4,10 @@ import pytest
 from maze_transformer.generation.constants import CoordArray
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.generation.utils import bool_array_from_string
-from maze_transformer.training.dataset import register_dataset_filter, register_filter_namespace_for_dataset
+from maze_transformer.training.dataset import (
+    register_dataset_filter,
+    register_filter_namespace_for_dataset,
+)
 from maze_transformer.training.maze_dataset import (
     MazeDataset,
     MazeDatasetConfig,
@@ -66,14 +69,18 @@ class TestMazeDataset:
             [[0, 0]],
         ]
 
-        def custom_filter_solution_length(maze: SolvedMaze, solution_length: int) -> bool:
+        def custom_filter_solution_length(
+            maze: SolvedMaze, solution_length: int
+        ) -> bool:
             return len(maze.solution) == solution_length
 
         mazes = [SolvedMaze(connection_list, solution) for solution in solutions]
         dataset = MazeDataset(self.config, mazes)
 
         filtered_lambda = dataset.custom_maze_filter(lambda m: len(m.solution) == 1)
-        filtered_func = dataset.custom_maze_filter(custom_filter_solution_length, solution_length=1)
+        filtered_func = dataset.custom_maze_filter(
+            custom_filter_solution_length, solution_length=1
+        )
 
         assert filtered_lambda.mazes == filtered_func.mazes == [mazes[2]]
 
@@ -108,7 +115,7 @@ class TestMazeDatasetFilters:
             def drop_nth(dataset: TestDataset, n: int) -> TestDataset:
                 """Filter mazes by path length"""
                 return TestDataset(
-                    dataset.cfg, [maze for i, maze in enumerate(dataset) if i != n] 
+                    dataset.cfg, [maze for i, maze in enumerate(dataset) if i != n]
                 )
 
         maze1 = SolvedMaze(
