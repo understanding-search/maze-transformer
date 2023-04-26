@@ -11,7 +11,7 @@ def test_get_dataloader():
     config_holder: ConfigHolder = ConfigHolder(
         dataset_cfg=dataset_config,
         model_cfg=GPT_CONFIGS["tiny-v1"],
-        train_cfg=TRAINING_CONFIGS["tiny-v1"],
+        train_cfg=TRAINING_CONFIGS["test-v1"],
     )
     config_holder.train_cfg.batch_size = 5
     logger = StubLogger()

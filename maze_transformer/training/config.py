@@ -131,14 +131,13 @@ GPT_CONFIGS: dict[str, BaseGPTConfig] = {cfg.name: cfg for cfg in _GPT_CONFIGS_L
 
 _TRAINING_CONFIG_LIST: list[TrainConfig] = [
     TrainConfig(
-        name="integration-v1",
+        name="test-v1",
         optimizer=torch.optim.RMSprop,
         optimizer_kwargs=dict(lr=0.0001),
         batch_size=16,
         dataloader_cfg=dict(
             shuffle=True,
-            num_workers=2,
-            persistent_workers=True,
+            num_workers=0,
             drop_last=False,
         ),
         print_loss_interval=100,

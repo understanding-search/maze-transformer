@@ -13,7 +13,7 @@ def test_random_baseline(temp_dir):
     # Disk interactions can be removed after https://github.com/AISC-understanding-search/maze-transformer/issues/113
     # First create a dataset and train a model
     cfg = ConfigHolder(
-        train_cfg=TRAINING_CONFIGS["tiny-v1"],
+        train_cfg=TRAINING_CONFIGS["test-v1"],
         model_cfg=GPT_CONFIGS["tiny-v1"],
         dataset_cfg=MazeDatasetConfig(name="test", grid_n=3, n_mazes=5),
     )
