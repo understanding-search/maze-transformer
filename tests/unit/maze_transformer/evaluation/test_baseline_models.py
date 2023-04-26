@@ -13,7 +13,7 @@ def test_random_baseline(temp_dir):
     # Disk interactions can be removed after https://github.com/AISC-understanding-search/maze-transformer/issues/113
     # First create a dataset and train a model
     cfg = ConfigHolder(
-        train_cfg=TRAINING_CONFIGS["tiny-v1"],
+        train_cfg=TRAINING_CONFIGS["test-v1"],
         model_cfg=GPT_CONFIGS["tiny-v1"],
         dataset_cfg=MazeDatasetConfig(name="test", grid_n=3, n_mazes=5),
     )
@@ -24,14 +24,14 @@ def test_random_baseline(temp_dir):
 
     max_new_tokens = 15
     unbiased_paths = predict_maze_paths(
-        tokens_batch=dataset.mazes_tokens,
+        tokens_batch=dataset.as_tokens(),
         data_cfg=cfg.dataset_cfg,
         model=unbiased_model,
         max_new_tokens=max_new_tokens,
     )
 
     biased_paths = predict_maze_paths(
-        tokens_batch=dataset.mazes_tokens,
+        tokens_batch=dataset.as_tokens(),
         data_cfg=cfg.dataset_cfg,
         model=biased_model,
         max_new_tokens=max_new_tokens,
@@ -45,7 +45,5 @@ def test_random_baseline(temp_dir):
     assert max(unbiased_coords) == cfg.dataset_cfg.grid_n - 1
 
     for i, path in enumerate(biased_paths):
-        solved_maze: SolvedMaze = SolvedMaze.from_tokens(
-            dataset.mazes_tokens[i], dataset.cfg
-        )
+        solved_maze: SolvedMaze = dataset[i]
         assert (path == solved_maze.solution).all()

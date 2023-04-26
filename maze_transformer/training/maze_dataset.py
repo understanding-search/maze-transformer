@@ -25,12 +25,9 @@ from maze_transformer.training.dataset import (
     DatasetFilterProtocol,
     GPTDataset,
     GPTDatasetConfig,
-    IndexedArray,
-    SaveFormats,
     register_filter_namespace_for_dataset,
-    register_wrap_dataset_filter,
+    register_dataset_filter,
 )
-from maze_transformer.training.tokenizer import maze_to_tokens
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",
@@ -166,52 +163,19 @@ class MazeDataset(GPTDataset):
     def data_hash(self) -> int:
         return hash(tuple(self.mazes))
 
-    def get(
-        self, index: int, fmt: SaveFormats = SaveFormats.OBJECTS
-    ) -> SolvedMaze | list[str] | np.ndarray:
-        """get a single maze, as one of the formats"""
-        if fmt == SaveFormats.OBJECTS:
-            return self.mazes[index]
-        elif fmt == SaveFormats.TOKENS:
-            return maze_to_tokens(self.mazes[index], self.cfg.node_token_map)
-        elif fmt == SaveFormats.ARRAY:
-            raise NotImplementedError("getting as array not implemented yet")
-        else:
-            raise ValueError(
-                f"unknown fmt {fmt}, expected an instance of `SaveFormats` enum"
-            )
+    def __getitem__(self, i: int) -> SolvedMaze:
+        return self.mazes[i]
 
-    def __getitem__(self, index: int, pad: bool = True) -> str:
-        """index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
-
-        return " ".join(maze_to_tokens(self.mazes[index], self.cfg.node_token_map))
-        # tokens: list[str] = maze_to_tokens(self.mazes[index], self.cfg.node_token_map)
-
-        # if pad:
-        #     remaining_len: int = self.cfg.seq_len_max - len(tokens)
-        #     return (
-        #         [self.cfg.token_arr[self.cfg.padding_token_index] for _ in range(remaining_len)]
-        #         + tokens
-        #     )
-        # else:
-        #     return tokens
-
-    mazes_objs: list[SolvedMaze] = cached_property(
-        lambda self: list(self.get_all(fmt=SaveFormats.OBJECTS))
-    )
-    mazes_tokens: list[list[str]] = cached_property(
-        lambda self: list(self.get_all(fmt=SaveFormats.TOKENS))
-    )
-    mazes_array: IndexedArray = cached_property(
-        lambda self: IndexedArray(self.get_all(fmt=SaveFormats.ARRAY))
-    )
+    def as_tokens(self, limit: int = 100) -> list[list[str]]:
+        return [maze.as_tokens(self.cfg.node_token_map) for maze in self.mazes[:limit]]
 
     def __len__(self) -> int:
         return len(self.mazes)
 
-    def get_all_lengths(self) -> list[int]:
-        raise NotImplementedError()
-        # return [len(m) for m in self.mazes_tokens]
+    def __eq__(self, other: typing.Any) -> bool:
+        if not isinstance(other, MazeDataset):
+            return NotImplemented
+        return self.cfg == other.cfg and self.mazes == other.mazes
 
     @classmethod
     def generate(
@@ -220,7 +184,6 @@ class MazeDataset(GPTDataset):
         do_parallel: bool = False,
         verbose: bool = False,
     ) -> "MazeDataset":
-        mazes: list[SolvedMaze] = list()
         endpoint_nodes: Int[np.int8, "maze_index 2 2"] = np.random.randint(
             0,
             cfg.grid_shape,
@@ -338,26 +301,26 @@ MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
 }
 
 
-def register_wrap_solved_maze_filter(
+def register_maze_filter(
     method: typing.Callable[[SolvedMaze, typing.Any], bool]
 ) -> DatasetFilterProtocol:
     """register a maze filter, casting it to operate over the whole list of mazes
 
     method should be a staticmethod of a namespace class registered with `register_filter_namespace_for_dataset`
 
-    this is a more restricted version of `register_wrap_dataset_filter` that removes the need for boilerplate for operating over the arrays
+    this is a more restricted version of `register_dataset_filter` that removes the need for boilerplate for operating over the arrays
     """
 
     @functools.wraps(method)
-    def wrapper(dataset: GPTDataset, **kwargs):
+    def wrapper(dataset: MazeDataset, *args, **kwargs):
         # copy and filter
-        new_dataset: GPTDataset = MazeDataset(
+        new_dataset: MazeDataset = MazeDataset(
             cfg=dataset.cfg,
-            mazes=list(filter(lambda m: method(maze=m, **kwargs), dataset.mazes)),
+            mazes=[m for m in dataset.mazes if method(m, *args, **kwargs)],
         )
         # update the config
         new_dataset.cfg.applied_filters.append(
-            dict(name=method.__name__, kwargs=kwargs)
+            dict(name=method.__name__, args=args, kwargs=kwargs)
         )
         new_dataset.update_self_config()
         return new_dataset
@@ -367,31 +330,32 @@ def register_wrap_solved_maze_filter(
 
 @register_filter_namespace_for_dataset(MazeDataset)
 class MazeDatasetFilters:
-    @register_wrap_solved_maze_filter
+    @register_maze_filter
     @staticmethod
     def path_length(maze: SolvedMaze, min_length: int) -> bool:
         """filter out mazes with a solution length less than `min_length`"""
         return len(maze.solution) >= min_length
 
-    @register_wrap_solved_maze_filter
+    @register_maze_filter
     @staticmethod
     def start_end_distance(maze: SolvedMaze, min_distance: int) -> bool:
         """filter out datasets where the start and end pos are less than `min_distance` apart on the manhattan distance (ignoring walls)"""
         return np.linalg.norm(maze.start_pos - maze.end_pos, 1) >= min_distance
 
-    @register_wrap_dataset_filter
+    @register_dataset_filter
     @staticmethod
     def cut_percentile_shortest(
-        dataset: MazeDataset, percentile: float = 0.1
+        # percentile is 1-100, not 0-1, as this is what np.percentile expects
+        dataset: MazeDataset,
+        percentile: float = 10.0,
     ) -> MazeDataset:
         """cut the shortest `percentile` of mazes from the dataset"""
-        # get the lengths of all solutions
-        lengths: np.ndarray = np.array([len(m.solution) for m in dataset.mazes])
-        # get the cutoff
-        cutoff: float = np.percentile(lengths, percentile)
-        # filter
-        new_dataset: MazeDataset = MazeDataset(
-            cfg=dataset.cfg,
-            mazes=list(filter(lambda m: len(m.solution) >= cutoff, dataset.mazes)),
-        )
+        lengths: np.ndarray = np.array([len(m.solution) for m in dataset])
+        cutoff: int = int(np.percentile(lengths, percentile))
+
+        filtered_mazes: list[SolvedMaze] = [
+            m for m in dataset if len(m.solution) > cutoff
+        ]
+        new_dataset: MazeDataset = MazeDataset(cfg=dataset.cfg, mazes=filtered_mazes)
+
         return new_dataset

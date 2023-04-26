@@ -19,7 +19,7 @@ def test_generate_mazedataset():
         save_local=False,
     )
 
-    assert len(m.mazes) == 5
+    assert len(m) == 5
 
 
 def test_load_save_mazedataset_auto():
@@ -40,11 +40,11 @@ def test_load_save_mazedataset_auto():
         local_base_path=temp_dir,
     )
 
-    assert len(m.mazes) == 5
-    assert len(m2.mazes) == 5
+    assert len(m) == 5
+    assert len(m2) == 5
 
     assert m.cfg == m2.cfg
-    assert all([m1 == m2 for m1, m2 in zip(m.mazes, m2.mazes)])
+    assert all([m1 == m2 for m1, m2 in zip(m, m2)])
 
 
 def test_load_save_mazedataset_manual():
@@ -61,12 +61,12 @@ def test_load_save_mazedataset_manual():
     m2: MazeDataset = MazeDataset.load(ZANJ().read(m_fname))
     m3: MazeDataset = MazeDataset.read(m_fname)
 
-    assert len(m.mazes) == 5
-    assert len(m2.mazes) == 5
-    assert len(m3.mazes) == 5
+    assert len(m) == 5
+    assert len(m2) == 5
+    assert len(m3) == 5
 
     assert m.cfg == m2.cfg
-    assert all([m1 == m2 for m1, m2 in zip(m.mazes, m2.mazes)])
+    assert all([m1 == m2 for m1, m2 in zip(m, m2)])
 
     assert m.cfg == m3.cfg
-    assert all([m1 == m3 for m1, m3 in zip(m.mazes, m3.mazes)])
+    assert all([m1 == m3 for m1, m3 in zip(m, m3)])

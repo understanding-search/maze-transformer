@@ -1,9 +1,8 @@
 import copy
-import enum
 import functools
 import json
-import types
 import typing
+from typing import Type, Callable
 import warnings
 from functools import cached_property
 from pathlib import Path
@@ -21,12 +20,7 @@ from muutils.tensor_utils import DTYPE_MAP, ATensor
 from muutils.zanj import ZANJ
 from torch.utils.data import Dataset
 
-from maze_transformer.utils.utils import (
-    DEFAULT_SEED,
-    GLOBAL_SEED,
-    get_device,
-    set_reproducibility,
-)
+from maze_transformer.utils.utils import DEFAULT_SEED, GLOBAL_SEED, set_reproducibility
 
 
 def _dtype_serialization_fn(datatype: torch.dtype | np.dtype) -> str:
@@ -45,12 +39,7 @@ class GPTDatasetConfig(SerializableDataclass):
     """base GPTDatasetConfig class"""
 
     name: str
-    # TODO: get rid of device here? belongs in training config
-    device: torch.device = serializable_field(
-        default_factory=lambda: torch.device(get_device()),
-        serialization_fn=lambda x: str(x),
-        loading_fn=lambda data: torch.device(data["device"]),
-    )
+    # TODO: Do we need dtype here? What does it do?
     dtype: torch.dtype | np.dtype = serializable_field(
         default_factory=lambda: torch.int16,
         serialization_fn=_dtype_serialization_fn,
@@ -99,6 +88,7 @@ class GPTDatasetConfig(SerializableDataclass):
         return torch.tensor(
             [self.tokenizer_map[t] for t in seq],
             dtype=self.dtype,
+            # TODO: Should this use get_device()?
             device="cpu",
         )
 
@@ -110,58 +100,6 @@ class GPTDatasetConfig(SerializableDataclass):
             f"using fallblack to_fname() method for {self.__class__.__name__}, this should be implemented by subclasses!"
         )
         return sanitize_fname(f"f{self.name}_{self_json_hash}")
-
-
-@serializable_dataclass(kw_only=True)
-class IndexedArray(SerializableDataclass):
-    """Contains a tensor made by concatenating a list of tensors, and a second tensor indicating the starting indices
-    of the original tensors in the first one. Mainly for getting __getitem__ to work nicely with datasets
-
-    arr: tensor containing all the elements of the original arrays: [1, 2], [3, 4] -> [1, 2, 3, 4]
-    indices: tensor indicating the starting index in arr of each original array: [1, 2], [3, 4] -> [0, 2]
-    """
-
-    arr: torch.Tensor
-    indices: torch.Tensor
-
-    def get_len(self, i: int) -> int:
-        if i + 1 < len(self.indices):
-            return self.indices[i + 1] - self.indices[i]
-
-        return self.arr.size(0) - self.indices[i]
-
-    def get_all_lengths(self) -> torch.Tensor:
-        return torch.cat(
-            [
-                self.indices[1:] - self.indices[:-1],
-                torch.tensor(
-                    [self.arr.size(0) - self.indices[-1]],
-                    dtype=self.indices.dtype,
-                    device=self.indices.device,
-                ),
-            ]
-        )
-
-    @classmethod
-    def from_sequences(cls, data: list[ATensor[("tokens")]]) -> "IndexedArray":
-        """Process many sequences into a single array, keeping track of sequence start indices
-
-        example:
-        f( [[a,b,c], [d,e]] ) -> IndexedArray(
-                arr = [a,b,c,d,e],
-                indices = [0,3]
-        )
-        """
-
-        arr: ATensor = torch.cat(data)
-        indices: ATensor = torch.cumsum(torch.tensor([0, *map(len, data)]), dim=0)[:-1]
-        return cls(arr=arr, indices=indices)
-
-
-class SaveFormats(enum.Enum):
-    OBJECTS: str = "objects"
-    TOKENS: str = "tokens"
-    ARRAY: str = "array"
 
 
 class GPTDataset(Dataset):
@@ -179,12 +117,11 @@ class GPTDataset(Dataset):
         do_generate: bool = True,
         load_local: bool = True,
         save_local: bool = True,
-        save_formats: set[SaveFormats] = {SaveFormats.OBJECTS, SaveFormats.TOKENS},
         zanj: ZANJ | None = None,
         do_download: bool = True,
         local_base_path: Path = Path("data/maze_dataset"),
         **kwargs,
-    ) -> None:
+    ) -> "GPTDataset":
         """base class for gpt datasets
 
         priority of loading:
@@ -212,10 +149,7 @@ class GPTDataset(Dataset):
             return the length of the dataset, required for `torch.utils.data.Dataset`
          - `__getitem__(self, i: int) -> list[str]`
             return the ith item in the dataset, required for `torch.utils.data.Dataset`
-         - `get(self, i: int, fmt: SaveFormats) -> Any`
             return the ith item in the dataset, required for `torch.utils.data.Dataset`
-         - `get_all_lengths(self) -> list[int]`
-            get the lengths of all sequences in the dataset
          -  `update_self_config(self) -> None`
             update the config of the dataset to match the current state of the dataset, used primarily in filtering and validation
          -  decorating the appropriate filter namespace with `register_filter_namespace_for_dataset(your_dataset_class)` if you want to use filters
@@ -232,9 +166,6 @@ class GPTDataset(Dataset):
          - `save_local : bool`
             whether to save the dataset locally if it is generated or downloaded
             (defaults to `True`)
-         - `save_formats : set[SaveFormats]`
-            which formats to save the dataset in
-            (defaults to `{SaveFormats.OBJECTS, SaveFormats.TOKENS}`)
          - `do_download : bool`
             whether to try downloading the dataset
             (defaults to `True`)
@@ -251,7 +182,6 @@ class GPTDataset(Dataset):
             save the dataset to a file, using ZANJ
          - `read(cls, file_path: str) -> GPTDataset`
             read the dataset from a file, using ZANJ
-         - `get_all(self, fmt: SaveFormats) -> Iterator[Any]`
             get all items in the dataset, in the specified format
          - `filter_by(self)`
             returns a namespace class
@@ -280,13 +210,13 @@ class GPTDataset(Dataset):
                 output = cls.read(local_base_path / fname, zanj=zanj)
                 did_load_local = True
 
-        if do_download:
+        if do_download and output is None:
             try:
                 output = cls.download(cfg, **kwargs)
             except NotImplementedError:
                 pass
 
-        if do_generate:
+        if do_generate and output is None:
             output = cls.generate(cfg, **kwargs)
             # only if we generated it, apply filters
             output = output._apply_filters_from_config()
@@ -303,16 +233,7 @@ class GPTDataset(Dataset):
 
         return output
 
-    # getting data
-    def get_all(self, fmt: SaveFormats) -> typing.Iterator[typing.Any]:
-        for idx in range(len(self)):
-            yield self.get(idx, fmt)
-
-    def get_all_lengths(self) -> list[int]:
-        """get the lengths of all sequences"""
-        raise NotImplementedError()
-
-    def save(self, file_path: str, zanj: ZANJ | None = None):
+    def save(self, file_path: Path | str, zanj: ZANJ | None = None):
         if zanj is None:
             zanj = ZANJ()
         zanj.save(self.serialize(), file_path)
@@ -362,8 +283,8 @@ class GPTDataset(Dataset):
                 self.dataset._FILTER_NAMESPACE, name
             )
 
-            def wrapped_filter_func(**kwargs):
-                return filter_func(self.dataset, **kwargs)
+            def wrapped_filter_func(*args, **kwargs):
+                return filter_func(self.dataset, *args, **kwargs)
 
             return wrapped_filter_func
 
@@ -374,9 +295,9 @@ class GPTDataset(Dataset):
     def _apply_filters_from_config(self):
         """apply filters to the dataset, as specified in the config. used in `from_config()`"""
         output: GPTDataset = self
-        # copy the list, and then clear it in the config
+        # copy the list, and then clear it in the config. we do this because each time we apply a filter it will update config.applied_filters
         applied_filters_old: list[
-            dict[typing.Literal["name", "kwargs"], typing.Any]
+            dict[typing.Literal["name", "args", "kwargs"], typing.Any]
         ] = copy.deepcopy(self.cfg.applied_filters)
         self.cfg.applied_filters = list()
         # apply the filters
@@ -391,8 +312,9 @@ class GPTDataset(Dataset):
                     raise ValueError(
                         f"the dataset {self.cfg.to_fname()} was filtering using an unknown filter: '{filter_name}'"
                     )
+            filter_args: list = filter_info["args"]
             filter_kwargs: dict = filter_info["kwargs"]
-            output = getattr(self.filter_by, filter_name)(**filter_kwargs)
+            output = getattr(self.filter_by, filter_name)(*filter_args, **filter_kwargs)
         # update the config
         self.update_self_config()
         assert (
@@ -401,29 +323,12 @@ class GPTDataset(Dataset):
         return output
 
 
-def register_filter_namespace_for_dataset(dataset_cls: type[GPTDataset]) -> type:
-    """register the namespace class with the given dataset class
+def register_filter_namespace_for_dataset(dataset_cls: Type[GPTDataset]) -> Callable[[Type], Type]:
+    """register the namespace class with the given dataset class """
 
-    sets:
-    ```python
-    dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
-    filter_namespace_cls._BASE_DATASET = dataset_cls
-    ```
-    and also adds a `_filter_namespace_cls` attribute to every static method in the namespace class for use in `register_wrap_dataset_filter`
-    """
-
-    def decorator(filter_namespace_cls: type) -> type:
+    def decorator(filter_namespace_cls: Type) -> Type:
         dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
         filter_namespace_cls._BASE_DATASET = dataset_cls
-
-        # TODO: remove this? it's only useful for checking
-        for method_name, method in filter_namespace_cls.__dict__.items():
-            if (
-                isinstance(method, typing.Callable)
-                and isinstance(method, types.FunctionType)
-                and not method.__name__.startswith("_")
-            ):
-                setattr(method, "_filter_namespace_cls", filter_namespace_cls)
 
         return filter_namespace_cls
 
@@ -439,7 +344,7 @@ class DatasetFilterProtocol(typing.Protocol):
         ...
 
 
-def register_wrap_dataset_filter(
+def register_dataset_filter(
     method: DatasetFilterProtocol,
 ) -> DatasetFilterProtocol:
     """register a dataset filter, copying the underlying dataset and updating the config
@@ -448,15 +353,15 @@ def register_wrap_dataset_filter(
     """
 
     @functools.wraps(method)
-    def wrapper(dataset: GPTDataset, **kwargs):
-        # copy and filter
-        new_dataset: GPTDataset = copy.deepcopy(dataset)
-        new_dataset = method(dataset, **kwargs)
+    def wrapper(dataset: GPTDataset, *args, **kwargs):
+        new_dataset = method(dataset, *args, **kwargs)
         # update the config
         new_dataset.cfg.applied_filters.append(
-            dict(name=method.__name__, kwargs=kwargs)
+            dict(name=method.__name__, args=args, kwargs=kwargs)
         )
         new_dataset.update_self_config()
         return new_dataset
 
     return wrapper
+
+

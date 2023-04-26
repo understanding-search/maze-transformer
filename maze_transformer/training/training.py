@@ -1,15 +1,17 @@
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import Callable
 
 import torch
+from jaxtyping import Float
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from muutils.zanj import ZANJ
 from torch.utils.data import DataLoader
-from transformer_lens.HookedTransformer import Loss
-
+from transformer_lens.HookedTransformer import SingleLoss
+from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
-from maze_transformer.training.maze_dataset import MazeDataset
+from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.wandb_logger import WandbLogger
 
 
@@ -38,19 +40,17 @@ class TRAIN_SAVE_FILES:
     )
 
 
+def collate_batch(batch: list[SolvedMaze], config: MazeDatasetConfig) -> list[str]:
+    return [" ".join(maze.as_tokens(config.node_token_map)) for maze in batch]
+
 def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
 ) -> DataLoader:
-    # length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
-    # logger.summary({"dataset_seq_len_stats_summary": length_stats.summary()})
-    # logger.summary(
-    #     {"dataset_seq_len_stats": length_stats.serialize(typecast=lambda x: str(x))}
-    # )
-
     logger.progress(f"Loaded {len(dataset)} sequences")
     logger.progress("Creating dataloader")
     dataloader: DataLoader = DataLoader(
         dataset,
+        collate_fn=partial(collate_batch, config=cfg.dataset_cfg),
         batch_size=cfg.train_cfg.batch_size,
         **cfg.train_cfg.dataloader_cfg,
     )
@@ -88,13 +88,12 @@ def train(
         cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size
     )
     for iteration, batch in enumerate(dataloader):
-        # compute loss
-        # batch_on_device: Int[torch.Tensor, "batch sequence"] = batch.type(
-        #     dtype=torch.LongTensor
-        # ).to(model.cfg.device)
-
-        # loss: Loss = model(batch_on_device[:, :-1], return_type="loss")
-        loss: Loss = model(batch, return_type="loss")
+        loss: SingleLoss
+        logits: Float[torch.Tensor, "batch pos d_vocab"]
+        logits, loss = model(batch, return_type="both")
+        # Remove the last logit because it's the prediction for what comes after PATH_END (and so is meaningless)
+        # Do this after computing loss because the loss_fn already ignores the last logit
+        logits = logits[:, :-1, :]
         loss.backward()
 
         optimizer.step()
