@@ -1,8 +1,8 @@
 import copy
 import functools
 import json
-import types
 import typing
+from typing import Type, Callable
 import warnings
 from functools import cached_property
 from pathlib import Path
@@ -283,8 +283,8 @@ class GPTDataset(Dataset):
                 self.dataset._FILTER_NAMESPACE, name
             )
 
-            def wrapped_filter_func(**kwargs):
-                return filter_func(self.dataset, **kwargs)
+            def wrapped_filter_func(*args, **kwargs):
+                return filter_func(self.dataset, *args, **kwargs)
 
             return wrapped_filter_func
 
@@ -295,9 +295,9 @@ class GPTDataset(Dataset):
     def _apply_filters_from_config(self):
         """apply filters to the dataset, as specified in the config. used in `from_config()`"""
         output: GPTDataset = self
-        # copy the list, and then clear it in the config
+        # copy the list, and then clear it in the config. we do this because each time we apply a filter it will update config.applied_filters
         applied_filters_old: list[
-            dict[typing.Literal["name", "kwargs"], typing.Any]
+            dict[typing.Literal["name", "args", "kwargs"], typing.Any]
         ] = copy.deepcopy(self.cfg.applied_filters)
         self.cfg.applied_filters = list()
         # apply the filters
@@ -312,8 +312,9 @@ class GPTDataset(Dataset):
                     raise ValueError(
                         f"the dataset {self.cfg.to_fname()} was filtering using an unknown filter: '{filter_name}'"
                     )
+            filter_args: list = filter_info["args"]
             filter_kwargs: dict = filter_info["kwargs"]
-            output = getattr(self.filter_by, filter_name)(**filter_kwargs)
+            output = getattr(self.filter_by, filter_name)(*filter_args, **filter_kwargs)
         # update the config
         self.update_self_config()
         assert (
@@ -322,29 +323,12 @@ class GPTDataset(Dataset):
         return output
 
 
-def register_filter_namespace_for_dataset(dataset_cls: type[GPTDataset]) -> type:
-    """register the namespace class with the given dataset class
+def register_filter_namespace_for_dataset(dataset_cls: Type[GPTDataset]) -> Callable[[Type], Type]:
+    """register the namespace class with the given dataset class """
 
-    sets:
-    ```python
-    dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
-    filter_namespace_cls._BASE_DATASET = dataset_cls
-    ```
-    and also adds a `_filter_namespace_cls` attribute to every static method in the namespace class for use in `register_wrap_dataset_filter`
-    """
-
-    def decorator(filter_namespace_cls: type) -> type:
+    def decorator(filter_namespace_cls: Type) -> Type:
         dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
         filter_namespace_cls._BASE_DATASET = dataset_cls
-
-        # TODO: remove this? it's only useful for checking
-        for method_name, method in filter_namespace_cls.__dict__.items():
-            if (
-                isinstance(method, typing.Callable)
-                and isinstance(method, types.FunctionType)
-                and not method.__name__.startswith("_")
-            ):
-                setattr(method, "_filter_namespace_cls", filter_namespace_cls)
 
         return filter_namespace_cls
 
@@ -360,7 +344,7 @@ class DatasetFilterProtocol(typing.Protocol):
         ...
 
 
-def register_wrap_dataset_filter(
+def register_dataset_filter(
     method: DatasetFilterProtocol,
 ) -> DatasetFilterProtocol:
     """register a dataset filter, copying the underlying dataset and updating the config
@@ -369,15 +353,15 @@ def register_wrap_dataset_filter(
     """
 
     @functools.wraps(method)
-    def wrapper(dataset: GPTDataset, **kwargs):
-        # copy and filter
-        new_dataset: GPTDataset = copy.deepcopy(dataset)
-        new_dataset = method(dataset, **kwargs)
+    def wrapper(dataset: GPTDataset, *args, **kwargs):
+        new_dataset = method(dataset, *args, **kwargs)
         # update the config
         new_dataset.cfg.applied_filters.append(
-            dict(name=method.__name__, kwargs=kwargs)
+            dict(name=method.__name__, args=args, kwargs=kwargs)
         )
         new_dataset.update_self_config()
         return new_dataset
 
     return wrapper
+
+

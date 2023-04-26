@@ -26,7 +26,7 @@ from maze_transformer.training.dataset import (
     GPTDataset,
     GPTDatasetConfig,
     register_filter_namespace_for_dataset,
-    register_wrap_dataset_filter,
+    register_dataset_filter,
 )
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
@@ -299,27 +299,26 @@ MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
     ]
 }
 
-
-def register_wrap_solved_maze_filter(
+def register_maze_filter(
     method: typing.Callable[[SolvedMaze, typing.Any], bool]
 ) -> DatasetFilterProtocol:
     """register a maze filter, casting it to operate over the whole list of mazes
 
     method should be a staticmethod of a namespace class registered with `register_filter_namespace_for_dataset`
 
-    this is a more restricted version of `register_wrap_dataset_filter` that removes the need for boilerplate for operating over the arrays
+    this is a more restricted version of `register_dataset_filter` that removes the need for boilerplate for operating over the arrays
     """
 
     @functools.wraps(method)
-    def wrapper(dataset: GPTDataset, **kwargs):
+    def wrapper(dataset: MazeDataset, *args, **kwargs):
         # copy and filter
-        new_dataset: GPTDataset = MazeDataset(
+        new_dataset: MazeDataset = MazeDataset(
             cfg=dataset.cfg,
-            mazes=list(filter(lambda m: method(maze=m, **kwargs), dataset.mazes)),
+            mazes = [m for m in dataset.mazes if method(m, *args, **kwargs)],
         )
         # update the config
         new_dataset.cfg.applied_filters.append(
-            dict(name=method.__name__, kwargs=kwargs)
+            dict(name=method.__name__, args=args, kwargs=kwargs)
         )
         new_dataset.update_self_config()
         return new_dataset
@@ -329,21 +328,22 @@ def register_wrap_solved_maze_filter(
 
 @register_filter_namespace_for_dataset(MazeDataset)
 class MazeDatasetFilters:
-    @register_wrap_solved_maze_filter
+    @register_maze_filter
     @staticmethod
     def path_length(maze: SolvedMaze, min_length: int) -> bool:
         """filter out mazes with a solution length less than `min_length`"""
         return len(maze.solution) >= min_length
 
-    @register_wrap_solved_maze_filter
+    @register_maze_filter
     @staticmethod
     def start_end_distance(maze: SolvedMaze, min_distance: int) -> bool:
         """filter out datasets where the start and end pos are less than `min_distance` apart on the manhattan distance (ignoring walls)"""
         return np.linalg.norm(maze.start_pos - maze.end_pos, 1) >= min_distance
 
-    @register_wrap_dataset_filter
+    @register_dataset_filter
     @staticmethod
     def cut_percentile_shortest(
+        # percentile is 1-100, not 0-1, as this is what np.percentile expects
         dataset: MazeDataset, percentile: float = 10.0
     ) -> MazeDataset:
         """cut the shortest `percentile` of mazes from the dataset"""
