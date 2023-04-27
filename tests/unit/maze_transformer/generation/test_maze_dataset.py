@@ -23,7 +23,7 @@ class TestMazeDataset:
     config = MazeDatasetConfig(name="test", grid_n=3, n_mazes=5)
 
     def test_generate_serial(self):
-        dataset = MazeDataset.generate(self.config, do_parallel=False)
+        dataset = MazeDataset.generate(self.config, gen_parallel=False)
 
         assert len(dataset) == 5
         for i, maze in enumerate(dataset):
@@ -36,7 +36,7 @@ class TestMazeDataset:
             )
 
     def test_generate_parallel(self):
-        dataset = MazeDataset.generate(self.config, do_parallel=True, verbose=True)
+        dataset = MazeDataset.generate(self.config, gen_parallel=True, verbose=True)
 
         assert len(dataset) == 5
         for i, maze in enumerate(dataset):

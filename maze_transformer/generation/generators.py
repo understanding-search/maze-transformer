@@ -120,6 +120,7 @@ class LatticeMazeGenerators:
                 visited_cells=visited_cells,
                 n_accessible_cells=n_accessible_cells,
                 max_tree_depth=max_tree_depth,
+                fully_connected=(len(visited_cells) == n_accessible_cells),
             ),
         )
 
@@ -213,6 +214,7 @@ class LatticeMazeGenerators:
             generation_meta=dict(
                 func_name="gen_wilson",
                 grid_shape=grid_shape,
+                fully_connected=True,
             ),
         )
 

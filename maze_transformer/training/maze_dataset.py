@@ -1,6 +1,8 @@
 import copy
 import functools
+import json
 import multiprocessing
+import random
 import typing
 import warnings
 from functools import cached_property
@@ -9,7 +11,7 @@ from typing import Callable
 import numpy as np
 import tqdm
 from jaxtyping import Int
-from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field
+from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field, SerializableDataclass
 from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import sanitize_fname
 
@@ -89,6 +91,14 @@ class MazeDatasetConfig(GPTDatasetConfig):
     )
 
     # TODO: add "maze_ctor_kwargs" field, for use in generators (see @canrager branch can-183-constrained-dfs)
+    maze_ctor_kwargs: dict = serializable_field(
+        default_factory=dict,
+        serialization_fn=lambda kwargs: kwargs,
+        loading_fn=lambda data: (
+            dict() if data.get("maze_ctor_kwargs", None) is None # this should handle the backwards compatibility
+            else data["maze_ctor_kwargs"]
+        ),
+    )    
 
     # paths_per_maze: int = 5,
     # p_min_tgt_dist: float = 0.2,
@@ -126,20 +136,64 @@ class MazeDatasetConfig(GPTDatasetConfig):
     @cached_property
     def padding_token_index(self) -> str:
         return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
+    
+    def sdc_hash(self) -> int:
+        return hash(json.dumps(self.serialize()))
 
     def to_fname(self) -> str:
-        # self_json_str: str = json.dumps(self.serialize())
-        # self_json_hash: int = int(abs(hash(self_json_str))%1e5)
-        # return sanitize_fname(f"{self.name}-g{self.grid_n}-n{self.n_mazes}-h{self_json_hash}")
+
         return sanitize_fname(
-            f"{self.name}-g{self.grid_n}-n{self.n_mazes}-a_{self.maze_ctor.__name__.removeprefix('gen_')}"
+            f"{self.name}-g{self.grid_n}-n{self.n_mazes}-a_{self.maze_ctor.__name__.removeprefix('gen_')}-h{self.sdc_hash()%10**5}"
         )
+    
+    def summary(self) -> dict[str, JSONitem]:
+        """abbreviated serialization, for human readability (not for loading!)"""
+        s = self.serialize()
+        output: dict[str, JSONitem] = {
+            k: s[k]
+            for k in [
+                "name",
+                "seq_len_min",
+                "seq_len_max",
+                "seed",
+                "applied_filters",
+                "grid_n",
+                "n_mazes",
+                "maze_ctor",
+                "maze_ctor_kwargs",
+            ]
+        }
+        # add the hashes
+        output["sdc_hash"] = self.sdc_hash()
+        output["fname"] = self.to_fname()
+        return output
 
 
-def _generate_maze_helper(positions: CoordArray) -> SolvedMaze:
+def _generate_maze_helper(index: int) -> SolvedMaze:
     maze: LatticeMaze = _GLOBAL_WORKER_CONFIG.maze_ctor(
-        grid_shape=_GLOBAL_WORKER_CONFIG.grid_shape_np
+        grid_shape=_GLOBAL_WORKER_CONFIG.grid_shape_np,
+        **_GLOBAL_WORKER_CONFIG.maze_ctor_kwargs,
     )
+    positions: Int[np.int8, "2 2"]
+    if maze.generation_meta.get("fully_connected", False):
+        # for fully connected case, pick any two positions
+        positions = np.random.randint(
+            0,
+            _GLOBAL_WORKER_CONFIG.grid_shape,
+            (2, 2),
+        )
+    else:
+        # if not fully connected, pick two positions from the connected component
+        visited_cells: set[CoordTup]|None = maze.generation_meta.get("visited_cells", None)
+        if visited_cells is None:
+            raise ValueError(f"a maze which is not marked as fully connected must have a visited_cells field in its generation_meta: {maze.generation_meta}\n{maze}\n{maze.as_ascii()}")
+        else:
+            visited_cells_np: Int[np.ndarray, "N 2"] = np.array(list(visited_cells))
+            # using numpy here to simplify random seed adjustment in `_maze_gen_init_worker`
+            positions = visited_cells_np[
+                np.random.choice(len(visited_cells_np), size=2, replace=False)
+            ]
+    
     return SolvedMaze.from_lattice_maze(
         lattice_maze=maze,
         solution=np.array(maze.find_shortest_path(positions[0], positions[1])),
@@ -149,6 +203,20 @@ def _generate_maze_helper(positions: CoordArray) -> SolvedMaze:
 def _maze_gen_init_worker(config: MazeDatasetConfig):
     global _GLOBAL_WORKER_CONFIG
     _GLOBAL_WORKER_CONFIG = config
+
+    # HACK: this makes the generation depend both on whether parallelism is used, and on the number of processes. this is bad!
+    # only set numpy seed, since we do not use other random gens
+    process_id: tuple[int] = multiprocessing.current_process()._identity
+    if len(process_id) == 0:
+        # no multiprocessing, seed was already set
+        pass
+    elif len(process_id) == 1:
+        # multiprocessing, adjust seed based on process id
+        np.random.seed(_GLOBAL_WORKER_CONFIG.seed + process_id[0])
+    else:
+        raise ValueError(f"unexpected process id: {process_id}\n{multiprocessing.Process()}")
+    
+    print(f"\n\n\nworker id: {process_id}, seed: {np.random.get_state()[1][0]}")
 
 
 class MazeDataset(GPTDataset):
@@ -217,15 +285,16 @@ class MazeDataset(GPTDataset):
     def generate(
         cls,
         cfg: MazeDatasetConfig,
-        do_parallel: bool = False,
+        gen_parallel: bool = False,
+        pool_kwargs: dict|None = None,
         verbose: bool = False,
     ) -> "MazeDataset":
+        """generate a maze dataset"""
+
+        if pool_kwargs is None:
+            pool_kwargs = dict()
         mazes: list[SolvedMaze] = list()
-        endpoint_nodes: Int[np.int8, "maze_index 2 2"] = np.random.randint(
-            0,
-            cfg.grid_shape,
-            (cfg.n_mazes, 2, 2),
-        )
+        maze_indexes: Int[np.int8, "maze_index"] = np.arange(cfg.n_mazes)
 
         solved_mazes: list[SolvedMaze]
         tqdm_kwargs: dict = dict(
@@ -234,15 +303,16 @@ class MazeDataset(GPTDataset):
             desc="generating & solving mazes",
             disable=not verbose,
         )
-        if do_parallel:
+        if gen_parallel:
             with multiprocessing.Pool(
-                initializer=_maze_gen_init_worker, initargs=(cfg,)
+                **pool_kwargs,
+                initializer=_maze_gen_init_worker, initargs=(cfg,),
             ) as pool:
                 solved_mazes = list(
                     tqdm.tqdm(
                         pool.imap(
                             _generate_maze_helper,
-                            endpoint_nodes,
+                            maze_indexes,
                         ),
                         **tqdm_kwargs,
                     )
@@ -253,11 +323,13 @@ class MazeDataset(GPTDataset):
                 tqdm.tqdm(
                     map(
                         _generate_maze_helper,
-                        endpoint_nodes,
+                        maze_indexes,
                     ),
                     **tqdm_kwargs,
                 )
             )
+        # reset seed to default value
+        np.random.seed(cfg.seed)
 
         return cls(
             cfg=cfg,
@@ -322,20 +394,8 @@ class MazeDataset(GPTDataset):
         return output
 
 
-MazeDatasetConfig._dataset_class = MazeDataset
+MazeDatasetConfig._dataset_class = property(lambda self: MazeDataset)
 
-
-MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
-    cfg.to_fname(): cfg
-    for cfg in [
-        MazeDatasetConfig(
-            name="test",
-            grid_n=3,
-            n_mazes=5,
-            maze_ctor=LatticeMazeGenerators.gen_dfs,
-        ),
-    ]
-}
 
 
 def register_wrap_solved_maze_filter(
