@@ -38,14 +38,14 @@ class LatticeMazeGenerators:
                         4. Mark the chosen cell as visited and push it to the stack
         """
 
-        grid_shape = np.array(grid_shape)
-        n_total_cells: int = np.prod(grid_shape)
-
         # Default values if no constraints have been passed
+        n_total_cells: int = np.prod(grid_shape)
         if n_accessible_cells is None:
             n_accessible_cells = n_total_cells
         if max_tree_depth is None:
-            max_tree_depth = n_total_cells
+            max_tree_depth = (
+                2 * n_total_cells
+            )  # We define max tree depth counting from the start coord in two directions. Therefore we divide by two in the if clause for neighboring sites later and multiply by two here.
         if start_coord is None:
             start_coord: Coord = np.random.randint(
                 0,
@@ -85,7 +85,9 @@ class LatticeMazeGenerators:
             ]
 
             # don't continue if max_tree_depth/2 is already reached (divide by 2 because we can branch to multiple directions)
-            if unvisited_neighbors_deltas and (current_tree_depth < max_tree_depth / 2):
+            if unvisited_neighbors_deltas and (
+                current_tree_depth <= max_tree_depth / 2
+            ):
                 stack.append(current_coord)
 
                 # choose one of the unvisited neighbors
