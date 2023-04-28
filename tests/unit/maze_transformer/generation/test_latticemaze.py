@@ -272,7 +272,10 @@ def test_as_adj_list():
 def test_get_nodes():
     for maze_gen_func in GENERATORS_MAP.values():
         maze = maze_gen_func(np.array((3, 2)))
-        assert maze.get_nodes() == [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]
+        assert (
+            maze.get_nodes().tolist()
+            == np.array([(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]).tolist()
+        )
 
 
 def test_generate_random_path():

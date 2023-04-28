@@ -89,7 +89,7 @@ class RandomBaseline(HookedTransformer):
         maze = LatticeMaze.from_tokens(tokens)
         origin_coord = self.config.dataset_cfg.token_node_map[get_origin_token(tokens)]
         target_coord = self.config.dataset_cfg.token_node_map[get_target_token(tokens)]
-        solution = maze.find_shortest_path(origin_coord, target_coord)
+        solution = maze.find_shortest_path(origin_coord, target_coord).tolist()
 
         existing_path = tokens_to_coords(
             get_path_tokens(tokens), self.config.dataset_cfg
