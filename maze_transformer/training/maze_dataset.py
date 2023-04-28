@@ -191,6 +191,7 @@ def _maze_gen_init_worker(config: MazeDatasetConfig):
             f"unexpected process id: {process_id}\n{multiprocessing.Process()}"
         )
 
+
 class MazeDataset(GPTDataset):
     """maze dataset"""
 
