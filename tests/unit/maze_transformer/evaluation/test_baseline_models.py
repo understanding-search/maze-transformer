@@ -1,4 +1,6 @@
+import sys
 import pytest
+import numpy as np
 
 from maze_transformer.evaluation.baseline_models import RandomBaseline
 from maze_transformer.evaluation.eval_model import predict_maze_paths
@@ -48,4 +50,5 @@ def test_random_baseline(temp_dir):
         solved_maze: SolvedMaze = SolvedMaze.from_tokens(
             dataset.mazes_tokens[i], dataset.cfg
         )
-        assert (path == solved_maze.solution).all()
+        print(f"Path {i}: {path} != {solved_maze.solution}", file=sys.stderr)
+        assert np.all(np.array(path) == np.array(solved_maze.solution)), f"Path {i} is not the solution: {path} != {solved_maze.solution.tolist()}\n{solved_maze.as_ascii()}\n{solved_maze}"

@@ -169,33 +169,9 @@ def _generate_maze_helper(index: int) -> SolvedMaze:
         grid_shape=_GLOBAL_WORKER_CONFIG.grid_shape_np,
         **_GLOBAL_WORKER_CONFIG.maze_ctor_kwargs,
     )
-    positions: Int[np.int8, "2 2"]
-    if maze.generation_meta.get("fully_connected", False):
-        # for fully connected case, pick any two positions
-        positions = np.random.randint(
-            0,
-            _GLOBAL_WORKER_CONFIG.grid_shape,
-            (2, 2),
-        )
-    else:
-        # if not fully connected, pick two positions from the connected component
-        visited_cells: set[CoordTup] | None = maze.generation_meta.get(
-            "visited_cells", None
-        )
-        if visited_cells is None:
-            raise ValueError(
-                f"a maze which is not marked as fully connected must have a visited_cells field in its generation_meta: {maze.generation_meta}\n{maze}\n{maze.as_ascii()}"
-            )
-        else:
-            visited_cells_np: Int[np.ndarray, "N 2"] = np.array(list(visited_cells))
-            # using numpy here to simplify random seed adjustment in `_maze_gen_init_worker`
-            positions = visited_cells_np[
-                np.random.choice(len(visited_cells_np), size=2, replace=False)
-            ]
-
     return SolvedMaze.from_lattice_maze(
         lattice_maze=maze,
-        solution=np.array(maze.find_shortest_path(positions[0], positions[1])),
+        solution=maze.generate_random_path(),
     )
 
 
