@@ -24,6 +24,7 @@ from maze_transformer.training.dataset import (
     register_dataset_filter,
     register_filter_namespace_for_dataset,
 )
+from maze_transformer.utils.stable_hash import stable_hash
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",
@@ -130,12 +131,12 @@ class MazeDatasetConfig(GPTDatasetConfig):
     def padding_token_index(self) -> str:
         return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
-    def sdc_hash(self) -> int:
-        return hash(json.dumps(self.serialize()))
+    def stable_hash_cfg(self) -> int:
+        return stable_hash(json.dumps(self.serialize()))
 
     def to_fname(self) -> str:
         return sanitize_fname(
-            f"{self.name}-g{self.grid_n}-n{self.n_mazes}-a_{self.maze_ctor.__name__.removeprefix('gen_')}-h{self.sdc_hash()%10**5}"
+            f"{self.name}-g{self.grid_n}-n{self.n_mazes}-a_{self.maze_ctor.__name__.removeprefix('gen_')}-h{self.stable_hash_cfg()%10**5}"
         )
 
     def summary(self) -> dict[str, JSONitem]:
@@ -156,7 +157,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
             ]
         }
         # add the hashes
-        output["sdc_hash"] = self.sdc_hash()
+        output["sdc_hash"] = self.stable_hash_cfg()
         output["fname"] = self.to_fname()
         return output
 
@@ -189,9 +190,6 @@ def _maze_gen_init_worker(config: MazeDatasetConfig):
         raise ValueError(
             f"unexpected process id: {process_id}\n{multiprocessing.Process()}"
         )
-
-    print(f"\n\n\nworker id: {process_id}, seed: {np.random.get_state()[1][0]}")
-
 
 class MazeDataset(GPTDataset):
     """maze dataset"""
