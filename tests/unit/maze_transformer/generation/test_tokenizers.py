@@ -12,7 +12,6 @@ from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
 from maze_transformer.training.maze_dataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import maze_to_tokens
 
 
 def test_tokenization_encoding():
@@ -25,7 +24,7 @@ def test_tokenization_encoding():
     node_token_map = cfg.node_token_map
 
     # Adjacency List Tokenization
-    maze_str_tokens = maze_to_tokens(solved_maze, node_token_map)
+    maze_str_tokens = solved_maze.as_tokens(node_token_map)
 
     # Manual Tokenization
     token_to_index = {token: i for i, token in enumerate(cfg.token_arr)}

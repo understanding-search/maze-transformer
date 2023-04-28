@@ -80,7 +80,6 @@ def load(path: str) -> None:
     d = MazeDataset.disk_load(path, do_tokenized=True)
 
     print(d.cfg)
-    print(d.mazes_array)
 
     print("done!")
 

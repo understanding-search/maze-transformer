@@ -108,7 +108,7 @@ def test_loading_example():
         "name": "default",
         "train_cfg": {
             "__format__": "TrainConfig(SerializableDataclass)",
-            "name": "integration-v1",
+            "name": "test-v1",
             "optimizer": "RMSprop",
             "optimizer_kwargs": {"lr": 0.0001},
             "batch_size": 16,
@@ -214,7 +214,7 @@ def test_loading_example_pretrained_tok():
         "name": "default",
         "train_cfg": {
             "__format__": "TrainConfig(SerializableDataclass)",
-            "name": "integration-v1",
+            "name": "test-v1",
             "optimizer": "RMSprop",
             "optimizer_kwargs": {"lr": 0.0001},
             "batch_size": 16,

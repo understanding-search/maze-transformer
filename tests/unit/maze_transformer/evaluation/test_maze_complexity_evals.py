@@ -15,7 +15,7 @@ def test_solution_length_maze_eval():
         min_length=2
     )
 
-    for maze in dataset.mazes:
+    for maze in dataset:
         solution_length: float = MazeComplexityEvals.solution_length(maze)
         assert solution_length >= 2, f"Solution length {solution_length} is less than 2"
 
@@ -31,7 +31,7 @@ def test_all_maze_evals_run_only():
     )
 
     for eval_name, eval_fn in MAZE_COMPLEXITY_EVALS.items():
-        for maze in dataset.mazes:
+        for maze in dataset:
             result: float | int = eval_fn(maze)
             assert isinstance(
                 result, (float, int)

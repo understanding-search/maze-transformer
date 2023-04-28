@@ -5,13 +5,13 @@ from maze_transformer.generation.constants import CoordArray
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.generation.utils import bool_array_from_string
 from maze_transformer.training.dataset import (
-    SaveFormats,
+    register_dataset_filter,
     register_filter_namespace_for_dataset,
 )
 from maze_transformer.training.maze_dataset import (
     MazeDataset,
     MazeDatasetConfig,
-    register_wrap_solved_maze_filter,
+    register_maze_filter,
 )
 
 
@@ -27,43 +27,18 @@ class TestMazeDataset:
 
         assert len(dataset) == 5
         for i, maze in enumerate(dataset):
-            maze_obj = SolvedMaze.from_tokens(maze.split(" "), self.config)
-            assert maze_obj.grid_shape == (3, 3)
-            assert (
-                maze_obj
-                == SolvedMaze.from_tokens(dataset.mazes_tokens[i], self.config)
-                == dataset.mazes_objs[i]
-            )
+            assert maze.grid_shape == (3, 3)
 
     def test_generate_parallel(self):
         dataset = MazeDataset.generate(self.config, gen_parallel=True, verbose=True)
 
         assert len(dataset) == 5
         for i, maze in enumerate(dataset):
-            maze_obj = SolvedMaze.from_tokens(maze.split(" "), self.config)
-            assert maze_obj.grid_shape == (3, 3)
-            assert (
-                maze_obj
-                == SolvedMaze.from_tokens(dataset.mazes_tokens[i], self.config)
-                == dataset.mazes_objs[i]
-            )
+            assert maze.grid_shape == (3, 3)
 
     def test_data_hash(self):
         dataset = MazeDataset.generate(self.config)
         # TODO: dataset.data_hash doesn't work right now
-
-    def test_get(self):
-        dataset = MazeDataset.generate(self.config)
-
-        assert dataset.get(2) == dataset.mazes[2]
-        # TODO: tokens are not equal due to `get` not caching and shuffling
-        # assert dataset.get(2, SaveFormats.TOKENS) == dataset.mazes_tokens[2]
-
-        with pytest.raises(NotImplementedError):
-            dataset.get(2, SaveFormats.ARRAY)
-
-        with pytest.raises(ValueError):
-            dataset.get(2, "foo")  # type: ignore
 
     def test_download(self):
         with pytest.raises(NotImplementedError):
@@ -74,11 +49,9 @@ class TestMazeDataset:
         dataset_copy = MazeDataset.load(dataset.serialize())
 
         assert dataset.cfg == dataset_copy.cfg
-        # TODO: This is currently failing due to dataset yielding shuffled token strings. Need to decide if this is desired behaviour
-        # for maze, maze_copy in zip(dataset, dataset_copy):
-        #     assert maze == maze_copy
+        for maze, maze_copy in zip(dataset, dataset_copy):
+            assert maze == maze_copy
 
-    # TODO: do this after testing default filters
     def test_custom_maze_filter(self):
         connection_list = bool_array_from_string(
             """
@@ -96,10 +69,20 @@ class TestMazeDataset:
             [[0, 0]],
         ]
 
+        def custom_filter_solution_length(
+            maze: SolvedMaze, solution_length: int
+        ) -> bool:
+            return len(maze.solution) == solution_length
+
         mazes = [SolvedMaze(connection_list, solution) for solution in solutions]
         dataset = MazeDataset(self.config, mazes)
-        filtered = dataset.custom_maze_filter(lambda m: len(m.solution) == 1)
-        assert filtered.mazes_objs == [mazes[2]]
+
+        filtered_lambda = dataset.custom_maze_filter(lambda m: len(m.solution) == 1)
+        filtered_func = dataset.custom_maze_filter(
+            custom_filter_solution_length, solution_length=1
+        )
+
+        assert filtered_lambda.mazes == filtered_func.mazes == [mazes[2]]
 
 
 class TestMazeDatasetFilters:
@@ -115,17 +98,25 @@ class TestMazeDatasetFilters:
         shape=[2, 2, 2],
     )
 
-    def test_register_wrap_solved_maze_filter(self):
+    def test_filters(self):
         class TestDataset(MazeDataset):
             ...
 
         @register_filter_namespace_for_dataset(TestDataset)
         class TestFilters:
-            @register_wrap_solved_maze_filter
+            @register_maze_filter
             @staticmethod
             def solution_match(maze: SolvedMaze, solution: CoordArray) -> bool:
                 """Test for solution equality"""
                 return (maze.solution == solution).all()
+
+            @register_dataset_filter
+            @staticmethod
+            def drop_nth(dataset: TestDataset, n: int) -> TestDataset:
+                """Filter mazes by path length"""
+                return TestDataset(
+                    dataset.cfg, [maze for i, maze in enumerate(dataset) if i != n]
+                )
 
         maze1 = SolvedMaze(
             connection_list=self.connection_list, solution=np.array([[0, 0]])
@@ -135,8 +126,15 @@ class TestMazeDatasetFilters:
         )
 
         dataset = TestDataset(self.config, [maze1, maze2])
-        filtered = dataset.filter_by.solution_match(solution=np.array([[0, 0]]))
-        assert filtered.mazes_objs == [maze1]
+
+        maze_filter = dataset.filter_by.solution_match(solution=np.array([[0, 0]]))
+        maze_filter2 = dataset.filter_by.solution_match(np.array([[0, 0]]))
+
+        dataset_filter = dataset.filter_by.drop_nth(n=0)
+        dataset_filter2 = dataset.filter_by.drop_nth(0)
+
+        assert maze_filter.mazes == maze_filter2.mazes == [maze1]
+        assert dataset_filter.mazes == dataset_filter2.mazes == [maze2]
 
     def test_path_length(self):
         long_maze = SolvedMaze(
@@ -149,13 +147,13 @@ class TestMazeDatasetFilters:
         )
 
         dataset = MazeDataset(self.config, [long_maze, short_maze])
-        path_length_filtered = dataset.filter_by.path_length(min_length=3)
-        start_end_filtered = dataset.filter_by.start_end_distance(min_distance=2)
+        path_length_filtered = dataset.filter_by.path_length(3)
+        start_end_filtered = dataset.filter_by.start_end_distance(2)
 
         assert type(path_length_filtered) == type(dataset)
-        assert path_length_filtered.mazes_objs == [long_maze]
-        assert start_end_filtered.mazes_objs == [long_maze]
-        assert dataset.mazes_objs == [long_maze, short_maze]
+        assert path_length_filtered.mazes == [long_maze]
+        assert start_end_filtered.mazes == [long_maze]
+        assert dataset.mazes == [long_maze, short_maze]
 
     def test_cut_percentile_shortest(self):
         solutions = [
@@ -166,7 +164,6 @@ class TestMazeDatasetFilters:
 
         mazes = [SolvedMaze(self.connection_list, solution) for solution in solutions]
         dataset = MazeDataset(self.config, mazes)
-        # TODO: this throws an exception
-        filtered = dataset.filter_by.cut_percentile_shortest(percentile=0.49)
+        filtered = dataset.filter_by.cut_percentile_shortest(49.0)
 
         assert filtered.mazes == mazes[:2]

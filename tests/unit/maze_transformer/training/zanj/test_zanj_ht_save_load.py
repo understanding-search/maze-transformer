@@ -16,6 +16,7 @@ from maze_transformer.training.config import (
     TrainConfig,
     ZanjHookedTransformer,
 )
+from tests.helpers.assertions import assert_model_output_equality
 
 ZANJ_MODEL_CFG: ConfigHolder = ConfigHolder(
     train_cfg=TrainConfig(name="test_cfg_save-train"),

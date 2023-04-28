@@ -31,7 +31,7 @@ def test_model_loading():
     )
     # get config
     cfg: ConfigHolder = ConfigHolder.get_config_multisource(
-        cfg_names=("test-g3-n5-a_dfs", "nano-v1", "integration-v1"),
+        cfg_names=("test-g3-n5-a_dfs", "nano-v1", "test-v1"),
     )
     # train model
     result: TrainingResult = train_model(
@@ -58,7 +58,7 @@ def test_model_loading():
 def test_predict_maze_paths():
     # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
     cfg: ConfigHolder = ConfigHolder.get_config_multisource(
-        cfg_names=("test-g3-n5-a_dfs", "nano-v1", "integration-v1"),
+        cfg_names=("test-g3-n5-a_dfs", "nano-v1", "test-v1"),
     )
     # train model
     result: TrainingResult = train_model(
@@ -75,7 +75,7 @@ def test_predict_maze_paths():
 
     max_new_tokens = 2
     paths = predict_maze_paths(
-        tokens_batch=dataset.mazes_tokens,
+        tokens_batch=dataset.as_tokens(),
         data_cfg=cfg.dataset_cfg,
         model=model,
         max_new_tokens=max_new_tokens,
@@ -91,7 +91,7 @@ def test_predict_maze_paths():
 def test_evaluate_model(temp_dir):
     # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
     cfg: ConfigHolder = ConfigHolder.get_config_multisource(
-        cfg_names=("test-g3-n5-a_dfs", "nano-v1", "integration-v1"),
+        cfg_names=("test-g3-n5-a_dfs", "nano-v1", "test-v1"),
     )
     # train model
     result: TrainingResult = train_model(
