@@ -39,6 +39,7 @@ class LatticeMazeGenerators:
         """
 
         # Default values if no constraints have been passed
+        grid_shape: Coord = np.array(grid_shape)
         n_total_cells: int = np.prod(grid_shape)
         if n_accessible_cells is None:
             n_accessible_cells = n_total_cells
@@ -52,6 +53,8 @@ class LatticeMazeGenerators:
                 np.maximum(grid_shape - 1, 1),
                 size=2,
             )
+        else:
+            start_coord = np.array(start_coord)
 
         # initialize the maze with no connections
         connection_list: ConnectionList = np.zeros(
@@ -234,7 +237,13 @@ GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
 }
 
 
-def get_maze_with_solution(gen_name: str, grid_shape: Coord) -> SolvedMaze:
-    maze: LatticeMaze = GENERATORS_MAP[gen_name](grid_shape)
+def get_maze_with_solution(
+    gen_name: str,
+    grid_shape: Coord,
+    maze_ctor_kwargs: dict | None = None,
+) -> SolvedMaze:
+    if maze_ctor_kwargs is None:
+        maze_ctor_kwargs = dict()
+    maze: LatticeMaze = GENERATORS_MAP[gen_name](grid_shape, **maze_ctor_kwargs)
     solution: CoordArray = np.array(maze.generate_random_path())
     return SolvedMaze.from_lattice_maze(lattice_maze=maze, solution=solution)

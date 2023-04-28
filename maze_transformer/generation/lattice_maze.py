@@ -1,4 +1,3 @@
-import random
 import typing
 import warnings
 from dataclasses import dataclass
@@ -157,7 +156,7 @@ class LatticeMaze(SerializableDataclass):
         self,
         c_start: CoordTup,
         c_end: CoordTup,
-    ) -> list[Coord]:
+    ) -> CoordArray:
         """find the shortest path between two coordinates, using A*"""
         c_start = tuple(c_start)
         c_end = tuple(c_end)
@@ -193,7 +192,7 @@ class LatticeMaze(SerializableDataclass):
                 while p_current in source:
                     p_current = source[p_current]
                     path.append(p_current)
-                return path[::-1]
+                return np.array(path[::-1])
 
             # close current node
             closed_vtx.add(c_current)
@@ -222,23 +221,56 @@ class LatticeMaze(SerializableDataclass):
                 g_score[neighbor] = g_temp
                 f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, c_end)
 
-    def get_nodes(self) -> list[Coord]:
+    def get_nodes(self) -> CoordArray:
         """return a list of all nodes in the maze"""
+        rows: Int[np.ndarray, "x y"]
+        cols: Int[np.ndarray, "x y"]
+        rows, cols = np.meshgrid(
+            range(self.grid_shape[0]),
+            range(self.grid_shape[1]),
+            indexing="ij",
+        )
+        nodes: CoordArray = np.vstack((rows.ravel(), cols.ravel())).T
+        return nodes
 
-        return [
-            (row, col)
-            for row in range(self.grid_shape[0])
-            for col in range(self.grid_shape[1])
-        ]
+    def get_connected_component(self) -> CoordArray:
+        """get the largest (and assumed only nonsingular) connected component of the maze
 
-    def generate_random_path(self) -> list[Coord]:
-        """return a path between randomly chosen start and end nodes"""
+        TODO: other connected components?
+        """
+        if self.generation_meta.get("fully_connected", False):
+            # for fully connected case, pick any two positions
+            return self.get_nodes()
+        else:
+            # if not fully connected, pick two positions from the connected component
+            visited_cells: set[CoordTup] | None = self.generation_meta.get(
+                "visited_cells", None
+            )
+            if visited_cells is None:
+                # TODO: dynamically generate visited_cells?
+                raise ValueError(
+                    f"a maze which is not marked as fully connected must have a visited_cells field in its generation_meta: {self.generation_meta}\n{self}\n{self.as_ascii()}"
+                )
+            else:
+                visited_cells_np: Int[np.ndarray, "N 2"] = np.array(list(visited_cells))
+                return visited_cells_np
+
+    def generate_random_path(self) -> CoordArray:
+        """return a path between randomly chosen start and end nodes within the connected component"""
 
         # we can't create a "path" in a single-node maze
         assert self.grid_shape[0] > 1 and self.grid_shape[1] > 1
 
-        start, end = random.sample(self.get_nodes(), 2)
-        return self.find_shortest_path(start, end)
+        connected_component: CoordArray = self.get_connected_component()
+        positions: Int[np.int8, "2 2"] = connected_component[
+            np.random.choice(
+                len(connected_component),
+                size=2,
+                replace=False,
+            )
+        ]
+
+        return self.find_shortest_path(positions[0], positions[1])
 
     # ============================================================
     # to and from adjacency list
