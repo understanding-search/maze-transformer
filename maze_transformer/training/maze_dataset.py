@@ -1,29 +1,30 @@
+import copy
+import functools
 import json
 import multiprocessing
-import os
+import typing
 import warnings
-from functools import cached_property, partial
+from functools import cached_property
 from typing import Callable
 
 import numpy as np
-import torch
-from muutils.json_serialize import (
-    JSONitem,
-    json_serialize,
-    serializable_dataclass,
-    serializable_field,
-)
+import tqdm
+from jaxtyping import Int
+from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field
 from muutils.json_serialize.util import safe_getsource, string_as_lines
-from muutils.misc import freeze
-from muutils.statcounter import StatCounter
-from muutils.tensor_utils import ATensor, NDArray
-from tqdm import tqdm
+from muutils.misc import sanitize_fname
 
-from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordArray, CoordTup
+from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
-from maze_transformer.training.dataset import GPTDataset, GPTDatasetConfig, IndexedArray
-from maze_transformer.training.tokenizer import maze_to_tokens
+from maze_transformer.training.dataset import (
+    DatasetFilterProtocol,
+    GPTDataset,
+    GPTDatasetConfig,
+    register_dataset_filter,
+    register_filter_namespace_for_dataset,
+)
+from maze_transformer.utils.stable_hash import stable_hash
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",
@@ -81,12 +82,28 @@ class MazeDatasetConfig(GPTDatasetConfig):
         loading_fn=lambda data: _load_maze_ctor(data["maze_ctor"]),
     )
 
+    # TODO: add "maze_ctor_kwargs" field, for use in generators (see @canrager branch can-183-constrained-dfs)
+    maze_ctor_kwargs: dict = serializable_field(
+        default_factory=dict,
+        serialization_fn=lambda kwargs: kwargs,
+        loading_fn=lambda data: (
+            dict()
+            if data.get("maze_ctor_kwargs", None)
+            is None  # this should handle the backwards compatibility
+            else data["maze_ctor_kwargs"]
+        ),
+    )
+
     # paths_per_maze: int = 5,
     # p_min_tgt_dist: float = 0.2,
 
     @property
-    def grid_shape(self) -> tuple[int, int]:
+    def grid_shape(self) -> CoordTup:
         return (self.grid_n, self.grid_n)
+
+    @property
+    def grid_shape_np(self) -> Coord:
+        return np.array(self.grid_shape)
 
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:
@@ -114,6 +131,66 @@ class MazeDatasetConfig(GPTDatasetConfig):
     def padding_token_index(self) -> str:
         return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
+    def stable_hash_cfg(self) -> int:
+        return stable_hash(json.dumps(self.serialize()))
+
+    def to_fname(self) -> str:
+        return sanitize_fname(
+            f"{self.name}-g{self.grid_n}-n{self.n_mazes}-a_{self.maze_ctor.__name__.removeprefix('gen_')}-h{self.stable_hash_cfg()%10**5}"
+        )
+
+    def summary(self) -> dict[str, JSONitem]:
+        """abbreviated serialization, for human readability (not for loading!)"""
+        s = self.serialize()
+        output: dict[str, JSONitem] = {
+            k: s[k]
+            for k in [
+                "name",
+                "seq_len_min",
+                "seq_len_max",
+                "seed",
+                "applied_filters",
+                "grid_n",
+                "n_mazes",
+                "maze_ctor",
+                "maze_ctor_kwargs",
+            ]
+        }
+        # add the hashes
+        output["sdc_hash"] = self.stable_hash_cfg()
+        output["fname"] = self.to_fname()
+        return output
+
+
+def _generate_maze_helper(index: int) -> SolvedMaze:
+    maze: LatticeMaze = _GLOBAL_WORKER_CONFIG.maze_ctor(
+        grid_shape=_GLOBAL_WORKER_CONFIG.grid_shape_np,
+        **_GLOBAL_WORKER_CONFIG.maze_ctor_kwargs,
+    )
+    return SolvedMaze.from_lattice_maze(
+        lattice_maze=maze,
+        solution=maze.generate_random_path(),
+    )
+
+
+def _maze_gen_init_worker(config: MazeDatasetConfig):
+    global _GLOBAL_WORKER_CONFIG
+    _GLOBAL_WORKER_CONFIG = config
+
+    # HACK: this makes the generation depend both on whether parallelism is used, and on the number of processes. this is bad!
+    # only set numpy seed, since we do not use other random gens
+    process_id: tuple[int] = multiprocessing.current_process()._identity
+    if len(process_id) == 0:
+        # no multiprocessing, seed was already set
+        pass
+    elif len(process_id) == 1:
+        # multiprocessing, adjust seed based on process id
+        np.random.seed(_GLOBAL_WORKER_CONFIG.seed + process_id[0])
+    else:
+        raise ValueError(
+            f"unexpected process id: {process_id}\n{multiprocessing.Process()}"
+        )
+
 
 class MazeDataset(GPTDataset):
     """maze dataset"""
@@ -121,258 +198,201 @@ class MazeDataset(GPTDataset):
     def __init__(
         self,
         cfg: MazeDatasetConfig,
-        mazes_objs: list[SolvedMaze] | None = None,
-        mazes_tokens: list[list[str]] | None = None,
-        mazes_array: IndexedArray | None = None,
-        paths: dict[str, str] = None,
+        mazes: typing.Sequence[SolvedMaze],
     ) -> None:
         super().__init__()
-
         self.cfg: MazeDatasetConfig = cfg
+        self.mazes: list[SolvedMaze] = list(mazes)
 
-        # get mode
-        if (
-            sum(1 if x is None else 0 for x in [mazes_objs, mazes_tokens, mazes_array])
-            < 1
-        ):
-            raise ValueError(
-                "at least one of mazes_objs, mazes_tokens, mazes_tokenized must be provided to MazeDataset"
-            )
+    def data_hash(self) -> int:
+        return hash(tuple(self.mazes))
 
-        # transfer
-        self.mazes_objs: list[SolvedMaze] | None = mazes_objs
-        self.mazes_tokens: list[list[str]] | None = mazes_tokens
-        self.mazes_array: IndexedArray | None = mazes_array
+    def __getitem__(self, i: int) -> SolvedMaze:
+        return self.mazes[i]
 
-        # process into tokens
-        if (self.mazes_objs is not None) and (self.mazes_tokens is None):
-            with multiprocessing.Pool() as pool:
-                self.mazes_tokens = list(
-                    tqdm(
-                        pool.map(
-                            partial(maze_to_tokens, node_token_map=cfg.node_token_map),
-                            self.mazes_objs,
-                        ),
-                        total=len(self.mazes_objs),
-                        desc="tokenizing mazes",
-                        unit="maze",
-                    )
-                )
-
-        # process tokens into tokenized
-        if (self.mazes_tokens is not None) and (mazes_array is None):
-            max_len: int = max(len(t) for t in self.mazes_tokens)
-            if max_len > cfg.seq_len_max:
-                raise ValueError(f"{max_len=} exceeds {cfg.seq_len_max=}")
-
-            self.mazes_array = IndexedArray.from_sequences(
-                [cfg.tokenize_seq(m) for m in self.mazes_tokens]
-            )
-
-        # validate
-        # if any(x is None for x in (self.mazes_objs, self.mazes_tokens, self.mazes_tokenized)):
-        # 	raise ValueError(f"MazeDataset invalid, something is None: {type(self.mazes_objs) = } {type(self.mazes_tokens) = } {type(self.mazes_tokenized) = }")
-
-        if self.mazes_objs is not None and self.mazes_tokens is not None:
-            if len(self.mazes_objs) != len(self.mazes_tokens):
-                raise ValueError(
-                    f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_tokens) = }"
-                )
-
-        if self.mazes_objs is not None and self.mazes_array.indices is not None:
-            if len(self.mazes_objs) != len(self.mazes_array.indices):
-                raise ValueError(
-                    f"MazeDataset invalid: {len(self.mazes_objs) = }, {len(self.mazes_array.indices) = }"
-                )
-
-        if self.mazes_tokens is not None and self.mazes_array.indices is not None:
-            if len(self.mazes_tokens) != len(self.mazes_array.indices):
-                raise ValueError(
-                    f"MazeDataset invalid: {len(self.mazes_tokens) = }, {len(self.mazes_array.indices) = }"
-                )
-
-    def __getitem__(self, index: int) -> ATensor[("tokens")]:
-        """index into mazes_array.arr, getting from the start of the correct sequence, padding if necessary"""
-
-        # A nice-to-have refactor would be to have some notion of a minimum sequence length here, such that this method
-        # never returns a sequence below that length. The motivation here is that for a particular dataset we might know
-        # that the first N tokens are always part of the maze, so this method can safetly skip that many before it finds
-        # the start of the correct sequence. The min value could be part of the dataset config.
-
-        # last element in mazes_array.indices whose value is smaller than `index`
-        sequence_index: int = torch.searchsorted(self.mazes_array.indices, index) - 1
-        # slice the array from the start of the sequence to `index`, including `index`
-        end_arr_index: int = min(
-            index + 1,  # up to end of sequence
-            self.mazes_array.indices[sequence_index]
-            + self.cfg.seq_len_max,  # up to sequence length cutoff
-        )
-        subseq: ATensor = self.mazes_array.arr[
-            self.mazes_array.indices[sequence_index] : end_arr_index
-        ]
-        # left-pad the sequence
-        return torch.nn.functional.pad(
-            subseq,
-            (self.cfg.seq_len_max + 1 - len(subseq), 0),
-            value=self.cfg.padding_token_index,
-        )
+    def as_tokens(self, limit: int = 100) -> list[list[str]]:
+        return [maze.as_tokens(self.cfg.node_token_map) for maze in self.mazes[:limit]]
 
     def __len__(self) -> int:
-        return len(self.mazes_array.arr)
+        return len(self.mazes)
 
-    def get_all_lengths(self) -> list[int]:
-        return self.mazes_array.get_all_lengths().tolist()
+    def __eq__(self, other: typing.Any) -> bool:
+        if not isinstance(other, MazeDataset):
+            return NotImplemented
+        return self.cfg == other.cfg and self.mazes == other.mazes
 
     @classmethod
-    def gen_default(
+    def generate(
         cls,
         cfg: MazeDatasetConfig,
+        gen_parallel: bool = False,
+        pool_kwargs: dict | None = None,
+        verbose: bool = False,
     ) -> "MazeDataset":
-        """generate a dataset of mazes
+        """generate a maze dataset"""
 
-        p_min_tgt_dist is the minimum manhattan distance between the start and target,
-        as a fraction of max of the maze's dimensions
-        """
+        if pool_kwargs is None:
+            pool_kwargs = dict()
+        mazes: list[SolvedMaze] = list()
+        maze_indexes: Int[np.int8, "maze_index"] = np.arange(cfg.n_mazes)
 
-        # Currently we don't enforce a minimum distance between the start and end of the path. If we need to do this in future, there's a beginning of an implementation here:
-        # n_min_tgt_dist: int = int(max(maze.grid_shape) * p_min_tgt_dist)
-
-        """if np.abs(start_node - end_node).sum() < n_min_tgt_dist:
-			# if too close, move end node towards the corner opposite the start node
-			opposite_corner: CoordTup = (
-				maze.grid_shape[0] * round(start_node[0] / maze.grid_shape[0]),
-				maze.grid_shape[1] * round(start_node[1] / maze.grid_shape[1]),
-			)
-			# end_node +=
-		"""
-
-        solved_mazes: list[SolvedMaze] = list()
-        endpoint_nodes: NDArray[
-            (("maze_index", cfg.n_mazes), ("start_end", 2), ("coord", 2)), np.int8
-        ] = np.random.randint(0, cfg.grid_shape, (cfg.n_mazes, 2, 2))
-
-        print(endpoint_nodes)
-
-        for i, (c_start, c_end) in enumerate(endpoint_nodes):
-            m: LatticeMaze = cfg.maze_ctor(cfg.grid_shape)
-            path: CoordArray = np.array(m.find_shortest_path(c_start, c_end))
-            solved_mazes.append(
-                SolvedMaze.from_lattice_maze(lattice_maze=m, solution=path)
+        solved_mazes: list[SolvedMaze]
+        tqdm_kwargs: dict = dict(
+            total=cfg.n_mazes,
+            unit="maze",
+            desc="generating & solving mazes",
+            disable=not verbose,
+        )
+        if gen_parallel:
+            with multiprocessing.Pool(
+                **pool_kwargs,
+                initializer=_maze_gen_init_worker,
+                initargs=(cfg,),
+            ) as pool:
+                solved_mazes = list(
+                    tqdm.tqdm(
+                        pool.imap(
+                            _generate_maze_helper,
+                            maze_indexes,
+                        ),
+                        **tqdm_kwargs,
+                    )
+                )
+        else:
+            _maze_gen_init_worker(cfg)
+            solved_mazes = list(
+                tqdm.tqdm(
+                    map(
+                        _generate_maze_helper,
+                        maze_indexes,
+                    ),
+                    **tqdm_kwargs,
+                )
             )
+        # reset seed to default value
+        np.random.seed(cfg.seed)
 
         return cls(
             cfg=cfg,
-            mazes_objs=solved_mazes,
+            mazes=solved_mazes,
         )
 
-    def serialize_config(self) -> JSONitem:
-        return json_serialize(self.cfg)
-
-    @freeze
-    class DISK_SAVE_FILES:
-        """namespace for filenames"""
-
-        cfg: str = "cfg.json"
-        # Not implemented
-        # obj: str = "maze_obj.jsonl"
-        tokens: str = "maze_tokens.jsonl"
-        tokenized: str = "maze_tokenized.npz"
+    @classmethod
+    def download(cls, cfg: MazeDatasetConfig, **kwargs) -> "MazeDataset":
+        raise NotImplementedError("not implemented yet")
 
     @classmethod
-    def config_save_name(cls) -> str:
-        return cls.DISK_SAVE_FILES.cfg
+    def load(cls, data: JSONitem) -> "MazeDataset":
+        """load from zanj/json"""
+        assert data["__format__"] == "MazeDataset"
+        return cls(
+            cfg=MazeDatasetConfig.load(data["cfg"]),
+            mazes=[SolvedMaze.load(m) for m in data["mazes"]],
+        )
 
-    def disk_save(
+    def serialize(self) -> JSONitem:
+        """serialize to zanj/json"""
+        return {
+            "__format__": "MazeDataset",
+            "cfg": self.cfg.serialize(),
+            "mazes": [m.serialize() for m in self.mazes],
+        }
+
+    @classmethod
+    def disk_load(cls, path: str, **kwargs) -> "MazeDataset":
+        """load from disk"""
+        warnings.warn(
+            "deprecated, use `MazeDataset.read(path)` or `MazeDataset.load(ZANJ().read(path)))` instead",
+            DeprecationWarning,
+        )
+        if kwargs:
+            warnings.warn(
+                f"kwargs to disk_load dont do anything: {kwargs = }", DeprecationWarning
+            )
+        return cls.read(path)
+
+    def update_self_config(self):
+        """update the config to match the current state of the dataset"""
+        self.cfg.n_mazes = len(self.mazes)
+
+    def custom_maze_filter(
         self,
-        path_base: str = "data/test-001",
-        do_config: bool = True,
-        do_obj: bool = False,
-        do_tokens: bool = True,
-        do_tokenized: bool = True,
-    ) -> None:
-        # make the appropriate directories
-        print(f"saving to '{path_base}'")
-        os.makedirs(path_base, exist_ok=False)
-
-        if do_config:
-            # save config as json, with metadata
-            config_out: dict[str, JSONitem] = {
-                **json_serialize(self.cfg),
-                "_postgen_meta": {
-                    "seq_len_stats": StatCounter(
-                        self.mazes_array.get_all_lengths().tolist()
-                    ).summary(),
-                },
-            }
-            with open(f"{path_base}/{self.DISK_SAVE_FILES.cfg}", "w") as f:
-                json.dump(config_out, f, indent="\t")
-
-        if do_obj:
-            raise NotImplementedError("do_obj not implemented")
-
-        if do_tokens:
-            # save tokens as jsonl
-            with open(f"{path_base}/{self.DISK_SAVE_FILES.tokens}", "w") as f:
-                for x in self.mazes_tokens:
-                    f.write(" ".join(x) + "\n")
-
-        if do_tokenized:
-            # save tokenized data as npz
-            np.savez(
-                f"{path_base}/{self.DISK_SAVE_FILES.tokenized}",
-                **dict(
-                    arr=self.mazes_array.arr.cpu().numpy(),
-                    indices=self.mazes_array.indices.cpu().numpy(),
-                ),
-            )
-
-    @classmethod
-    def disk_load(
-        cls,
-        path_base: str,
-        do_config: bool = False,
-        do_obj: bool = False,
-        do_tokens: bool = False,
-        do_tokenized: bool = False,
+        method: typing.Callable[[SolvedMaze], bool],
+        **kwargs,
     ) -> "MazeDataset":
-        cfg: MazeDatasetConfig | None = None
-        if do_config:
-            # load config from json
-            with open(f"{path_base}/{cls.DISK_SAVE_FILES.cfg}", "r") as f:
-                cfg = MazeDatasetConfig.load(json.load(f))
-
-        mazes_objs: list[SolvedMaze] | None = None
-        if do_obj:
-            raise NotImplementedError("do_obj not implemented")
-
-        mazes_tokens: list[list[str]] | None = None
-        if do_tokens:
-            # load tokens from jsonl
-            with open(f"{path_base}/{cls.DISK_SAVE_FILES.tokens}", "r") as f:
-                mazes_tokens = [x.split() for x in f.readlines()]
-
-        loaded_dict: dict | None = None
-        if do_tokenized:
-            # load tokenized data from npz
-            loaded_dict = np.load(
-                f"{path_base}/{cls.DISK_SAVE_FILES.tokenized}",
-                allow_pickle=False,
-            )
-
-            assert "arr" in loaded_dict
-            assert "indices" in loaded_dict
-
-        return cls(
-            cfg=cfg,
-            mazes_objs=mazes_objs,
-            mazes_tokens=mazes_tokens,
-            mazes_array=None
-            if loaded_dict is None
-            else IndexedArray(
-                arr=torch.tensor(loaded_dict["arr"], device="cpu"),
-                indices=torch.tensor(loaded_dict["indices"], device="cpu"),
-            ),
+        """filter the dataset using a custom method"""
+        output: MazeDataset = MazeDataset(
+            cfg=copy.deepcopy(self.cfg),
+            mazes=[m for m in self.mazes if method(m, **kwargs)],
         )
+        output.cfg.applied_filters.append(
+            {
+                "name": f"__custom__:{method.__name__}",
+                "kwargs": kwargs,
+            }
+        )
+        output.update_self_config()
+        return output
 
 
-MazeDatasetConfig._dataset_class = MazeDataset
+MazeDatasetConfig._dataset_class = property(lambda self: MazeDataset)
+
+
+def register_maze_filter(
+    method: typing.Callable[[SolvedMaze, typing.Any], bool]
+) -> DatasetFilterProtocol:
+    """register a maze filter, casting it to operate over the whole list of mazes
+
+    method should be a staticmethod of a namespace class registered with `register_filter_namespace_for_dataset`
+
+    this is a more restricted version of `register_dataset_filter` that removes the need for boilerplate for operating over the arrays
+    """
+
+    @functools.wraps(method)
+    def wrapper(dataset: MazeDataset, *args, **kwargs):
+        # copy and filter
+        new_dataset: MazeDataset = MazeDataset(
+            cfg=dataset.cfg,
+            mazes=[m for m in dataset.mazes if method(m, *args, **kwargs)],
+        )
+        # update the config
+        new_dataset.cfg.applied_filters.append(
+            dict(name=method.__name__, args=args, kwargs=kwargs)
+        )
+        new_dataset.update_self_config()
+        return new_dataset
+
+    return wrapper
+
+
+@register_filter_namespace_for_dataset(MazeDataset)
+class MazeDatasetFilters:
+    @register_maze_filter
+    @staticmethod
+    def path_length(maze: SolvedMaze, min_length: int) -> bool:
+        """filter out mazes with a solution length less than `min_length`"""
+        return len(maze.solution) >= min_length
+
+    @register_maze_filter
+    @staticmethod
+    def start_end_distance(maze: SolvedMaze, min_distance: int) -> bool:
+        """filter out datasets where the start and end pos are less than `min_distance` apart on the manhattan distance (ignoring walls)"""
+        return np.linalg.norm(maze.start_pos - maze.end_pos, 1) >= min_distance
+
+    @register_dataset_filter
+    @staticmethod
+    def cut_percentile_shortest(
+        # percentile is 1-100, not 0-1, as this is what np.percentile expects
+        dataset: MazeDataset,
+        percentile: float = 10.0,
+    ) -> MazeDataset:
+        """cut the shortest `percentile` of mazes from the dataset"""
+        lengths: np.ndarray = np.array([len(m.solution) for m in dataset])
+        cutoff: int = int(np.percentile(lengths, percentile))
+
+        filtered_mazes: list[SolvedMaze] = [
+            m for m in dataset if len(m.solution) > cutoff
+        ]
+        new_dataset: MazeDataset = MazeDataset(cfg=dataset.cfg, mazes=filtered_mazes)
+
+        return new_dataset

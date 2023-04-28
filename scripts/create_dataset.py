@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+import warnings
 from pathlib import Path
 
 from muutils.misc import shorten_numerical_to_str  # type: ignore[import]
@@ -14,8 +15,13 @@ def create_dataset(
     n_mazes: int,
     grid_n: int = 16,
     name: str | None = None,
+    verbose: bool = False,
     **cfg_kwargs,
 ):
+    warnings.warn(
+        "create_dataset is deprecated, use MazeDataset.from_config instead",
+        DeprecationWarning,
+    )
     if n_mazes < 0:
         raise ValueError("n_mazes must be >= 0")
     if grid_n < 0:
@@ -30,9 +36,10 @@ def create_dataset(
         name = f"{name_base}-{name}"
 
     data_path = Path(path_base) / name
-    print(
-        f"generating dataset: {data_path.as_posix() = } {n_mazes = } {grid_n = } {name = } {cfg_kwargs = }"
-    )
+    if verbose:
+        print(
+            f"generating dataset: {data_path.as_posix() = } {n_mazes = } {grid_n = } {name = } {cfg_kwargs = }"
+        )
 
     if os.path.exists(data_path):
         raise FileExistsError(f"path {data_path} already exists!")
@@ -56,23 +63,23 @@ def create_dataset(
                 total=config.n_mazes,
                 unit="maze",
                 desc="generating & solving mazes",
+                disable=not verbose,
             )
         )
 
     # create and save dataset
     dataset: MazeDataset = MazeDataset(
         cfg=config,
-        mazes_objs=solved_mazes,
+        mazes=solved_mazes,
     )
 
-    dataset.disk_save(str(data_path))
+    dataset.save(str(data_path))
 
 
 def load(path: str) -> None:
     d = MazeDataset.disk_load(path, do_tokenized=True)
 
     print(d.cfg)
-    print(d.mazes_array)
 
     print("done!")
 

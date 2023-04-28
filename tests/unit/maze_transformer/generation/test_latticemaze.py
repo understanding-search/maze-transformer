@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
+from maze_transformer.generation.generators import GENERATORS_MAP
 from maze_transformer.generation.lattice_maze import (
     LatticeMaze,
     PixelColors,
@@ -271,13 +271,16 @@ def test_as_adj_list():
 
 def test_get_nodes():
     for maze_gen_func in GENERATORS_MAP.values():
-        maze = LatticeMazeGenerators.gen_dfs((3, 2))
-        assert maze.get_nodes() == [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]
+        maze = maze_gen_func(np.array((3, 2)))
+        assert (
+            maze.get_nodes().tolist()
+            == np.array([(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]).tolist()
+        )
 
 
 def test_generate_random_path():
     for maze_gen_func in GENERATORS_MAP.values():
-        maze = LatticeMazeGenerators.gen_dfs((2, 2))
+        maze = maze_gen_func(np.array((2, 2)))
         path = maze.generate_random_path()
 
         # len > 1 ensures that we have unique start and end nodes
@@ -286,6 +289,6 @@ def test_generate_random_path():
 
 def test_generate_random_path_size_1():
     for maze_gen_func in GENERATORS_MAP.values():
-        maze = LatticeMazeGenerators.gen_dfs((1, 1))
+        maze = maze_gen_func(np.array((1, 1)))
         with pytest.raises(AssertionError):
             maze.generate_random_path()

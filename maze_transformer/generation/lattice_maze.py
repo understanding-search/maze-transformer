@@ -1,7 +1,7 @@
-import random
 import typing
 import warnings
 from dataclasses import dataclass
+from itertools import chain
 from typing import cast
 
 import numpy as np
@@ -27,6 +27,7 @@ from maze_transformer.utils.token_utils import (
     tokens_to_coords,
 )
 
+ConnectionList = Bool[np.ndarray, "lattice_dim x y"]
 RGB = tuple[int, int, int]
 
 PixelGrid = Int[np.ndarray, "x y rgb"]
@@ -156,7 +157,7 @@ class LatticeMaze(SerializableDataclass):
         self,
         c_start: CoordTup,
         c_end: CoordTup,
-    ) -> list[Coord]:
+    ) -> CoordArray:
         """find the shortest path between two coordinates, using A*"""
         c_start = tuple(c_start)
         c_end = tuple(c_end)
@@ -192,7 +193,7 @@ class LatticeMaze(SerializableDataclass):
                 while p_current in source:
                     p_current = source[p_current]
                     path.append(p_current)
-                return path[::-1]
+                return np.array(path[::-1])
 
             # close current node
             closed_vtx.add(c_current)
@@ -221,23 +222,56 @@ class LatticeMaze(SerializableDataclass):
                 g_score[neighbor] = g_temp
                 f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, c_end)
 
-    def get_nodes(self) -> list[Coord]:
+    def get_nodes(self) -> CoordArray:
         """return a list of all nodes in the maze"""
+        rows: Int[np.ndarray, "x y"]
+        cols: Int[np.ndarray, "x y"]
+        rows, cols = np.meshgrid(
+            range(self.grid_shape[0]),
+            range(self.grid_shape[1]),
+            indexing="ij",
+        )
+        nodes: CoordArray = np.vstack((rows.ravel(), cols.ravel())).T
+        return nodes
 
-        return [
-            (row, col)
-            for row in range(self.grid_shape[0])
-            for col in range(self.grid_shape[1])
-        ]
+    def get_connected_component(self) -> CoordArray:
+        """get the largest (and assumed only nonsingular) connected component of the maze
 
-    def generate_random_path(self) -> list[Coord]:
-        """ "return a path between randomly chosen start and end nodes"""
+        TODO: other connected components?
+        """
+        if self.generation_meta.get("fully_connected", False):
+            # for fully connected case, pick any two positions
+            return self.get_nodes()
+        else:
+            # if not fully connected, pick two positions from the connected component
+            visited_cells: set[CoordTup] | None = self.generation_meta.get(
+                "visited_cells", None
+            )
+            if visited_cells is None:
+                # TODO: dynamically generate visited_cells?
+                raise ValueError(
+                    f"a maze which is not marked as fully connected must have a visited_cells field in its generation_meta: {self.generation_meta}\n{self}\n{self.as_ascii()}"
+                )
+            else:
+                visited_cells_np: Int[np.ndarray, "N 2"] = np.array(list(visited_cells))
+                return visited_cells_np
+
+    def generate_random_path(self) -> CoordArray:
+        """return a path between randomly chosen start and end nodes within the connected component"""
 
         # we can't create a "path" in a single-node maze
         assert self.grid_shape[0] > 1 and self.grid_shape[1] > 1
 
-        start, end = random.sample(self.get_nodes(), 2)
-        return self.find_shortest_path(start, end)
+        connected_component: CoordArray = self.get_connected_component()
+        positions: Int[np.int8, "2 2"] = connected_component[
+            np.random.choice(
+                len(connected_component),
+                size=2,
+                replace=False,
+            )
+        ]
+
+        return self.find_shortest_path(positions[0], positions[1])
 
     # ============================================================
     # to and from adjacency list
@@ -288,9 +322,9 @@ class LatticeMaze(SerializableDataclass):
         # Note: This has only been tested for square mazes. Might need to change some things if rectangular mazes are needed.
         grid_n: int = adj_list.max() + 1
 
-        connection_list: NDArray["lattice_dim x y", bool] = np.zeros(
+        connection_list: ConnectionList = np.zeros(
             (2, grid_n, grid_n),
-            dtype=bool,
+            dtype=np.bool_,
         )
 
         for c_start, c_end in adj_list:
@@ -315,10 +349,39 @@ class LatticeMaze(SerializableDataclass):
             connection_list=connection_list,
         )
 
-    # ============================================================
-    # TODO: write a to_tokens method?
-    # from tokens
-    # ============================================================
+    def as_adj_list_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
+        return [
+            SPECIAL_TOKENS["adj_list_start"],
+            *chain.from_iterable(
+                [
+                    [
+                        node_token_map[tuple(c_s.tolist())],
+                        SPECIAL_TOKENS["connector"],
+                        node_token_map[tuple(c_e.tolist())],
+                        SPECIAL_TOKENS["adjacency_endline"],
+                    ]
+                    for c_s, c_e in self.as_adj_list()
+                ]
+            ),
+            SPECIAL_TOKENS["adj_list_end"],
+        ]
+
+    def as_tokens(
+        self,
+        node_token_map: dict[CoordTup, str],
+    ) -> list[str]:
+        """serialize maze and solution to tokens"""
+        tokens: list[str] = self.as_adj_list_tokens(node_token_map)
+        # if getattr(self, "start_pos", None) is not None:
+        if isinstance(self, TargetedLatticeMaze):
+            tokens += self.get_start_pos_tokens(node_token_map)
+        if isinstance(self, TargetedLatticeMaze):
+            tokens += self.get_end_pos_tokens(node_token_map)
+        if isinstance(self, SolvedMaze):
+            tokens += self.get_solution_tokens(node_token_map)
+
+        return tokens
+
     @classmethod
     def from_tokens(cls, tokens: list[str]) -> "LatticeMaze":
         """create a LatticeMaze from a list of tokens"""
@@ -693,6 +756,20 @@ class TargetedLatticeMaze(LatticeMaze):
                 f"end_pos {self.end_pos} is out of bounds for grid shape {self.grid_shape}"
             )
 
+    def get_start_pos_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
+        return [
+            SPECIAL_TOKENS["origin_start"],
+            node_token_map[tuple(self.start_pos)],
+            SPECIAL_TOKENS["origin_end"],
+        ]
+
+    def get_end_pos_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
+        return [
+            SPECIAL_TOKENS["target_start"],
+            node_token_map[tuple(self.end_pos)],
+            SPECIAL_TOKENS["target_end"],
+        ]
+
     @classmethod
     def from_lattice_maze(
         cls,
@@ -719,6 +796,8 @@ class SolvedMaze(TargetedLatticeMaze):
         solution: CoordArray,
         generation_meta: dict | None = None,
         lattice_dim: int = 2,
+        start_pos: Coord | None = None,
+        end_pos: Coord | None = None,
     ) -> None:
         super().__init__(
             connection_list=connection_list,
@@ -728,6 +807,22 @@ class SolvedMaze(TargetedLatticeMaze):
             lattice_dim=lattice_dim,
         )
         self.__dict__["solution"] = solution
+
+        if start_pos is not None:
+            assert np.array_equal(
+                np.array(start_pos), self.start_pos
+            ), f"when trying to create a SolvedMaze, the given start_pos does not match the one in the solution: given={start_pos}, solution={self.start_pos}"
+        if end_pos is not None:
+            assert np.array_equal(
+                np.array(end_pos), self.end_pos
+            ), f"when trying to create a SolvedMaze, the given end_pos does not match the one in the solution: given={end_pos}, solution={self.end_pos}"
+
+    def get_solution_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
+        return [
+            SPECIAL_TOKENS["path_start"],
+            *[node_token_map[tuple(c.tolist())] for c in self.solution],
+            SPECIAL_TOKENS["path_end"],
+        ]
 
     # for backwards compatibility
     @property
@@ -762,7 +857,10 @@ class SolvedMaze(TargetedLatticeMaze):
         )
 
     @classmethod
-    def from_tokens(cls, tokens: list[str], data_cfg) -> "SolvedMaze":
+    def from_tokens(cls, tokens: list[str] | str, data_cfg) -> "SolvedMaze":
+        if type(tokens) == str:
+            tokens = tokens.split(" ")
+
         maze: LatticeMaze = LatticeMaze.from_tokens(tokens)
         path_tokens: list[str] = get_path_tokens(tokens)
         solution: list[str | tuple[int, int]] = tokens_to_coords(path_tokens, data_cfg)

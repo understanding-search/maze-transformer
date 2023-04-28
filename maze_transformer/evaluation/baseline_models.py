@@ -60,7 +60,7 @@ class RandomBaseline(HookedTransformer):
         unvisited_neighbors = [coord for coord in neighbors if coord not in path]
 
         # if the current path is already as long as the solution, there can be no correct next step
-        correct_step = solution[len(path)] if len(solution) > len(path) else None
+        correct_step = tuple(solution[len(path)]) if len(solution) > len(path) else None
 
         if len(unvisited_neighbors) == 0:
             return SPECIAL_TOKENS["path_end"]
@@ -89,7 +89,7 @@ class RandomBaseline(HookedTransformer):
         maze = LatticeMaze.from_tokens(tokens)
         origin_coord = self.config.dataset_cfg.token_node_map[get_origin_token(tokens)]
         target_coord = self.config.dataset_cfg.token_node_map[get_target_token(tokens)]
-        solution = maze.find_shortest_path(origin_coord, target_coord)
+        solution = maze.find_shortest_path(origin_coord, target_coord).tolist()
 
         existing_path = tokens_to_coords(
             get_path_tokens(tokens), self.config.dataset_cfg

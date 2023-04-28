@@ -51,6 +51,7 @@ convert_notebooks:
 
 .PHONY: test_notebooks
 test_notebooks: convert_notebooks
+	@echo "run tests on converted notebooks in $(CONVERTED_NOTEBOOKS_TEMP_DIR) using $(HELPERS_DIR)/run_notebook_tests.py"
 	python $(HELPERS_DIR)/run_notebook_tests.py --notebooks-dir=$(NOTEBOOKS_DIR) --converted-notebooks-temp-dir=$(CONVERTED_NOTEBOOKS_TEMP_DIR)
 
 
