@@ -9,6 +9,7 @@ from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from muutils.zanj import ZANJ
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
+
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
@@ -42,6 +43,7 @@ class TRAIN_SAVE_FILES:
 
 def collate_batch(batch: list[SolvedMaze], config: MazeDatasetConfig) -> list[str]:
     return [" ".join(maze.as_tokens(config.node_token_map)) for maze in batch]
+
 
 def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger

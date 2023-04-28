@@ -2,10 +2,10 @@ import copy
 import functools
 import json
 import typing
-from typing import Type, Callable
 import warnings
 from functools import cached_property
 from pathlib import Path
+from typing import Callable, Type
 
 import numpy as np
 import torch
@@ -323,8 +323,10 @@ class GPTDataset(Dataset):
         return output
 
 
-def register_filter_namespace_for_dataset(dataset_cls: Type[GPTDataset]) -> Callable[[Type], Type]:
-    """register the namespace class with the given dataset class """
+def register_filter_namespace_for_dataset(
+    dataset_cls: Type[GPTDataset],
+) -> Callable[[Type], Type]:
+    """register the namespace class with the given dataset class"""
 
     def decorator(filter_namespace_cls: Type) -> Type:
         dataset_cls._FILTER_NAMESPACE = filter_namespace_cls
@@ -363,5 +365,3 @@ def register_dataset_filter(
         return new_dataset
 
     return wrapper
-
-

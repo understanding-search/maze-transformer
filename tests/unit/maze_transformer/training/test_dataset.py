@@ -1,12 +1,15 @@
 from pathlib import Path
+
 import pytest
+
 from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
+
 
 class TestGPTDatasetConfig:
     def test_tokenizer_map(self):
         cfg = MazeDatasetConfig(name="test", grid_n=3, n_mazes=1)
         assert list(cfg.tokenizer_map.keys()) == cfg.token_arr
-        
+
 
 class TestGPTDataset:
     class TestFromConfig:
@@ -87,9 +90,8 @@ class TestGPTDataset:
         cfg = MazeDatasetConfig(name="test", grid_n=3, n_mazes=3)
         dataset = MazeDataset.generate(cfg)
         filepath = temp_dir / Path(f"{cfg.to_fname()}.zanj")
-        
+
         dataset.save(filepath)
         loaded = MazeDataset.read(filepath)
 
         assert dataset == loaded
-

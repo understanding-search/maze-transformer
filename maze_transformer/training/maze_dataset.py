@@ -25,8 +25,8 @@ from maze_transformer.training.dataset import (
     DatasetFilterProtocol,
     GPTDataset,
     GPTDatasetConfig,
-    register_filter_namespace_for_dataset,
     register_dataset_filter,
+    register_filter_namespace_for_dataset,
 )
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
