@@ -60,7 +60,7 @@ class RandomBaseline(HookedTransformer):
         unvisited_neighbors = [coord for coord in neighbors if coord not in path]
 
         # if the current path is already as long as the solution, there can be no correct next step
-        correct_step = solution[len(path)] if len(solution) > len(path) else None
+        correct_step = tuple(solution[len(path)]) if len(solution) > len(path) else None
 
         if len(unvisited_neighbors) == 0:
             return SPECIAL_TOKENS["path_end"]

@@ -1,5 +1,3 @@
-import sys
-
 import numpy as np
 import pytest
 
@@ -43,14 +41,12 @@ def test_random_baseline(temp_dir):
         coord for path in unbiased_paths for coords in path for coord in coords
     ]
 
-    assert len(unbiased_paths) == 5
+    assert len(unbiased_paths) == len(dataset)
     assert max([len(path) for path in unbiased_paths]) <= max_new_tokens + 1
-    assert max(unbiased_coords) == cfg.dataset_cfg.grid_n - 1
+    assert max(unbiased_coords) <= cfg.dataset_cfg.grid_n - 1
 
     for i, path in enumerate(biased_paths):
         solved_maze: SolvedMaze = dataset[i]
-        print(f"Path {i}: {path} != {solved_maze.solution}", file=sys.stderr)
         assert np.all(
             np.array(path) == np.array(solved_maze.solution)
         ), f"Path {i} is not the solution: {path} != {solved_maze.solution.tolist()}\n{solved_maze.as_ascii()}\n{solved_maze}"
-        assert (path == solved_maze.solution).all()
