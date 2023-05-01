@@ -40,7 +40,7 @@ filterwarnings = [
     "ignore:Deprecated call to `pkg_resources.declare_namespace:DeprecationWarning"
 ]
 testpaths = "tests"
-norecursedirs="tests/helpers"
+norecursedirs="maze_transformer/utils/test_helpers"
 
 [[tool.mypy.overrides]]
 module = "fire"
