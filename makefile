@@ -1,4 +1,4 @@
-HELPERS_DIR := tests/helpers
+HELPERS_DIR := maze_transformer/utils/test_helpers
 NOTEBOOKS_DIR := notebooks
 CONVERTED_NOTEBOOKS_TEMP_DIR := tests/_temp/notebooks
 POETRY_RUN_PYTHON := poetry run python

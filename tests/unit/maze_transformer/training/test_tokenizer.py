@@ -2,7 +2,7 @@ from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.maze_dataset import MazeDatasetConfig
-from tests.helpers import utils
+from maze_transformer.utils.test_helpers import utils
 
 
 def test_coordinate_system():

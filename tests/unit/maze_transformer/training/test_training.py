@@ -2,7 +2,7 @@ from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.training import get_dataloader
-from tests.helpers.stub_logger import StubLogger
+from maze_transformer.utils.test_helpers.stub_logger import StubLogger
 
 
 def test_get_dataloader():
