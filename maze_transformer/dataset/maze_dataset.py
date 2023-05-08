@@ -14,9 +14,6 @@ from muutils.json_serialize import JSONitem, serializable_dataclass, serializabl
 from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import sanitize_fname
 
-from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
-from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
-from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
 from maze_transformer.dataset.dataset import (
     DatasetFilterProtocol,
     GPTDataset,
@@ -24,6 +21,9 @@ from maze_transformer.dataset.dataset import (
     register_dataset_filter,
     register_filter_namespace_for_dataset,
 )
+from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
+from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
+from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
 from maze_transformer.utils.stable_hash import stable_hash
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [

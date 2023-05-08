@@ -11,14 +11,14 @@ from muutils.json_serialize import (
 )
 from torch.utils.data import DataLoader
 
+from maze_transformer.dataset.maze_dataset import MazeDataset
+from maze_transformer.dataset.maze_dataset_configs import MAZE_DATASET_CONFIGS
 from maze_transformer.training.config import (
     GPT_CONFIGS,
     TRAINING_CONFIGS,
     ConfigHolder,
     ZanjHookedTransformer,
 )
-from maze_transformer.dataset.maze_dataset import MazeDataset
-from maze_transformer.dataset.maze_dataset_configs import MAZE_DATASET_CONFIGS
 from maze_transformer.training.training import TRAIN_SAVE_FILES, get_dataloader, train
 from maze_transformer.training.wandb_logger import (
     WandbJobType,

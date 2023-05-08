@@ -10,9 +10,9 @@ from muutils.zanj import ZANJ
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
 
+from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
-from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.wandb_logger import WandbLogger
 
 

@@ -1,9 +1,6 @@
 import numpy as np
 import pytest
 
-from maze_transformer.generation.constants import CoordArray
-from maze_transformer.generation.lattice_maze import SolvedMaze
-from maze_transformer.generation.utils import bool_array_from_string
 from maze_transformer.dataset.dataset import (
     register_dataset_filter,
     register_filter_namespace_for_dataset,
@@ -13,6 +10,9 @@ from maze_transformer.dataset.maze_dataset import (
     MazeDatasetConfig,
     register_maze_filter,
 )
+from maze_transformer.generation.constants import CoordArray
+from maze_transformer.generation.lattice_maze import SolvedMaze
+from maze_transformer.generation.utils import bool_array_from_string
 
 
 class TestMazeDatasetConfig:
