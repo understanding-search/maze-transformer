@@ -1,5 +1,5 @@
 from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.training.maze_dataset import MazeDatasetConfig
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 
 MAZE_DATASET_CONFIGS: dict[str, MazeDatasetConfig] = {
     cfg.to_fname(): cfg

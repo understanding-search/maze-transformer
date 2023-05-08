@@ -2,7 +2,7 @@ import pytest
 
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import SolvedMaze
-from maze_transformer.training.maze_dataset import MazeDatasetConfig
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 
 
 @pytest.mark.skip(

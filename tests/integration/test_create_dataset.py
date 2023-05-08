@@ -2,7 +2,7 @@ from pathlib import Path
 
 from muutils.zanj import ZANJ
 
-from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 
 temp_dir: Path = Path("tests/_temp/dataset")
 

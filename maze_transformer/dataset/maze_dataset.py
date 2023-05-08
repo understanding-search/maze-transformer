@@ -17,7 +17,7 @@ from muutils.misc import sanitize_fname
 from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
-from maze_transformer.training.dataset import (
+from maze_transformer.dataset.dataset import (
     DatasetFilterProtocol,
     GPTDataset,
     GPTDatasetConfig,
