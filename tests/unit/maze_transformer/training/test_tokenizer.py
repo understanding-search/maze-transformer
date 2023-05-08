@@ -1,6 +1,6 @@
 from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.generation.generators import LatticeMazeGenerators
+from maze_transformer.generation.generators import LatticeMazeGenerators, get_maze_with_solution
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.utils.test_helpers import utils
 
@@ -12,9 +12,7 @@ def test_coordinate_system():
     To test this, generate both adj_lists, sort them and convert to a common format, and check that they are equal.
     """
     maze_size = 3
-    solved_maze: SolvedMaze = LatticeMazeGenerators.gen_dfs_with_solution(
-        (maze_size, maze_size)
-    )
+    solved_maze: SolvedMaze = get_maze_with_solution("gen_dfs", (maze_size, maze_size))
     maze_adj_list = solved_maze.as_adj_list()
 
     # convert to the same format as the tokenizer adj_list
