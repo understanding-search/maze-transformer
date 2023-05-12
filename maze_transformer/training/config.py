@@ -37,13 +37,14 @@ class BaseGPTConfig(SerializableDataclass):
     d_model: int
     d_head: int
     n_layers: int
+    d_mlp: int | None
 
     weight_processing: dict[str, bool] = serializable_field(
         default_factory=lambda: dict(
             are_layernorms_folded=False,
             are_weights_processed=False,
         )
-    )
+)
 
 
 # ==================================================
@@ -104,6 +105,7 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         d_model=32,
         d_head=16,
         n_layers=4,
+        d_mlp=128
     ),
     BaseGPTConfig(
         name="tuned-v1",
@@ -111,6 +113,7 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         d_model=384,
         d_head=64,
         n_layers=6,
+        d_mlp=1536
     ),
     BaseGPTConfig(
         name="gpt2-small",
@@ -118,6 +121,23 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         d_model=384,  # half of gpt2-small
         d_head=64,  # match gpt-2 small
         n_layers=12,  # half of gpt2-small
+        d_mlp=1536
+    ),
+    BaseGPTConfig(
+        name="attn-only-l1",
+        act_fn="gelu",
+        d_model=384,
+        d_head=64,
+        n_layers=1,
+        d_mlp=None
+    ),
+    BaseGPTConfig(
+        name="attn-only-l2",
+        act_fn="gelu",
+        d_model=384,
+        d_head=64,
+        n_layers=2,
+        d_mlp=None
     ),
     # this one is just for integration tests
     BaseGPTConfig(
@@ -126,7 +146,8 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         d_model=8,
         d_head=4,
         n_layers=2,
-    ),
+        d_mlp=32
+    )
 ]
 
 GPT_CONFIGS: dict[str, BaseGPTConfig] = {cfg.name: cfg for cfg in _GPT_CONFIGS_LIST}
@@ -230,6 +251,7 @@ class ConfigHolder(SerializableDataclass):
             n_layers=self.model_cfg.n_layers,
             n_ctx=self.dataset_cfg.seq_len_max,
             d_vocab=len(self.dataset_cfg.token_arr),
+            d_mlp=self.model_cfg.d_mlp,
         )
 
     def transformer_config(self) -> HookedTransformerConfig:
