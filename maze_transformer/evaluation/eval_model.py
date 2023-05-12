@@ -164,12 +164,12 @@ def evaluate_model(
         for name, func in eval_functions.items():
             score_counters[name].update(
                 func(
-                    maze=sm.maze,
-                    solution=np.array(sm.solution),
+                    maze=solved_maze,
+                    solution=np.array(solved_maze.solution),
                     prediction=np.array(prediction),
                     model=model,
                 )
-                for sm, prediction in zip(maze_batch, predictions)
+                for solved_maze, prediction in zip(maze_batch, predictions)
             )
 
     return score_counters
