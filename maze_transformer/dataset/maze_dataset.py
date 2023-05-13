@@ -73,7 +73,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
     """maze dataset configuration, including tokenizers"""
 
     grid_n: int
-    n_mazes: int
+    n_mazes: int = serializable_field(compare=False) # this is primarily to avoid conflicts which happen during `from_config` when we have applied filters
     maze_ctor: Callable = serializable_field(
         default_factory=lambda: LatticeMazeGenerators.gen_dfs,
         serialization_fn=lambda gen_func: {
@@ -359,20 +359,16 @@ def register_maze_filter(
 
     @functools.wraps(method)
     def wrapper(dataset: MazeDataset, *args, **kwargs):
-        print(f"applying filter {method.__name__} to {len(dataset)} mazes")
         # copy and filter
         new_dataset: MazeDataset = copy.deepcopy(MazeDataset(
             cfg=dataset.cfg,
             mazes=[m for m in dataset.mazes if method(m, *args, **kwargs)],
         ))
-        print(new_dataset.cfg.applied_filters)
         # update the config
         new_dataset.cfg.applied_filters.append(
             dict(name=method.__name__, args=args, kwargs=kwargs)
         )
-        print(new_dataset.cfg.applied_filters)
         new_dataset.update_self_config()
-        print(new_dataset.cfg.applied_filters)
         return new_dataset
 
     return wrapper
@@ -479,7 +475,8 @@ class MazeDatasetFilters:
         """strip the generation meta from the dataset"""
         new_dataset: MazeDataset = copy.deepcopy(dataset)
         for maze in new_dataset:
-            maze.generation_meta = None
+            # hacky because it's a frozen dataclass
+            maze.__dict__["generation_meta"] = None
         return new_dataset
 
     @register_dataset_filter
@@ -490,11 +487,37 @@ class MazeDatasetFilters:
         gen_meta_lists: dict = defaultdict(list)
         for maze in new_dataset:
             for key, value in maze.generation_meta.items():
-                gen_meta_lists[key].append(value)
+                if isinstance(value, (bool, int, float, str)):
+                    gen_meta_lists[key].append(value)
+                
+                elif isinstance(value, set):
+                    # special case for visited_cells
+                    # HACK: this is ugly!!
+                    gen_meta_lists[key].extend([tuple(v) for v in value])
+
+                elif isinstance(value, np.ndarray):
+                    if (len(value.shape) == 1) and (value.shape[0] == maze.lattice_dim):
+                        # assume its a single coordinate
+                        gen_meta_lists[key].append(tuple(value))
+                    elif (len(value.shape) == 2) and (value.shape[1] == maze.lattice_dim):
+                        # assume its a list of coordinates
+                        gen_meta_lists[key].extend([tuple(v) for v in value])
+                    else:
+                        raise ValueError(
+                            f"Cannot collect generation meta for {key} as it is an ndarray of shape {value.shape}",
+                            "expected either a coord of shape (2,) or a list of coords of shape (n, 2)",
+                        )
+                else:
+                    print(type(value))
+                    raise ValueError(
+                        f"Cannot collect generation meta for {key} as it is of type '{str(type(value))}'",
+                        "expected either a basic type (bool, int, float, str), a numpy coord, or a numpy array of coords",
+                    )
 
             # clear the data
             if clear_in_mazes:
-                maze.generation_meta = None
+                # hacky because it's a frozen dataclass
+                maze.__dict__["generation_meta"] = None
 
         new_dataset.generation_metadata_collected = {
             key: dict(Counter(value))

@@ -40,7 +40,7 @@ class LatticeMazeGenerators:
 
         # Default values if no constraints have been passed
         grid_shape: Coord = np.array(grid_shape)
-        n_total_cells: int = np.prod(grid_shape)
+        n_total_cells: int = int(np.prod(grid_shape))
         if n_accessible_cells is None:
             n_accessible_cells = n_total_cells
         if max_tree_depth is None:
