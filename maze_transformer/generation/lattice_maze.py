@@ -77,7 +77,10 @@ def coord_str_to_tuple(coord_str: str) -> CoordTup:
     return tuple(int(x) for x in stripped.split(","))
 
 
-@serializable_dataclass(frozen=True, kw_only=True)
+@serializable_dataclass(
+    frozen=True, kw_only=True,
+    properties_to_serialize=["lattice_dim", "generation_meta"],
+)
 class LatticeMaze(SerializableDataclass):
     """lattice maze (nodes on a lattice, connections only to neighboring nodes)
 
@@ -116,10 +119,9 @@ class LatticeMaze(SerializableDataclass):
 
     connection_list: ConnectionList
     generation_meta: dict | None = serializable_field(default=None, compare=False)
-    lattice_dim: int = serializable_field(default=2)
 
+    lattice_dim = property(lambda self: self.connection_list.shape[0])
     grid_shape = property(lambda self: self.connection_list.shape[1:])
-
     n_connections = property(lambda self: self.connection_list.sum())
 
     # ============================================================
@@ -792,6 +794,7 @@ class TargetedLatticeMaze(LatticeMaze):
             connection_list=lattice_maze.connection_list,
             start_pos=start_pos,
             end_pos=end_pos,
+            generation_meta=lattice_maze.generation_meta,
         )
 
 
@@ -806,7 +809,6 @@ class SolvedMaze(TargetedLatticeMaze):
         connection_list: ConnectionList,
         solution: CoordArray,
         generation_meta: dict | None = None,
-        lattice_dim: int = 2,
         start_pos: Coord | None = None,
         end_pos: Coord | None = None,
     ) -> None:
@@ -815,7 +817,6 @@ class SolvedMaze(TargetedLatticeMaze):
             generation_meta=generation_meta,
             start_pos=np.array(solution[0]),
             end_pos=np.array(solution[-1]),
-            lattice_dim=lattice_dim,
         )
         self.__dict__["solution"] = solution
 
@@ -851,6 +852,7 @@ class SolvedMaze(TargetedLatticeMaze):
         return cls(
             connection_list=lattice_maze.connection_list,
             solution=solution,
+            generation_meta=lattice_maze.generation_meta,
         )
 
     @classmethod
@@ -865,6 +867,7 @@ class SolvedMaze(TargetedLatticeMaze):
         return cls(
             connection_list=targeted_lattice_maze.connection_list,
             solution=np.array(solution),
+            generation_meta=targeted_lattice_maze.generation_meta,
         )
 
     @classmethod

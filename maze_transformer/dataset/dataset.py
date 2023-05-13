@@ -298,28 +298,29 @@ class GPTDataset(Dataset):
         # copy the list, and then clear it in the config. we do this because each time we apply a filter it will update config.applied_filters
         applied_filters_old: list[
             dict[typing.Literal["name", "args", "kwargs"], typing.Any]
-        ] = copy.deepcopy(self.cfg.applied_filters)
-        self.cfg.applied_filters = list()
+        ] = self.cfg.applied_filters
+        output.cfg.applied_filters = list()
         # apply the filters
         for filter_info in applied_filters_old:
             filter_name: str = filter_info["name"]
-            if filter_name not in self._FILTER_NAMESPACE.__dict__:
+            if filter_name not in output._FILTER_NAMESPACE.__dict__:
                 if filter_name.startswith("__custom__:"):
                     raise ValueError(
-                        f"the dataset {self.cfg.to_fname()} was filtering using a custom filter: '{filter_name}', which we don't know about. add it to MazeDatasetFilters"
+                        f"the dataset {output.cfg.to_fname()} was filtering using a custom filter: '{filter_name}', which we don't know about. add it to MazeDatasetFilters!"
                     )
                 else:
                     raise ValueError(
-                        f"the dataset {self.cfg.to_fname()} was filtering using an unknown filter: '{filter_name}'"
+                        f"the dataset {output.cfg.to_fname()} was filtering using an unknown filter: '{filter_name}'"
                     )
+            print(f"applying filter: {filter_name} with info {filter_info}")
             filter_args: list = filter_info["args"]
             filter_kwargs: dict = filter_info["kwargs"]
-            output = getattr(self.filter_by, filter_name)(*filter_args, **filter_kwargs)
+            output = getattr(output.filter_by, filter_name)(*filter_args, **filter_kwargs)
         # update the config
-        self.update_self_config()
+        output.update_self_config()
         assert (
-            self.cfg.applied_filters == applied_filters_old
-        ), f"config mismatch: {self.cfg.applied_filters} != {applied_filters_old}"
+            output.cfg.applied_filters == applied_filters_old
+        ), f"config mismatch in applied filters: {output.cfg.applied_filters} != {applied_filters_old}"
         return output
 
 
@@ -351,12 +352,14 @@ def register_dataset_filter(
 ) -> DatasetFilterProtocol:
     """register a dataset filter, copying the underlying dataset and updating the config
 
+    be sure to return a COPY, not the original?
+
     method should be a staticmethod of a namespace class registered with `register_filter_namespace_for_dataset`
     """
 
     @functools.wraps(method)
     def wrapper(dataset: GPTDataset, *args, **kwargs):
-        new_dataset = copy.deepcopy(method(dataset, *args, **kwargs))
+        new_dataset = method(dataset, *args, **kwargs)
         # update the config
         new_dataset.cfg.applied_filters.append(
             dict(name=method.__name__, args=args, kwargs=kwargs)

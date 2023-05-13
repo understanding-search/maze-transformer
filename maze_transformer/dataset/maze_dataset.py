@@ -1,18 +1,21 @@
 import copy
 import functools
+import itertools
 import json
 import multiprocessing
 import typing
 import warnings
 from functools import cached_property
 from typing import Callable
+from collections import Counter, defaultdict
 
 import numpy as np
 import tqdm
 from jaxtyping import Int
-from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field
+from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field, json_serialize
 from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import sanitize_fname
+from muutils.statcounter import StatCounter
 
 from maze_transformer.dataset.dataset import (
     DatasetFilterProtocol,
@@ -199,10 +202,12 @@ class MazeDataset(GPTDataset):
         self,
         cfg: MazeDatasetConfig,
         mazes: typing.Sequence[SolvedMaze],
+        generation_metadata_collected: dict|None = None,
     ) -> None:
         super().__init__()
         self.cfg: MazeDatasetConfig = cfg
         self.mazes: list[SolvedMaze] = list(mazes)
+        self.generation_metadata_collected: dict|None = generation_metadata_collected
 
     def data_hash(self) -> int:
         return hash(tuple(self.mazes))
@@ -288,6 +293,7 @@ class MazeDataset(GPTDataset):
         return cls(
             cfg=MazeDatasetConfig.load(data["cfg"]),
             mazes=[SolvedMaze.load(m) for m in data["mazes"]],
+            generation_metadata_collected=data.get("generation_metadata_collected", None),
         )
 
     def serialize(self) -> JSONitem:
@@ -296,6 +302,7 @@ class MazeDataset(GPTDataset):
             "__format__": "MazeDataset",
             "cfg": self.cfg.serialize(),
             "mazes": [m.serialize() for m in self.mazes],
+            "generation_metadata_collected": json_serialize(self.generation_metadata_collected),
         }
 
     @classmethod
@@ -351,10 +358,10 @@ def register_maze_filter(
     @functools.wraps(method)
     def wrapper(dataset: MazeDataset, *args, **kwargs):
         # copy and filter
-        new_dataset: MazeDataset = MazeDataset(
+        new_dataset: MazeDataset = copy.deepcopy(MazeDataset(
             cfg=dataset.cfg,
             mazes=[m for m in dataset.mazes if method(m, *args, **kwargs)],
-        )
+        ))
         # update the config
         new_dataset.cfg.applied_filters.append(
             dict(name=method.__name__, args=args, kwargs=kwargs)
@@ -395,7 +402,7 @@ class MazeDatasetFilters:
         ]
         new_dataset: MazeDataset = MazeDataset(cfg=dataset.cfg, mazes=filtered_mazes)
 
-        return new_dataset
+        return copy.deepcopy(new_dataset)
 
     @register_dataset_filter
     @staticmethod
@@ -407,7 +414,7 @@ class MazeDatasetFilters:
         new_dataset: MazeDataset = MazeDataset(
             cfg=dataset.cfg, mazes=dataset.mazes[:max_count]
         )
-        return new_dataset
+        return copy.deepcopy(new_dataset)
 
     @register_dataset_filter
     @staticmethod
@@ -458,4 +465,84 @@ class MazeDatasetFilters:
             if a_unique:
                 unique_mazes.append(maze_a)
 
-        return MazeDataset(cfg=dataset.cfg, mazes=unique_mazes)
+        return copy.deepcopy(MazeDataset(cfg=dataset.cfg, mazes=unique_mazes))
+    
+    @register_dataset_filter
+    @staticmethod
+    def strip_generation_meta(dataset: MazeDataset) -> MazeDataset:
+        """strip the generation meta from the dataset"""
+        new_dataset: MazeDataset = copy.deepcopy(dataset)
+        for maze in new_dataset:
+            maze.generation_meta = None
+        return new_dataset
+
+    @register_dataset_filter
+    @staticmethod
+    def collect_generation_meta(dataset: MazeDataset, clear_in_mazes: bool = True) -> MazeDataset:
+        new_dataset: MazeDataset = copy.deepcopy(dataset)
+
+        gen_meta_lists: dict = defaultdict(list)
+        for maze in new_dataset:
+            for key, value in maze.generation_meta.items():
+                gen_meta_lists[key].append(value)
+
+            # clear the data
+            if clear_in_mazes:
+                maze.generation_meta = None
+
+        new_dataset.generation_metadata_collected = {
+            key: dict(Counter(value))
+            for key, value in gen_meta_lists.items()
+        }
+
+        return new_dataset
+
+
+        # the code below is for doing some smarter collecting and type checking. Probably will delete.
+        """
+        collect either the type at the field, or the shape of the field if it is an array
+        metadata_types: dict[str, set[type, tuple]] = dict()
+        for maze in new_dataset:
+            for key, value in maze.generation_meta.items():
+                if key not in metadata_types:
+                    metadata_types[key] = set()
+
+                if isinstance(value, np.ndarray):
+                    metadata_types[key].add(value.shape)
+                else:
+                    metadata_types[key].add(type(value))
+
+        # figure out what to do for each field
+        metadata_actions: dict[str, typing.Callable] = dict()
+        for key, key_type in metadata_types.items():
+            if all(isinstance(kt, tuple) for kt in key_type):
+                if all(kt == (2,) for kt in key_type):
+                    # its all coords, do a statcounter on those coords
+                    metadata_actions[key] = lambda vals: Counter(tuple(x) for x in vals)
+                elif all(
+                    (len(kt) == 2) and (kt[1] == 2) 
+                    for kt in key_type
+                ):
+                    # its a list of coords, do a statcounter on those coords
+                    metadata_actions[key] = lambda vals: Counter(
+                        tuple(x) for x in np.concatenate(vals)
+                    )
+                else:
+                    # its a list of something else, do a counter on those
+                    # TODO: throw except here?
+                    metadata_actions[key] = Counter
+                    
+            elif all(kt in (bool, int, float) for kt in key_type):
+                # statcounter for numeric types
+                metadata_actions[key] = StatCounter
+            elif all(kt == str for kt in key_type):
+                # counter for string types
+                metadata_actions[key] = Counter
+            else:
+                # counter for everything else
+                # TODO: throw except here?
+                metadata_actions[key] = Counter
+        """
+
+        
+
