@@ -641,10 +641,9 @@ class LatticeMaze(SerializableDataclass):
 
         # order the solution, by creating a list from the start to the end
         # add end pos, since we will iterate over all these starting from the start pos
-        solution_raw_list: list[CoordTup] = (
-            [tuple(c) for c in solution_raw] 
-            + [tuple(end_pos)]
-        )
+        solution_raw_list: list[CoordTup] = [tuple(c) for c in solution_raw] + [
+            tuple(end_pos)
+        ]
         # solution starts with start point
         solution: list[CoordTup] = [tuple(start_pos)]
         while solution[-1] != tuple(end_pos):
@@ -890,7 +889,9 @@ class SolvedMaze(TargetedLatticeMaze):
 
 def detect_pixels_type(data: PixelGrid) -> typing.Type[LatticeMaze]:
     """Detects the type of pixels data by checking for the presence of start and end pixels"""
-    if color_in_pixel_grid(data, PixelColors.START) or color_in_pixel_grid(data, PixelColors.END):
+    if color_in_pixel_grid(data, PixelColors.START) or color_in_pixel_grid(
+        data, PixelColors.END
+    ):
         if color_in_pixel_grid(data, PixelColors.PATH):
             return SolvedMaze
         else:
