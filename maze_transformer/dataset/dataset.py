@@ -315,9 +315,13 @@ class GPTDataset(Dataset):
             print(f"applying filter: {filter_name} with info {filter_info}")
             filter_args: list = filter_info["args"]
             filter_kwargs: dict = filter_info["kwargs"]
+            print("pre_apply: ", output.cfg.applied_filters)
             output = getattr(output.filter_by, filter_name)(*filter_args, **filter_kwargs)
+            print("post_apply: ", output.cfg.applied_filters)
         # update the config
+        print("post_loop: ", output.cfg.applied_filters)
         output.update_self_config()
+        print("post_update: ", output.cfg.applied_filters)
         assert (
             output.cfg.applied_filters == applied_filters_old
         ), f"config mismatch in applied filters: {output.cfg.applied_filters} != {applied_filters_old}"

@@ -236,6 +236,8 @@ class MazeDataset(GPTDataset):
     ) -> "MazeDataset":
         """generate a maze dataset"""
 
+        cfg = copy.deepcopy(cfg)
+
         if pool_kwargs is None:
             pool_kwargs = dict()
         mazes: list[SolvedMaze] = list()
@@ -357,16 +359,20 @@ def register_maze_filter(
 
     @functools.wraps(method)
     def wrapper(dataset: MazeDataset, *args, **kwargs):
+        print(f"applying filter {method.__name__} to {len(dataset)} mazes")
         # copy and filter
         new_dataset: MazeDataset = copy.deepcopy(MazeDataset(
             cfg=dataset.cfg,
             mazes=[m for m in dataset.mazes if method(m, *args, **kwargs)],
         ))
+        print(new_dataset.cfg.applied_filters)
         # update the config
         new_dataset.cfg.applied_filters.append(
             dict(name=method.__name__, args=args, kwargs=kwargs)
         )
+        print(new_dataset.cfg.applied_filters)
         new_dataset.update_self_config()
+        print(new_dataset.cfg.applied_filters)
         return new_dataset
 
     return wrapper
