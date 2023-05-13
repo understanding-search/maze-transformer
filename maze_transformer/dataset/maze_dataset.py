@@ -85,7 +85,6 @@ class MazeDatasetConfig(GPTDatasetConfig):
         loading_fn=lambda data: _load_maze_ctor(data["maze_ctor"]),
     )
 
-    # TODO: add "maze_ctor_kwargs" field, for use in generators (see @canrager branch can-183-constrained-dfs)
     maze_ctor_kwargs: dict = serializable_field(
         default_factory=dict,
         serialization_fn=lambda kwargs: kwargs,
@@ -96,9 +95,6 @@ class MazeDatasetConfig(GPTDatasetConfig):
             else data["maze_ctor_kwargs"]
         ),
     )
-
-    # paths_per_maze: int = 5,
-    # p_min_tgt_dist: float = 0.2,
 
     @property
     def grid_shape(self) -> CoordTup:
