@@ -120,10 +120,13 @@ class LatticeMazeGenerators:
                 func_name="gen_dfs",
                 grid_shape=grid_shape,
                 start_coord=start_coord,
-                visited_cells=visited_cells,
-                n_accessible_cells=n_accessible_cells,
-                max_tree_depth=max_tree_depth,
-                fully_connected=(len(visited_cells) == n_accessible_cells),
+                visited_cells={
+                    tuple(int(x) for x in coord) 
+                    for coord in visited_cells
+                },
+                n_accessible_cells=int(n_accessible_cells),
+                max_tree_depth=int(max_tree_depth),
+                fully_connected=bool(len(visited_cells) == n_accessible_cells),
             ),
         )
 
