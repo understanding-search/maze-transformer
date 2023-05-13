@@ -3,6 +3,7 @@ import functools
 import json
 import multiprocessing
 import typing
+import copy
 import warnings
 from functools import cached_property
 from typing import Callable
@@ -396,3 +397,59 @@ class MazeDatasetFilters:
         new_dataset: MazeDataset = MazeDataset(cfg=dataset.cfg, mazes=filtered_mazes)
 
         return new_dataset
+    
+    @register_dataset_filter
+    @staticmethod
+    def truncate_count(
+        dataset: MazeDataset,
+        max_count: int,
+    ) -> MazeDataset:
+        """truncate the dataset to be at most `max_count` mazes"""
+        new_dataset: MazeDataset = MazeDataset(cfg=dataset.cfg, mazes=dataset.mazes[:max_count])
+        return new_dataset
+    
+    @register_dataset_filter
+    @staticmethod
+    def remove_duplicates(
+        dataset: MazeDataset,
+        minimum_difference_connection_list: int|None = 1,
+        minimum_difference_solution: int|None = 1,
+    ) -> MazeDataset:
+        """remove duplicates from a dataset, keeping the **LAST** unique maze
+
+        set minimum either minimum difference to `None` to disable checking
+
+        if you want to avoid mazes which have more overlap, set the minimum difference to be greater
+
+        Gotchas:
+        - if two mazes are of different sizes, they will never be considered duplicates
+        - if two solutions are of different lengths, they will never be considered duplicates
+            TODO: check for overlap?
+        """
+        unique_mazes: list[SolvedMaze] = list()
+
+        maze_a: SolvedMaze; maze_b: SolvedMaze
+        for i, maze_a in enumerate(dataset.mazes):
+            a_unique: bool = True
+            for maze_b in dataset.mazes[i+1:]:
+                # after all that nesting, more nesting to perform checks
+                if (
+                    (minimum_difference_connection_list is not None)
+                    and (maze_a.connection_list.shape == maze_b.connection_list.shape)
+                ):  
+                    if np.sum(maze_a.connection_list != maze_b.connection_list) <= minimum_difference_connection_list:
+                        a_unique = False
+                        break
+                
+                if (
+                    (minimum_difference_solution is not None)
+                    and (maze_a.solution.shape == maze_b.solution.shape)
+                ):
+                    if np.sum(maze_a.solution != maze_b.solution) <= minimum_difference_solution:
+                        a_unique = False
+                        break
+
+            if a_unique:
+                unique_mazes.append(maze_a)
+
+        return MazeDataset(cfg=dataset.cfg, mazes=unique_mazes)

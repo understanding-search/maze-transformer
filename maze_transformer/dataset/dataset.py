@@ -356,7 +356,7 @@ def register_dataset_filter(
 
     @functools.wraps(method)
     def wrapper(dataset: GPTDataset, *args, **kwargs):
-        new_dataset = method(dataset, *args, **kwargs)
+        new_dataset = copy.deepcopy(method(dataset, *args, **kwargs))
         # update the config
         new_dataset.cfg.applied_filters.append(
             dict(name=method.__name__, args=args, kwargs=kwargs)

@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pytest
 
@@ -167,3 +168,80 @@ class TestMazeDatasetFilters:
         filtered = dataset.filter_by.cut_percentile_shortest(49.0)
 
         assert filtered.mazes == mazes[:2]
+
+
+DATASET_RAW_ASCII = """
+#####
+#  E#
+###X#
+#SXX#
+##### 
+
+-----
+
+#####
+#SXE#
+### #
+#   #
+##### 
+
+-----
+
+#####
+# # #
+# # #
+#EXS#
+##### 
+
+-----
+
+#####
+#SXX#
+###X#
+#EXX#
+##### 
+"""
+
+DATASET_DEDUPE_ASCII = """
+#####
+# # #
+# # #
+#EXS#
+##### 
+
+-----
+
+#####
+#SXX#
+###X#
+#EXX#
+##### 
+"""
+
+
+def _helper_dataset_from_ascii(ascii: str) -> MazeDataset:
+    mazes: list[SolvedMaze] = list()
+    for maze in ascii.split("-----"):
+        try:
+            mazes.append(SolvedMaze.from_ascii(maze.strip()))
+        except Exception as e:
+            raise ValueError(f"Failed to parse maze:\n{maze}") from e
+
+    return MazeDataset(
+        MazeDatasetConfig(name="test", grid_n=mazes[0].grid_shape[0], n_mazes=len(mazes)), 
+        mazes,
+    )
+
+def test_remove_duplicates():
+    dataset: MazeDataset = _helper_dataset_from_ascii(DATASET_RAW_ASCII)
+
+    assert len(dataset) == 4
+
+    dataset_deduped: MazeDataset = dataset.filter_by.remove_duplicates()
+
+    assert len(dataset_deduped) == 2
+
+    mazes_deduped_from_ascii: MazeDataset = _helper_dataset_from_ascii(DATASET_DEDUPE_ASCII)
+
+    for x, y in zip(dataset_deduped.mazes, mazes_deduped_from_ascii.mazes):
+        assert x == y

@@ -35,6 +35,14 @@ BinaryPixelGrid = Bool[np.ndarray, "x y"]
 ConnectionList = Bool[np.ndarray, "lattice_dim x y"]
 
 
+def color_in_pixel_grid(pixel_grid: PixelGrid, color: RGB) -> bool:
+    for row in pixel_grid:
+        for pixel in row:
+            if np.all(pixel == color):
+                return True
+    return False
+
+
 @dataclass(frozen=True)
 class PixelColors:
     WALL: RGB = (0, 0, 0)
@@ -619,21 +627,25 @@ class LatticeMaze(SerializableDataclass):
                 end_pos=end_pos,
             )
 
-        # solution
+        # raw solution, only contains path elements and not start or end
         solution_raw: CoordArray = marked_pos["solution"]
-        assert (
-            solution_raw.shape[1] == 2
-        ), f"solution {solution_raw} has shape {solution_raw.shape}, expected shape (n, 2)"
-        assert (
-            start_pos in solution_raw
-        ), f"start_pos {start_pos} not in solution {solution_raw}"
-        assert (
-            end_pos in solution_raw
-        ), f"end_pos {end_pos} not in solution {solution_raw}"
+        if len(solution_raw.shape) == 2:
+            assert (
+                solution_raw.shape[1] == 2
+            ), f"solution {solution_raw} has shape {solution_raw.shape}, expected shape (n, 2)"
+        elif solution_raw.shape == (0,):
+            # the solution and end should be immediately adjacent
+            assert (
+                np.sum(np.abs(start_pos - end_pos)) == 1
+            ), f"start_pos {start_pos} and end_pos {end_pos} are not adjacent, but no solution was given"
+
         # order the solution, by creating a list from the start to the end
-        solution_raw_list: list[CoordTup] = [tuple(c) for c in solution_raw] + [
-            tuple(end_pos)
-        ]
+        # add end pos, since we will iterate over all these starting from the start pos
+        solution_raw_list: list[CoordTup] = (
+            [tuple(c) for c in solution_raw] 
+            + [tuple(end_pos)]
+        )
+        # solution starts with start point
         solution: list[CoordTup] = [tuple(start_pos)]
         while solution[-1] != tuple(end_pos):
             # use `get_coord_neighbors` to find connected neighbors
@@ -878,8 +890,8 @@ class SolvedMaze(TargetedLatticeMaze):
 
 def detect_pixels_type(data: PixelGrid) -> typing.Type[LatticeMaze]:
     """Detects the type of pixels data by checking for the presence of start and end pixels"""
-    if PixelColors.START in data or PixelColors.END in data:
-        if PixelColors.PATH in data:
+    if color_in_pixel_grid(data, PixelColors.START) or color_in_pixel_grid(data, PixelColors.END):
+        if color_in_pixel_grid(data, PixelColors.PATH):
             return SolvedMaze
         else:
             return TargetedLatticeMaze
