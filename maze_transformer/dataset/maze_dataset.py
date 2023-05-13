@@ -1,21 +1,24 @@
 import copy
 import functools
-import itertools
 import json
 import multiprocessing
 import typing
 import warnings
+from collections import Counter, defaultdict
 from functools import cached_property
 from typing import Callable
-from collections import Counter, defaultdict
 
 import numpy as np
 import tqdm
 from jaxtyping import Int
-from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field, json_serialize
+from muutils.json_serialize import (
+    JSONitem,
+    json_serialize,
+    serializable_dataclass,
+    serializable_field,
+)
 from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import sanitize_fname
-from muutils.statcounter import StatCounter
 
 from maze_transformer.dataset.dataset import (
     DatasetFilterProtocol,
@@ -73,7 +76,9 @@ class MazeDatasetConfig(GPTDatasetConfig):
     """maze dataset configuration, including tokenizers"""
 
     grid_n: int
-    n_mazes: int = serializable_field(compare=False) # this is primarily to avoid conflicts which happen during `from_config` when we have applied filters
+    n_mazes: int = serializable_field(
+        compare=False
+    )  # this is primarily to avoid conflicts which happen during `from_config` when we have applied filters
     maze_ctor: Callable = serializable_field(
         default_factory=lambda: LatticeMazeGenerators.gen_dfs,
         serialization_fn=lambda gen_func: {
@@ -198,12 +203,12 @@ class MazeDataset(GPTDataset):
         self,
         cfg: MazeDatasetConfig,
         mazes: typing.Sequence[SolvedMaze],
-        generation_metadata_collected: dict|None = None,
+        generation_metadata_collected: dict | None = None,
     ) -> None:
         super().__init__()
         self.cfg: MazeDatasetConfig = cfg
         self.mazes: list[SolvedMaze] = list(mazes)
-        self.generation_metadata_collected: dict|None = generation_metadata_collected
+        self.generation_metadata_collected: dict | None = generation_metadata_collected
 
     def data_hash(self) -> int:
         return hash(tuple(self.mazes))
@@ -291,7 +296,9 @@ class MazeDataset(GPTDataset):
         return cls(
             cfg=MazeDatasetConfig.load(data["cfg"]),
             mazes=[SolvedMaze.load(m) for m in data["mazes"]],
-            generation_metadata_collected=data.get("generation_metadata_collected", None),
+            generation_metadata_collected=data.get(
+                "generation_metadata_collected", None
+            ),
         )
 
     def serialize(self) -> JSONitem:
@@ -300,7 +307,9 @@ class MazeDataset(GPTDataset):
             "__format__": "MazeDataset",
             "cfg": self.cfg.serialize(),
             "mazes": [m.serialize() for m in self.mazes],
-            "generation_metadata_collected": json_serialize(self.generation_metadata_collected),
+            "generation_metadata_collected": json_serialize(
+                self.generation_metadata_collected
+            ),
         }
 
     @classmethod
@@ -356,10 +365,12 @@ def register_maze_filter(
     @functools.wraps(method)
     def wrapper(dataset: MazeDataset, *args, **kwargs):
         # copy and filter
-        new_dataset: MazeDataset = copy.deepcopy(MazeDataset(
-            cfg=dataset.cfg,
-            mazes=[m for m in dataset.mazes if method(m, *args, **kwargs)],
-        ))
+        new_dataset: MazeDataset = copy.deepcopy(
+            MazeDataset(
+                cfg=dataset.cfg,
+                mazes=[m for m in dataset.mazes if method(m, *args, **kwargs)],
+            )
+        )
         # update the config
         new_dataset.cfg.applied_filters.append(
             dict(name=method.__name__, args=args, kwargs=kwargs)
@@ -464,7 +475,7 @@ class MazeDatasetFilters:
                 unique_mazes.append(maze_a)
 
         return copy.deepcopy(MazeDataset(cfg=dataset.cfg, mazes=unique_mazes))
-    
+
     @register_dataset_filter
     @staticmethod
     def strip_generation_meta(dataset: MazeDataset) -> MazeDataset:
@@ -477,7 +488,9 @@ class MazeDatasetFilters:
 
     @register_dataset_filter
     @staticmethod
-    def collect_generation_meta(dataset: MazeDataset, clear_in_mazes: bool = True) -> MazeDataset:
+    def collect_generation_meta(
+        dataset: MazeDataset, clear_in_mazes: bool = True
+    ) -> MazeDataset:
         new_dataset: MazeDataset = copy.deepcopy(dataset)
 
         gen_meta_lists: dict = defaultdict(list)
@@ -485,7 +498,7 @@ class MazeDatasetFilters:
             for key, value in maze.generation_meta.items():
                 if isinstance(value, (bool, int, float, str)):
                     gen_meta_lists[key].append(value)
-                
+
                 elif isinstance(value, set):
                     # special case for visited_cells
                     # HACK: this is ugly!!
@@ -495,7 +508,9 @@ class MazeDatasetFilters:
                     if (len(value.shape) == 1) and (value.shape[0] == maze.lattice_dim):
                         # assume its a single coordinate
                         gen_meta_lists[key].append(tuple(value))
-                    elif (len(value.shape) == 2) and (value.shape[1] == maze.lattice_dim):
+                    elif (len(value.shape) == 2) and (
+                        value.shape[1] == maze.lattice_dim
+                    ):
                         # assume its a list of coordinates
                         gen_meta_lists[key].extend([tuple(v) for v in value])
                     else:
@@ -516,12 +531,10 @@ class MazeDatasetFilters:
                 maze.__dict__["generation_meta"] = None
 
         new_dataset.generation_metadata_collected = {
-            key: dict(Counter(value))
-            for key, value in gen_meta_lists.items()
+            key: dict(Counter(value)) for key, value in gen_meta_lists.items()
         }
 
         return new_dataset
-
 
         # the code below is for doing some smarter collecting and type checking. Probably will delete.
         """
@@ -568,6 +581,3 @@ class MazeDatasetFilters:
                 # TODO: throw except here?
                 metadata_actions[key] = Counter
         """
-
-        
-

@@ -1,4 +1,3 @@
-import copy
 import functools
 import json
 import typing
@@ -314,7 +313,9 @@ class GPTDataset(Dataset):
                     )
             filter_args: list = filter_info["args"]
             filter_kwargs: dict = filter_info["kwargs"]
-            output = getattr(output.filter_by, filter_name)(*filter_args, **filter_kwargs)
+            output = getattr(output.filter_by, filter_name)(
+                *filter_args, **filter_kwargs
+            )
         # update the config
         output.update_self_config()
         assert (

@@ -1,4 +1,5 @@
 import copy
+
 import numpy as np
 import pytest
 
@@ -115,9 +116,11 @@ class TestMazeDatasetFilters:
             @staticmethod
             def drop_nth(dataset: TestDataset, n: int) -> TestDataset:
                 """Filter mazes by path length"""
-                return copy.deepcopy(TestDataset(
-                    dataset.cfg, [maze for i, maze in enumerate(dataset) if i != n]
-                ))
+                return copy.deepcopy(
+                    TestDataset(
+                        dataset.cfg, [maze for i, maze in enumerate(dataset) if i != n]
+                    )
+                )
 
         maze1 = SolvedMaze(
             connection_list=self.connection_list, solution=np.array([[0, 0]])

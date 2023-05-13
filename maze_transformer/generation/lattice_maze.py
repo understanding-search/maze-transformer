@@ -78,7 +78,8 @@ def coord_str_to_tuple(coord_str: str) -> CoordTup:
 
 
 @serializable_dataclass(
-    frozen=True, kw_only=True,
+    frozen=True,
+    kw_only=True,
     properties_to_serialize=["lattice_dim", "generation_meta"],
 )
 class LatticeMaze(SerializableDataclass):
