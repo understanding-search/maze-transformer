@@ -41,3 +41,14 @@ class TestMazeDatasetCollection():
         assert self.test_collection[0].connection_list.shape == (5, 5)
         assert self.test_collection[1].connection_list.shape == (1, 1)
         assert self.test_collection[6].connection_list.shape == (4, 4)
+
+    def test_download(self):
+        # TODO
+        pass
+         
+    def test_serialize_and_load(self):
+        serialized = self.test_collection.serialize()
+        loaded = MazeDatasetCollection.load(serialized)
+        assert loaded.mazes == self.test_collection.mazes
+        assert loaded.cfg == self.test_collection.cfg
+
