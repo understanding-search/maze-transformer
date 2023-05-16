@@ -69,7 +69,7 @@ class GPTDatasetConfig(SerializableDataclass):
         raise NotImplementedError()
 
     @cached_property
-    def padding_token_index(self) -> str:
+    def padding_token_index(self) -> int:
         raise NotImplementedError()
 
     @cached_property
@@ -81,15 +81,6 @@ class GPTDatasetConfig(SerializableDataclass):
     @property
     def _dataset_class(cls) -> type:
         raise NotImplementedError("this should be implemented by subclasses!")
-
-    def tokenize_seq(self, seq: list[str]) -> ATensor:
-        """tokenize sequence"""
-        return torch.tensor(
-            [self.tokenizer_map[t] for t in seq],
-            dtype=self.dtype,
-            # TODO: Should this use get_device()?
-            device="cpu",
-        )
 
     def to_fname(self) -> str:
         """convert config to a filename"""

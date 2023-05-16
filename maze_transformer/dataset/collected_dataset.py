@@ -1,8 +1,11 @@
 import itertools
 from functools import cached_property
+import json
 
 import numpy as np
+from jaxtyping import Int, Float
 from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field
+from muutils.misc import sanitize_fname
 
 from maze_transformer.dataset.dataset import GPTDataset, GPTDatasetConfig
 from maze_transformer.dataset.maze_dataset import (
@@ -10,7 +13,9 @@ from maze_transformer.dataset.maze_dataset import (
     MazeDataset,
     MazeDatasetConfig,
 )
+from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
 from maze_transformer.generation.lattice_maze import LatticeMaze
+from maze_transformer.utils import stable_hash
 
 
 @serializable_dataclass(
@@ -33,6 +38,43 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
     @property
     def max_grid_n(self) -> int:
         return max(config.max_grid_n for config in self.maze_dataset_configs)
+    
+    @property
+    def max_grid_shape(self) -> CoordTup:
+        return (self.max_grid_n, self.max_grid_n)
+    
+    @property
+    def max_grid_shape_np(self) -> Coord:
+        return np.array(self.max_grid_shape)
+
+    @cached_property
+    def node_token_map(self) -> dict[CoordTup, str]:
+        """map from node to token"""
+        return {tuple(c): f"({','.join(c)})" for c in np.ndindex(self.max_grid_shape_np)}
+
+    @cached_property
+    def token_node_map(self) -> dict[str, CoordTup]:
+        """map from token to node"""
+        return {v: k for k, v in self.node_token_map.items()}
+
+    @cached_property
+    def token_arr(self) -> list[str]:
+        """map from index to token"""
+        return [
+            *list(SPECIAL_TOKENS.values()),
+            *list(self.node_token_map.values()),
+        ]
+
+    @property
+    def n_tokens(self) -> int:
+        return len(self.token_arr)
+
+    def stable_hash_cfg(self) -> int:
+        return stable_hash(json.dumps(self.serialize()))
+
+    def to_fname(self) -> str:
+        """convert config to a filename"""
+        return sanitize_fname(f"collected-{self.name}_{self.stable_hash_cfg()%10**5}")
 
 
 class MazeDatasetCollection(GPTDataset):
@@ -52,8 +94,8 @@ class MazeDatasetCollection(GPTDataset):
         return [len(dataset) for dataset in self.maze_datasets]
 
     @cached_property
-    def dataset_cum_lengths(self) -> list[int]:
-        return list(itertools.accumulate(self.dataset_lengths))
+    def dataset_cum_lengths(self) -> Int[np.ndarray, "indices"]:
+        return np.array(list(itertools.accumulate(self.dataset_lengths)))
 
     @cached_property
     def mazes(self) -> list[LatticeMaze]:
@@ -101,13 +143,17 @@ class MazeDatasetCollection(GPTDataset):
 
     @classmethod
     def load(cls, data: JSONitem) -> "MazeDatasetCollection":
-        cfg = MazeDatasetCollectionConfig.from_dict(data["cfg"])
-        datasets = [
-            MazeDataset.load(dataset_data) for dataset_data in data["maze_datasets"]
-        ]
-        return cls(cfg, datasets)
+        return cls(
+            cfg = MazeDatasetCollectionConfig.load(data["cfg"]), 
+            maze_datasets = [
+                MazeDataset.load(dataset_data) for dataset_data in data["maze_datasets"]
+            ],
+        )
 
     def update_self_config(self) -> None:
         self.cfg.n_mazes = len(self)
         for dataset in self.maze_datasets:
             dataset.update_self_config()
+
+
+MazeDatasetCollectionConfig._dataset_class = MazeDatasetCollection

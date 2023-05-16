@@ -112,7 +112,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:
         """map from node to token"""
-        return {tuple(c): f"({c[0]},{c[1]})" for c in np.ndindex(self.grid_shape)}
+        return {tuple(c): f"({','.join(c)})" for c in np.ndindex(self.grid_shape)}
 
     @cached_property
     def token_node_map(self) -> dict[str, CoordTup]:
@@ -132,7 +132,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
         return len(self.token_arr)
 
     @cached_property
-    def padding_token_index(self) -> str:
+    def padding_token_index(self) -> int:
         return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
     def stable_hash_cfg(self) -> int:
