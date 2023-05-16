@@ -443,6 +443,11 @@ class MazeDatasetFilters:
         - if two solutions are of different lengths, they will never be considered duplicates
             TODO: check for overlap?
         """
+        if len(dataset) > 1000:
+            raise ValueError(
+                "this method is currently very slow for large datasets, consider using `remove_duplicates_fast` instead"
+            )
+
         unique_mazes: list[SolvedMaze] = list()
 
         maze_a: SolvedMaze
@@ -475,6 +480,16 @@ class MazeDatasetFilters:
                 unique_mazes.append(maze_a)
 
         return copy.deepcopy(MazeDataset(cfg=dataset.cfg, mazes=unique_mazes))
+
+    @register_dataset_filter
+    @staticmethod
+    def remove_duplicates_fast(
+        dataset: MazeDataset) -> MazeDataset:
+        """remove duplicates from a dataset"""
+
+        unique_mazes = list(dict.fromkeys(dataset.mazes))
+        return copy.deepcopy(MazeDataset(cfg=dataset.cfg, mazes=unique_mazes))
+
 
     @register_dataset_filter
     @staticmethod

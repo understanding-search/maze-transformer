@@ -133,6 +133,9 @@ class LatticeMaze(SerializableDataclass):
         """return manhattan distance between two points"""
         return np.abs(a[0] - b[0]) + np.abs(a[1] - b[1])
 
+    def __hash__(self) -> int:
+        return hash(self.connection_list.tobytes())
+
     def nodes_connected(self, a: Coord, b: Coord, /) -> bool:
         """returns whether two nodes are connected"""
         delta: Coord = b - a
@@ -829,6 +832,9 @@ class SolvedMaze(TargetedLatticeMaze):
             assert np.array_equal(
                 np.array(end_pos), self.end_pos
             ), f"when trying to create a SolvedMaze, the given end_pos does not match the one in the solution: given={end_pos}, solution={self.end_pos}"
+
+    def __hash__(self) -> int:
+        return hash((self.connection_list.tobytes(), self.solution.tobytes()))
 
     def get_solution_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
         return [
