@@ -5,7 +5,7 @@ import json
 import numpy as np
 from jaxtyping import Int, Float
 from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field
-from muutils.misc import sanitize_fname
+from muutils.misc import sanitize_fname, stable_hash
 
 from maze_transformer.dataset.dataset import GPTDataset, GPTDatasetConfig
 from maze_transformer.dataset.maze_dataset import (
@@ -15,7 +15,6 @@ from maze_transformer.dataset.maze_dataset import (
 )
 from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
 from maze_transformer.generation.lattice_maze import LatticeMaze
-from maze_transformer.utils import stable_hash
 
 
 @serializable_dataclass(

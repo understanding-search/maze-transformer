@@ -20,6 +20,7 @@ from muutils.zanj.torchutil import ConfiguredModel, set_config_class
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
+from maze_transformer.dataset.dataset import GPTDatasetConfig
 
 from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 from maze_transformer.dataset.maze_dataset_configs import MAZE_DATASET_CONFIGS
@@ -201,7 +202,7 @@ class ConfigHolder(SerializableDataclass):
     Handles any logic that moves data between the configs below it.
     """
 
-    dataset_cfg: MazeDatasetConfig
+    dataset_cfg: GPTDatasetConfig
     model_cfg: BaseGPTConfig
     train_cfg: TrainConfig
     name: str = serializable_field(default="default")

@@ -5,6 +5,7 @@ import torch
 from muutils.tensor_utils import ATensor, NDArray
 from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
+from maze_transformer.dataset.dataset import GPTDatasetConfig
 
 from maze_transformer.evaluation.plot_maze import MazePlot
 from maze_transformer.generation.constants import SPECIAL_TOKENS
@@ -39,7 +40,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     def __init__(
         self,
-        cfg: Union["ConfigHolder", "MazeDatasetConfig", None] = None,
+        cfg: Union["ConfigHolder", "GPTDatasetConfig", None] = None,
         token_arr: list[str] | None = None,
         seq_len_max: int | None = None,
         **kwargs,
