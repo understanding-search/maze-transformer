@@ -51,6 +51,12 @@ __MAZEDATASET_PROPERTIES_TO_VALIDATE: list[str] = [
     "n_tokens",
 ]
 
+def _coord_to_str(coord: Coord) -> str:
+    return f"({','.join(str(c) for c in coord)})"
+
+def _str_to_coord(coord_str: str) -> Coord:
+    return np.array(tuple(int(x) for x in coord_str.strip("() \t").split(",")))
+
 
 def _load_maze_ctor(maze_ctor_serialized: str | dict) -> Callable:
     if isinstance(maze_ctor_serialized, dict):
@@ -111,7 +117,10 @@ class MazeDatasetConfig(GPTDatasetConfig):
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:
         """map from node to token"""
-        return {tuple(c): f"({','.join(str(c))})" for c in np.ndindex(self.grid_shape)}
+        return {
+            tuple(coord): _coord_to_str(coord)
+            for coord in np.ndindex(self.grid_shape)
+        }
 
     @cached_property
     def token_node_map(self) -> dict[str, CoordTup]:

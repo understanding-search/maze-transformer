@@ -54,7 +54,7 @@ def apply_mapping(
     when_missing: WhenMissing = "skip",
 ) -> list[Any]:
     """Given a list and a mapping, apply the mapping to the list"""
-    output = list()
+    output: list = list()
     for item in iter:
         if item in mapping:
             output.append(mapping[item])
