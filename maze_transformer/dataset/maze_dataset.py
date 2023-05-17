@@ -115,6 +115,8 @@ class MazeDatasetConfig(GPTDatasetConfig):
     @property
     def grid_shape_np(self) -> Coord:
         return np.array(self.grid_shape)
+    
+    # TODO: use max grid shape for tokenization, have it be a property but then override it in collected dataset
 
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:

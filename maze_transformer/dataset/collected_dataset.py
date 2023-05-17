@@ -39,7 +39,7 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
 
     @property
     def max_grid_n(self) -> int:
-        return max(config.max_grid_n for config in self.maze_dataset_configs)
+        return max(config.grid_n for config in self.maze_dataset_configs)
 
     @property
     def max_grid_shape(self) -> CoordTup:
@@ -47,14 +47,14 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
 
     @property
     def max_grid_shape_np(self) -> Coord:
-        return np.array(self.max_grid_shape)
+        return np.array(self.max_grid_shape, dtype=np.int32)
 
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:
         """map from node to token"""
-        {
+        return {
             tuple(coord): _coord_to_str(coord)
-            for coord in np.ndindex(self.grid_shape)
+            for coord in list(np.ndindex(self.max_grid_shape))
         }
 
     @cached_property
@@ -166,7 +166,8 @@ class MazeDatasetCollection(GPTDataset):
         )
 
     def update_self_config(self) -> None:
-        self.cfg.n_mazes = len(self)
+        # TODO: why cant we set this directly? its not frozen, and it seems to work in a regular MazeDataset
+        self.cfg.__dict__["n_mazes"] = len(self)
         for dataset in self.maze_datasets:
             dataset.update_self_config()
 

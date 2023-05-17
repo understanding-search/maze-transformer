@@ -36,7 +36,7 @@ class TestMazeDatasetCollection:
         )
 
     def test_dataset_lengths(self):
-        assert self.test_collection.dataset_lengths == DATASET_LENGTHS
+        assert np.all(np.array(self.test_collection.dataset_lengths) == np.array(DATASET_LENGTHS))
 
     def test_dataset_cum_lengths(self):
         assert (
