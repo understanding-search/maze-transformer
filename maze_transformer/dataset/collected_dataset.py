@@ -1,11 +1,13 @@
 import itertools
 import json
 from functools import cached_property
+import typing
 
 import numpy as np
 from jaxtyping import Int
-from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field
+from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field, json_serialize
 from muutils.misc import sanitize_fname, stable_hash
+from muutils.zanj.loading import register_loader_handler, LoaderHandler, load_item_recursive
 
 from maze_transformer.dataset.dataset import GPTDataset, GPTDatasetConfig
 from maze_transformer.dataset.maze_dataset import (
@@ -67,6 +69,10 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
             *list(SPECIAL_TOKENS.values()),
             *list(self.node_token_map.values()),
         ]
+    
+    @cached_property
+    def padding_token_index(self) -> int:
+        return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
 
     @property
     def n_tokens(self) -> int:
@@ -87,10 +93,12 @@ class MazeDatasetCollection(GPTDataset):
         self,
         cfg: MazeDatasetCollectionConfig,
         maze_datasets: list[MazeDataset],
+        generation_metadata_collected: dict | None = None,
     ) -> None:
         super().__init__()
         self.cfg: MazeDatasetCollectionConfig = cfg
         self.maze_datasets: list[MazeDataset] = list(maze_datasets)
+        self.generation_metadata_collected: dict | None = generation_metadata_collected
 
     @cached_property
     def dataset_lengths(self) -> list[int]:
@@ -140,8 +148,12 @@ class MazeDatasetCollection(GPTDataset):
 
     def serialize(self) -> JSONitem:
         return dict(
+            __format__ = "MazeDatasetCollection",
             cfg=self.cfg.serialize(),
             maze_datasets=[dataset.serialize() for dataset in self.maze_datasets],
+            generation_metadata_collected = json_serialize(
+                self.generation_metadata_collected
+            ),
         )
 
     @classmethod
@@ -160,3 +172,14 @@ class MazeDatasetCollection(GPTDataset):
 
 
 MazeDatasetCollectionConfig._dataset_class = MazeDatasetCollection
+register_loader_handler(LoaderHandler(
+    check= lambda json_item, path=None, z=None: (
+        isinstance(json_item, typing.Mapping)
+        and "__format__" in json_item
+        and json_item["__format__"].startswith("MazeDatasetCollection")
+    ),
+    load = lambda json_item, path=None, z=None: load_item_recursive(json_item, path, z),
+    uid = "MazeDatasetCollection",
+    source_pckg = "maze_transformer.generation.maze_dataset_collection",
+    desc = "MazeDatasetCollection"
+))

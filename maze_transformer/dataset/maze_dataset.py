@@ -2,6 +2,7 @@ import copy
 import functools
 import json
 import multiprocessing
+import sys
 import typing
 import warnings
 from collections import Counter, defaultdict
@@ -19,6 +20,7 @@ from muutils.json_serialize import (
 )
 from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import sanitize_fname, stable_hash
+from muutils.zanj.loading import register_loader_handler, LoaderHandler, load_item_recursive
 
 from maze_transformer.dataset.dataset import (
     DatasetFilterProtocol,
@@ -300,14 +302,19 @@ class MazeDataset(GPTDataset):
     @classmethod
     def load(cls, data: JSONitem) -> "MazeDataset":
         """load from zanj/json"""
+        print(f"{type(data) = }")
         assert data["__format__"] == "MazeDataset"
-        return cls(
-            cfg=MazeDatasetConfig.load(data["cfg"]),
-            mazes=[SolvedMaze.load(m) for m in data["mazes"]],
-            generation_metadata_collected=data.get(
-                "generation_metadata_collected", None
-            ),
-        )
+        # return cls(
+        #     cfg=MazeDatasetConfig.load(data["cfg"]),
+        #     mazes=[SolvedMaze.load(m) for m in data["mazes"]],
+        #     generation_metadata_collected=data.get(
+        #         "generation_metadata_collected", None
+        #     ),
+        # )
+        return cls(**{
+            key: load_item_recursive(data[key], tuple())
+            for key in ["cfg", "mazes", "generation_metadata_collected"]
+        })
 
     def serialize(self) -> JSONitem:
         """serialize to zanj/json"""
@@ -358,6 +365,17 @@ class MazeDataset(GPTDataset):
 
 
 MazeDatasetConfig._dataset_class = property(lambda self: MazeDataset)
+register_loader_handler(LoaderHandler(
+        check= lambda json_item, path=None, z=None: (
+        isinstance(json_item, typing.Mapping)
+        and "__format__" in json_item
+        and json_item["__format__"].startswith("MazeDataset")
+    ),
+    load = lambda json_item, path=None, z=None: MazeDataset.load(json_item),
+    uid = "MazeDataset",
+    source_pckg = "maze_transformer.generation.maze_dataset",
+    desc = "MazeDataset"
+))
 
 
 def register_maze_filter(
