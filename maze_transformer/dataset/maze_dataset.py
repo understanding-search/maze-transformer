@@ -304,13 +304,6 @@ class MazeDataset(GPTDataset):
         """load from zanj/json"""
         print(f"{type(data) = }")
         assert data["__format__"] == "MazeDataset"
-        # return cls(
-        #     cfg=MazeDatasetConfig.load(data["cfg"]),
-        #     mazes=[SolvedMaze.load(m) for m in data["mazes"]],
-        #     generation_metadata_collected=data.get(
-        #         "generation_metadata_collected", None
-        #     ),
-        # )
         return cls(**{
             key: load_item_recursive(data[key], tuple())
             for key in ["cfg", "mazes", "generation_metadata_collected"]
@@ -320,8 +313,8 @@ class MazeDataset(GPTDataset):
         """serialize to zanj/json"""
         return {
             "__format__": "MazeDataset",
-            "cfg": self.cfg.serialize(),
-            "mazes": [m.serialize() for m in self.mazes],
+            "cfg": json_serialize(self.cfg),
+            "mazes": json_serialize(self.mazes),
             "generation_metadata_collected": json_serialize(
                 self.generation_metadata_collected
             ),

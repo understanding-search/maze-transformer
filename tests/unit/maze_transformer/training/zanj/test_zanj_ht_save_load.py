@@ -108,6 +108,7 @@ def test_model_save_exact():
     zanj: ZANJ = ZANJ(
         custom_settings={"_load_state_dict_wrapper": {"recover_exact": True}},
     )
+    print(f"{MODEL.zanj_model_config.dataset_cfg = }")
     zanj.save(MODEL, fname)
     model_load = zanj.read(fname)
 

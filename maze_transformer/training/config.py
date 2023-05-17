@@ -203,9 +203,9 @@ class ConfigHolder(SerializableDataclass):
     """
 
     dataset_cfg: GPTDatasetConfig = serializable_field(
-        serialization_fn=lambda self: self.serialize(),
+        # serialization_fn=lambda self: json_serialize(self.serializ,
         loading_fn = lambda data: load_item_recursive(
-            data["dataset_cfg"], path=None,
+            data["dataset_cfg"], path=tuple("dataset_cfg"),
         ),
         assert_type = True,
     )
