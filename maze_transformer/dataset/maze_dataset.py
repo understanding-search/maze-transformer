@@ -482,13 +482,11 @@ class MazeDatasetFilters:
 
     @register_dataset_filter
     @staticmethod
-    def remove_duplicates_fast(
-        dataset: MazeDataset) -> MazeDataset:
+    def remove_duplicates_fast(dataset: MazeDataset) -> MazeDataset:
         """remove duplicates from a dataset"""
 
         unique_mazes = list(dict.fromkeys(dataset.mazes))
         return copy.deepcopy(MazeDataset(cfg=dataset.cfg, mazes=unique_mazes))
-
 
     @register_dataset_filter
     @staticmethod

@@ -174,45 +174,41 @@ class TestMazeDatasetFilters:
 
 
 DUPE_DATASET = [
-"""
+    """
 #####
 #  E#
 ###X#
 #SXX#
 ##### 
 """,
-
-"""
+    """
 #####
 #SXE#
 ### #
 #   #
 ##### 
 """,
-
-"""
+    """
 #####
 #  E#
 ###X#
 #SXX#
 ##### 
 """,
-
-"""
+    """
 #####
 # # #
 # # #
 #EXS#
 ##### 
 """,
-
-"""
+    """
 #####
 #SXX#
 ###X#
 #EXX#
 ##### 
-"""
+""",
 ]
 
 
@@ -242,4 +238,9 @@ def test_remove_duplicates_fast():
     dataset_deduped: MazeDataset = dataset.filter_by.remove_duplicates_fast()
 
     assert len(dataset) == 5
-    assert dataset_deduped.mazes == [dataset.mazes[0], dataset.mazes[1], dataset.mazes[3], dataset.mazes[4]]
+    assert dataset_deduped.mazes == [
+        dataset.mazes[0],
+        dataset.mazes[1],
+        dataset.mazes[3],
+        dataset.mazes[4],
+    ]

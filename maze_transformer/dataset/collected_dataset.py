@@ -1,9 +1,9 @@
 import itertools
-from functools import cached_property
 import json
+from functools import cached_property
 
 import numpy as np
-from jaxtyping import Int, Float
+from jaxtyping import Int
 from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field
 from muutils.misc import sanitize_fname, stable_hash
 
@@ -37,11 +37,11 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
     @property
     def max_grid_n(self) -> int:
         return max(config.max_grid_n for config in self.maze_dataset_configs)
-    
+
     @property
     def max_grid_shape(self) -> CoordTup:
         return (self.max_grid_n, self.max_grid_n)
-    
+
     @property
     def max_grid_shape_np(self) -> Coord:
         return np.array(self.max_grid_shape)
@@ -49,7 +49,9 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:
         """map from node to token"""
-        return {tuple(c): f"({','.join(c)})" for c in np.ndindex(self.max_grid_shape_np)}
+        return {
+            tuple(c): f"({','.join(c)})" for c in np.ndindex(self.max_grid_shape_np)
+        }
 
     @cached_property
     def token_node_map(self) -> dict[str, CoordTup]:
@@ -143,8 +145,8 @@ class MazeDatasetCollection(GPTDataset):
     @classmethod
     def load(cls, data: JSONitem) -> "MazeDatasetCollection":
         return cls(
-            cfg = MazeDatasetCollectionConfig.load(data["cfg"]), 
-            maze_datasets = [
+            cfg=MazeDatasetCollectionConfig.load(data["cfg"]),
+            maze_datasets=[
                 MazeDataset.load(dataset_data) for dataset_data in data["maze_datasets"]
             ],
         )

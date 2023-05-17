@@ -15,7 +15,7 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.misc import sanitize_fname
-from muutils.tensor_utils import DTYPE_MAP, ATensor
+from muutils.tensor_utils import DTYPE_MAP
 from muutils.zanj import ZANJ
 from torch.utils.data import Dataset
 
