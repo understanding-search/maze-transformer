@@ -2,6 +2,8 @@ from typing import Any, Iterable, Literal
 
 from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
 
+WhenMissing = Literal["except", "skip", "include"]
+
 
 def tokens_between(tokens: list[str], start_value: str, end_value: str) -> list[str]:
     start_idx = tokens.index(start_value) + 1
@@ -49,7 +51,7 @@ def get_tokens_up_to_path_start(
 def apply_mapping(
     iter: Iterable[Any],
     mapping: dict[Any, Any],
-    when_missing: Literal["except", "skip", "include"] = "skip",
+    when_missing: WhenMissing = "skip",
 ) -> list[Any]:
     """Given a list and a mapping, apply the mapping to the list"""
     output = list()
@@ -72,7 +74,7 @@ def apply_mapping(
 def tokens_to_coords(
     tokens: list[str],
     maze_data_cfg,  # TODO: cannot type this right now because importing MazeDatasetConfig causes a circular import
-    when_noncoord: Literal["except", "skip", "include"] = "skip",
+    when_noncoord: WhenMissing = "skip",
 ) -> list[str | CoordTup]:
     return apply_mapping(tokens, maze_data_cfg.token_node_map, when_noncoord)
 
@@ -80,6 +82,6 @@ def tokens_to_coords(
 def coords_to_tokens(
     coords: list[str | CoordTup],
     maze_data_cfg,  # TODO: cannot type this right now because importing MazeDatasetConfig causes a circular import
-    when_noncoord: Literal["except", "skip", "include"] = "skip",
+    when_noncoord: WhenMissing = "skip",
 ) -> list[str]:
     return apply_mapping(coords, maze_data_cfg.node_token_map, when_noncoord)

@@ -6,9 +6,9 @@ from muutils.zanj import ZANJ
 from maze_transformer.training.config import (
     BaseGPTConfig,
     ConfigHolder,
-    MazeDatasetConfig,
     TrainConfig,
 )
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 
 
 def test_misc():

@@ -12,10 +12,10 @@ from muutils.zanj.torchutil import (
 from maze_transformer.training.config import (
     BaseGPTConfig,
     ConfigHolder,
-    MazeDatasetConfig,
     TrainConfig,
     ZanjHookedTransformer,
 )
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 
 ZANJ_MODEL_CFG: ConfigHolder = ConfigHolder(
     train_cfg=TrainConfig(name="test_cfg_save-train"),

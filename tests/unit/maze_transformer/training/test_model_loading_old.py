@@ -9,9 +9,9 @@ import torch
 from maze_transformer.training.config import (
     BaseGPTConfig,
     ConfigHolder,
-    MazeDatasetConfig,
     TrainConfig,
 )
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 
 
 @pytest.mark.usefixtures("temp_dir")
