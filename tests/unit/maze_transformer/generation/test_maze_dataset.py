@@ -173,62 +173,53 @@ class TestMazeDatasetFilters:
         assert filtered.mazes == mazes[:2]
 
 
-DATASET_RAW_ASCII = """
+DUPE_DATASET = [
+"""
 #####
 #  E#
 ###X#
 #SXX#
 ##### 
+""",
 
------
-
+"""
 #####
 #SXE#
 ### #
 #   #
 ##### 
+""",
 
------
+"""
+#####
+#  E#
+###X#
+#SXX#
+##### 
+""",
 
+"""
 #####
 # # #
 # # #
 #EXS#
 ##### 
+""",
 
------
-
+"""
 #####
 #SXX#
 ###X#
 #EXX#
 ##### 
 """
-
-DATASET_DEDUPE_ASCII = """
-#####
-# # #
-# # #
-#EXS#
-##### 
-
------
-
-#####
-#SXX#
-###X#
-#EXX#
-##### 
-"""
+]
 
 
 def _helper_dataset_from_ascii(ascii: str) -> MazeDataset:
     mazes: list[SolvedMaze] = list()
-    for maze in ascii.split("-----"):
-        try:
-            mazes.append(SolvedMaze.from_ascii(maze.strip()))
-        except Exception as e:
-            raise ValueError(f"Failed to parse maze:\n{maze}") from e
+    for maze in ascii:
+        mazes.append(SolvedMaze.from_ascii(maze.strip()))
 
     return MazeDataset(
         MazeDatasetConfig(
@@ -239,17 +230,16 @@ def _helper_dataset_from_ascii(ascii: str) -> MazeDataset:
 
 
 def test_remove_duplicates():
-    dataset: MazeDataset = _helper_dataset_from_ascii(DATASET_RAW_ASCII)
-
-    assert len(dataset) == 4
-
+    dataset: MazeDataset = _helper_dataset_from_ascii(DUPE_DATASET)
     dataset_deduped: MazeDataset = dataset.filter_by.remove_duplicates()
 
-    assert len(dataset_deduped) == 2
+    assert len(dataset) == 5
+    assert dataset_deduped.mazes == [dataset.mazes[3], dataset.mazes[4]]
 
-    mazes_deduped_from_ascii: MazeDataset = _helper_dataset_from_ascii(
-        DATASET_DEDUPE_ASCII
-    )
 
-    for x, y in zip(dataset_deduped.mazes, mazes_deduped_from_ascii.mazes):
-        assert x == y
+def test_remove_duplicates_fast():
+    dataset: MazeDataset = _helper_dataset_from_ascii(DUPE_DATASET)
+    dataset_deduped: MazeDataset = dataset.filter_by.remove_duplicates_fast()
+
+    assert len(dataset) == 5
+    assert dataset_deduped.mazes == [dataset.mazes[0], dataset.mazes[1], dataset.mazes[3], dataset.mazes[4]]
