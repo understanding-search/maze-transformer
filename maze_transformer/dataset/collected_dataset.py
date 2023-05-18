@@ -100,11 +100,11 @@ class MazeDatasetCollection(GPTDataset):
         self.maze_datasets: list[MazeDataset] = list(maze_datasets)
         self.generation_metadata_collected: dict | None = generation_metadata_collected
 
-    @cached_property
+    @property
     def dataset_lengths(self) -> list[int]:
         return [len(dataset) for dataset in self.maze_datasets]
 
-    @cached_property
+    @property
     def dataset_cum_lengths(self) -> Int[np.ndarray, "indices"]:
         return np.array(list(itertools.accumulate(self.dataset_lengths)))
 
@@ -122,9 +122,12 @@ class MazeDatasetCollection(GPTDataset):
     def __getitem__(self, index: int):
         # find which dataset the index belongs to
         dataset_idx: int = np.searchsorted(self.dataset_cum_lengths, index)
-        return self.maze_datasets[dataset_idx][
-            index - self.dataset_cum_lengths[dataset_idx - 1]
-        ]
+        index_adjusted: int = index
+        if dataset_idx > 0:
+            # if the index is 0, `dataset_idx - 1` will be -1. 
+            # We just want to use the base index 
+            index_adjusted -= self.dataset_cum_lengths[dataset_idx - 1]
+        return self.maze_datasets[dataset_idx][index_adjusted]
 
     @classmethod
     def generate(

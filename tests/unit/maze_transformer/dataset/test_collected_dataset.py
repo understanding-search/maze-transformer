@@ -52,9 +52,11 @@ class TestMazeDatasetCollection:
         assert len(self.test_collection) == 7
 
     def test_getitem(self):
-        assert self.test_collection[0].connection_list.shape == (5, 5)
-        assert self.test_collection[1].connection_list.shape == (1, 1)
-        assert self.test_collection[6].connection_list.shape == (4, 4)
+        # print(len(self.test_collection))
+        # print(self.test_collection.mazes)
+        assert self.test_collection[0].connection_list.shape == (2, 5, 5)
+        assert self.test_collection[1].connection_list.shape == (2, 1, 1)
+        assert self.test_collection[6].connection_list.shape == (2, 4, 4)
 
     def test_download(self):
         # TODO
