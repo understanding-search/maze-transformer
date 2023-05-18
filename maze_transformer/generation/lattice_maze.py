@@ -316,11 +316,13 @@ class LatticeMaze(SerializableDataclass):
     def from_adj_list(
         cls,
         adj_list: NDArray["conn start_end coord", np.int8],
+        grid_n = None
     ) -> "LatticeMaze":
         """create a LatticeMaze from a list of connections"""
 
         # Note: This has only been tested for square mazes. Might need to change some things if rectangular mazes are needed.
-        grid_n: int = adj_list.max() + 1
+        if grid_n is None:
+            grid_n: int = adj_list.max() + 1
 
         connection_list: ConnectionList = np.zeros(
             (2, grid_n, grid_n),
@@ -383,7 +385,7 @@ class LatticeMaze(SerializableDataclass):
         return tokens
 
     @classmethod
-    def from_tokens(cls, tokens: list[str]) -> "LatticeMaze":
+    def from_tokens(cls, tokens: list[str], grid_n=None) -> "LatticeMaze":
         """create a LatticeMaze from a list of tokens"""
         if tokens[0] == SPECIAL_TOKENS["adj_list_start"]:
             adj_list_tokens = get_adj_list_tokens(tokens)
@@ -425,7 +427,7 @@ class LatticeMaze(SerializableDataclass):
             adj_list[i, 0] = np.array(coord_str_to_tuple(c_start))
             adj_list[i, 1] = np.array(coord_str_to_tuple(c_end))
 
-        return cls.from_adj_list(adj_list)
+        return cls.from_adj_list(adj_list, grid_n=grid_n)
 
     # ============================================================
     # to and from pixels
