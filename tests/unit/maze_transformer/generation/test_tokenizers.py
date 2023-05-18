@@ -8,15 +8,15 @@ import torch
 from pytest import mark, param
 from transformer_lens import HookedTransformer
 
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 from maze_transformer.generation.generators import LatticeMazeGenerators
+from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
-from maze_transformer.training.maze_dataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import maze_to_tokens
 
 
 def test_tokenization_encoding():
     # Check that wrapped tokenizer __call__ returns the same as original tokenizer
-    maze, solution = LatticeMazeGenerators.gen_dfs_with_solution((3, 3))
+    solved_maze: SolvedMaze = LatticeMazeGenerators.gen_dfs_with_solution((3, 3))
 
     # Need to generate a config to extract the token map >.<
     # TODO: Part of https://github.com/AISC-understanding-search/maze-transformer/issues/77
@@ -24,7 +24,7 @@ def test_tokenization_encoding():
     node_token_map = cfg.node_token_map
 
     # Adjacency List Tokenization
-    maze_str_tokens = maze_to_tokens(maze, solution, node_token_map)
+    maze_str_tokens = solved_maze.as_tokens(node_token_map)
 
     # Manual Tokenization
     token_to_index = {token: i for i, token in enumerate(cfg.token_arr)}

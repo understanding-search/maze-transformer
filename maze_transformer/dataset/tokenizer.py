@@ -1,5 +1,3 @@
-from itertools import chain
-
 # Avoid circular import from training/config.py
 from typing import TYPE_CHECKING, Union  # need Union as "a" | "b" doesn't work
 
@@ -9,52 +7,18 @@ from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
 from maze_transformer.evaluation.plot_maze import MazePlot
-from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
+from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.lattice_maze import LatticeMaze
 
 if TYPE_CHECKING:
     from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig
-# pylint: disable=unused-import
 
-
-def maze_to_tokens(
-    maze: LatticeMaze,
-    solution: list[Coord],
-    node_token_map: dict[CoordTup, str],
-) -> list[str]:
-    """serialize maze and solution to tokens"""
-    tokens: list[str] = [
-        # give adjacency list
-        SPECIAL_TOKENS["adj_list_start"],
-        *chain.from_iterable(
-            [
-                [
-                    node_token_map[tuple(c_s.tolist())],
-                    SPECIAL_TOKENS["connector"],
-                    node_token_map[tuple(c_e.tolist())],
-                    SPECIAL_TOKENS["adjacency_endline"],
-                ]
-                for c_s, c_e in maze.as_adj_list()
-            ]
-        ),
-        SPECIAL_TOKENS["adj_list_end"],
-        # give origin
-        SPECIAL_TOKENS["origin_start"],
-        node_token_map[tuple(solution[0])],
-        SPECIAL_TOKENS["origin_end"],
-        # give target
-        SPECIAL_TOKENS["target_start"],
-        node_token_map[tuple(solution[-1])],
-        SPECIAL_TOKENS["target_end"],
-        SPECIAL_TOKENS["path_start"],
-        *[node_token_map[tuple(c.tolist())] for c in solution],
-        SPECIAL_TOKENS["path_end"],
-    ]
-
-    return tokens
+# pylint: disable=unused-import, abstract-method
 
 
 class HuggingMazeTokenizer(PreTrainedTokenizer):
+    """extension of PreTrainedTokenizer for mazes"""
+
     vocab: dict[str, int]  # map of token_ids to strings
 
     bos_token: str = SPECIAL_TOKENS["path_start"]
@@ -139,7 +103,10 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         return super().batch_decode(sequences, skip_special_tokens, **kwargs)
 
     def to_ascii(
-        self, sequence: list[int | str] | ATensor, start=None, end=None
+        self,
+        sequence: list[int | str] | ATensor,
+        start_post=None,
+        end_pos=None,
     ) -> NDArray:
         # Sequence should be a single maze (not batch)
         if isinstance(sequence, list) and isinstance(sequence[0], str):
@@ -152,4 +119,4 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             str_sequence = self.batch_decode(sequence)
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence)
-        return MazePlot(lattice_maze).as_ascii(start=start, end=end)
+        return MazePlot(lattice_maze).to_ascii()

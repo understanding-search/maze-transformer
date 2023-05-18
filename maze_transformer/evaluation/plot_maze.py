@@ -6,13 +6,19 @@ from dataclasses import dataclass
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from jaxtyping import Float
+from jaxtyping import Bool, Float
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import ListedColormap, Normalize
 from muutils.tensor_utils import NDArray
 
 from maze_transformer.generation.constants import Coord, CoordArray, CoordList
-from maze_transformer.generation.lattice_maze import Coord, CoordArray, LatticeMaze
+from maze_transformer.generation.lattice_maze import (
+    Coord,
+    CoordArray,
+    LatticeMaze,
+    SolvedMaze,
+    TargetedLatticeMaze,
+)
 
 MAX_NODE_VALUE_EPSILON: float = 1e-10
 
@@ -113,16 +119,16 @@ class MazePlot:
         "slategrey",
     ]
 
-    def __init__(self, maze: LatticeMaze) -> None:
+    def __init__(self, maze: LatticeMaze, unit_length: int = 14) -> None:
         """
         UNIT_LENGTH: Set ratio between node size and wall thickness in image.
         Wall thickness is fixed to 1px
         A "unit" consists of a single node and the right and lower connection/wall.
         Example: ul = 14 yields 13:1 ratio between node size and wall thickness
         """
-        self.unit_length: int = 14
+        self.unit_length: int = unit_length
         self.maze: LatticeMaze = maze
-        self.true_path: StyledPath = None
+        self.true_path: StyledPath | None = None
         self.predicted_paths: list[StyledPath] = []
         self.node_values: Float[np.ndarray, "grid_n grid_n"] = None
         self.custom_node_value_flag: bool = False
@@ -130,6 +136,23 @@ class MazePlot:
         self.node_color_map: str = "Blues"
         self.target_token_coord: Coord = None
         self.preceding_tokens_coords: CoordArray = None
+
+        if isinstance(maze, TargetedLatticeMaze):
+            self.add_true_path(SolvedMaze.from_targeted_lattice_maze(maze).solution)
+
+        if isinstance(maze, SolvedMaze):
+            self.add_true_path(maze.solution)
+
+    @property
+    def solved_maze(self) -> SolvedMaze:
+        if self.true_path is None:
+            raise ValueError(
+                "Cannot return SolvedMaze object without true path. Add true path with add_true_path method."
+            )
+        return SolvedMaze.from_lattice_maze(
+            lattice_maze=self.maze,
+            solution=self.true_path.path,
+        )
 
     def add_true_path(
         self,
@@ -227,12 +250,6 @@ class MazePlot:
         self.ax.set_ylabel("row")
         self.fig.suptitle(title)
 
-    def show(self, dpi: int = 100, title: str = "") -> None:
-        """Plot the maze and paths and show the plot. DONT USE THIS IN NOTEBOOKS WHICH NEED TO BE TESTED IN CI!!!"""
-        self.plot(dpi=dpi, title=title)
-        plt.show()
-        return self
-
     def _rowcol_to_coord(self, point: Coord) -> NDArray:
         """Transform Point from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""
         point = np.array([point[1], point[0]])
@@ -294,7 +311,10 @@ class MazePlot:
 
             self.ax.imshow(img, cmap=cmap, vmin=-1, vmax=1)
 
-    def _lattice_maze_to_img(self) -> NDArray["row col", bool]:
+    def _lattice_maze_to_img(
+        self,
+        connection_val_scale: float = 0.93,
+    ) -> Bool[np.ndarray, "row col"]:
         """
         Build an image to visualise the maze.
         Each "unit" consists of a node and the right and lower adjacent wall/connection. Its area is ul * ul.
@@ -318,7 +338,7 @@ class MazePlot:
         # Set node and connection values
         if self.node_values is None:
             scaled_node_values = np.ones(self.maze.grid_shape)
-            connection_values = scaled_node_values * 0.93
+            connection_values = scaled_node_values * connection_val_scale
         else:
             # Normalizing node colors to match color_map running in (-1, 1) (defined in ._plot_maze()).
             scaled_node_values = self.node_values / self.max_node_value
@@ -403,30 +423,14 @@ class MazePlot:
             ms=10,
         )
 
-    def as_ascii(self, start=None, end=None):
-        """
-        Returns an ASCII visualization of the maze.
-        Courtesy of ChatGPT
-        """
-        wall_char = "#"
-        path_char = " "
-        self.unit_length = 2
-
-        # Determine the size of the maze
-        maze = self._lattice_maze_to_img()
-        n_rows, n_cols = maze.shape
-        maze_str = ""
-
-        # Iterate through each element of the maze and print the appropriate symbol
-        for i in range(n_rows):
-            for j in range(n_cols):
-                if start is not None and start[0] == i - 1 and start[1] == j - 1:
-                    maze_str += "S"
-                elif end is not None and end[0] == i - 1 and end[1] == j - 1:
-                    maze_str += "E"
-                elif maze[i, j] == -1:
-                    maze_str += wall_char
-                else:
-                    maze_str += path_char
-            maze_str += "\n"  # Start a new line after each row
-        return maze_str
+    def to_ascii(
+        self,
+        show_endpoints: bool = True,
+        show_solution: bool = True,
+    ) -> str:
+        if self.true_path:
+            return self.solved_maze.as_ascii(
+                show_endpoints=show_endpoints, show_solution=show_solution
+            )
+        else:
+            return self.maze.as_ascii(show_endpoints=show_endpoints)

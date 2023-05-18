@@ -10,6 +10,7 @@ from muutils.tensor_utils import ATensor
 from transformer_lens import HookedTransformer
 from transformer_lens import utils as tl_utils
 
+from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.generators import LatticeMazeGenerators
@@ -55,6 +56,7 @@ def find_config(folder: Path) -> Path | tuple[Path, Path] | None:
 def load_model_with_configs(
     model_path: Path,
     verbose: bool = False,
+    fold_ln: bool = True,
 ) -> tuple[HookedTransformer, ConfigHolder]:
     """
     Load a model and associated config files from a path.
@@ -94,7 +96,7 @@ def load_model_with_configs(
     # will complain about the fact that we deleted layernorm from the state_dict
     # NOTE temporary fix until https://github.com/neelnanda-io/TransformerLens/issues/219 is resolved
 
-    model.process_weights_(fold_ln=True)
+    model.process_weights_(fold_ln=fold_ln)
     model.setup()  # Re-attach layernorm hooks by calling setup
     model.eval()
 
@@ -175,13 +177,12 @@ def evaluate_model(
         name: StatCounter() for name in path_evals.keys()
     }
 
-    for batch in chunks(dataset.mazes_tokens, batch_size):
-        # TODO: This won't be needed after #124, then we can call mazes_objs instead
-        # https://github.com/orgs/AISC-understanding-search/projects/1/views/1?pane=issue&itemId=23879308
-        solved_mazes = [SolvedMaze.from_tokens(tokens, dataset.cfg) for tokens in batch]
-
+    for maze_batch in chunks(dataset, batch_size):
+        tokens_batch = [
+            maze.as_tokens(dataset.cfg.node_token_map) for maze in maze_batch
+        ]
         predictions = predict_maze_paths(
-            tokens_batch=batch,
+            tokens_batch=tokens_batch,
             data_cfg=dataset.cfg,
             model=model,
             max_new_tokens=max_new_tokens,

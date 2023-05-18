@@ -1,8 +1,8 @@
 import pytest
 import torch
 
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
-from maze_transformer.training.maze_dataset import MazeDatasetConfig
 
 
 def test_create_model_forward():
@@ -53,7 +53,7 @@ def test_serialize_and_load_missing_values():
 def _create_top_level_config() -> ConfigHolder:
     # It might be better to use custom values in the tests rather than
     # "tiny-v1". I'm not sure.
-    train_cfg = TRAINING_CONFIGS["tiny-v1"]
+    train_cfg = TRAINING_CONFIGS["test-v1"]
     model_cfg = GPT_CONFIGS["tiny-v1"]
     dataset_cfg = MazeDatasetConfig(name="test", grid_n=4, n_mazes=10)
 

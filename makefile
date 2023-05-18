@@ -1,4 +1,4 @@
-HELPERS_DIR := tests/helpers
+HELPERS_DIR := maze_transformer/utils/test_helpers
 NOTEBOOKS_DIR := notebooks
 CONVERTED_NOTEBOOKS_TEMP_DIR := tests/_temp/notebooks
 POETRY_RUN_PYTHON := poetry run python
@@ -51,6 +51,7 @@ convert_notebooks:
 
 .PHONY: test_notebooks
 test_notebooks: convert_notebooks
+	@echo "run tests on converted notebooks in $(CONVERTED_NOTEBOOKS_TEMP_DIR) using $(HELPERS_DIR)/run_notebook_tests.py"
 	python $(HELPERS_DIR)/run_notebook_tests.py --notebooks-dir=$(NOTEBOOKS_DIR) --converted-notebooks-temp-dir=$(CONVERTED_NOTEBOOKS_TEMP_DIR)
 
 

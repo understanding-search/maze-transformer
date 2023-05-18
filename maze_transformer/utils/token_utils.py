@@ -91,5 +91,3 @@ def remove_padding_from_token_str(token_str: str) -> str:
     token_str = token_str.replace(f"{SPECIAL_TOKENS['padding']} ", "")
     token_str = token_str.replace(f"{SPECIAL_TOKENS['padding']}", "")
     return token_str
-
-

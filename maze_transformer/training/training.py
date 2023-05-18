@@ -1,34 +1,35 @@
+from functools import partial
 from pathlib import Path
 
 import torch
 from jaxtyping import Float
-from muutils.statcounter import StatCounter  # type: ignore[import]
-from muutils.tensor_utils import ATensor  # type: ignore[import]
+from muutils.zanj import ZANJ
 from torch.utils.data import DataLoader
-from transformer_lens import HookedTransformer
+from transformer_lens.HookedTransformer import SingleLoss
 
+from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.evaluation.eval_model import evaluate_logits
 from maze_transformer.evaluation.path_evals import PathEvals
-from maze_transformer.training.config import ConfigHolder
+from maze_transformer.generation.lattice_maze import SolvedMaze
+from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.maze_dataset import MazeDataset
 from maze_transformer.training.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbLogger
 
 
+def collate_batch(batch: list[SolvedMaze], config: MazeDatasetConfig) -> list[str]:
+    return [" ".join(maze.as_tokens(config.node_token_map)) for maze in batch]
+
+
 def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
 ) -> DataLoader:
-    length_stats: StatCounter = StatCounter(dataset.get_all_lengths())
-    logger.summary({"dataset_seq_len_stats_summary": length_stats.summary()})
-    logger.summary(
-        {"dataset_seq_len_stats": length_stats.serialize(typecast=lambda x: str(x))}
-    )
-
     logger.progress(f"Loaded {len(dataset)} sequences")
     logger.progress("Creating dataloader")
     dataloader: DataLoader = DataLoader(
         dataset,
+        collate_fn=partial(collate_batch, config=cfg.dataset_cfg),
         batch_size=cfg.train_cfg.batch_size,
         **cfg.train_cfg.dataloader_cfg,
     )
@@ -37,14 +38,17 @@ def get_dataloader(
 
 
 def train(
-    dataloader: DataLoader,
     cfg: ConfigHolder,
+    dataloader: DataLoader,
     logger: WandbLogger,
     output_dir: Path,
     device: torch.device,
-) -> None:
+    zanj: ZANJ | None = None,
+) -> ZanjHookedTransformer:
+    if zanj is None:
+        zanj = ZANJ()
     logger.progress("Initializing model")
-    model: HookedTransformer = cfg.create_model()
+    model: ZanjHookedTransformer = cfg.create_model_zanj()
     logger.summary({"device": str(device), "model.device": model.cfg.device})
     logger.progress("Initializing optimizer")
 
@@ -79,16 +83,12 @@ def train(
 
     # TODO: check what happens in final batch where remaining mazes in dataset is less than batch size
     for iteration, batch in enumerate(dataloader):
-        breakpoint()
-        # compute loss
-        batch_on_device: ATensor[("batch", "sequence")] = batch.type(
-            dtype=torch.LongTensor
-        ).to(model.cfg.device)
-
-        loss: Float[torch.Tensor, ""]
+        loss: SingleLoss
         logits: Float[torch.Tensor, "batch pos d_vocab"]
-        batch_without_last_token = batch_on_device[:, :-1]
-        logits, loss = model(batch_without_last_token, return_type="both")
+        logits, loss = model(batch, return_type="both")
+        # Remove the last logit because it's the prediction for what comes after PATH_END (and so is meaningless)
+        # Do this after computing loss because the loss_fn already ignores the last logit
+        logits = logits[:, :-1, :]
         loss.backward()
 
         optimizer.step()
@@ -134,19 +134,21 @@ def train(
             model_save_path: Path = (
                 output_dir
                 / TRAIN_SAVE_FILES.checkpoints
-                / TRAIN_SAVE_FILES.model_checkpt(iteration)
+                / TRAIN_SAVE_FILES.model_checkpt_zanj(iteration)
             )
             logger.progress(f"Saving model to {model_save_path.as_posix()}")
-            torch.save(model.state_dict(), model_save_path)
+            zanj.save(model, model_save_path)
             logger.upload_model(
                 model_save_path, aliases=["latest", f"iter-{iteration}"]
             )
 
     # save the final model
     # ==================================================
-    final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final
+    final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final_zanj
     logger.progress(f"Saving final model to {final_model_path.as_posix()}")
-    torch.save(model.state_dict(), final_model_path)
+    zanj.save(model, final_model_path)
     logger.upload_model(final_model_path, aliases=["latest", "final"])
 
     logger.progress("Done!")
+
+    return model

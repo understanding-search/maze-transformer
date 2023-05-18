@@ -1,9 +1,8 @@
 import pytest
 
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import SolvedMaze
-from maze_transformer.training.maze_dataset import MazeDatasetConfig
-from maze_transformer.training.tokenizer import maze_to_tokens
 
 
 @pytest.mark.skip(
@@ -15,7 +14,7 @@ def test_from_tokens():
 
     # See https://github.com/AISC-understanding-search/maze-transformer/issues/77
     config = MazeDatasetConfig(grid_n=maze_size, name="test", n_mazes=1)
-    tokenized_maze = maze_to_tokens(maze, solution, config.node_token_map)
+    tokenized_maze = maze.as_tokens(config.node_token_map)
 
     new_maze, new_solution = SolvedMaze.from_tokens(tokenized_maze, config)
     assert new_maze == maze
