@@ -27,7 +27,18 @@ class LatticeMazeGenerators:
     ) -> LatticeMaze:
         """generate a lattice maze using depth first search, iterative
 
-        algorithm:
+        # Arguments
+        - `grid_shape: Coord`: the shape of the grid
+        - `lattice_dim: int`: the dimension of the lattice
+          (default: `2`)
+        - `n_accessible_cells: int | None`: the number of accessible cells in the maze. If `None`, defaults to the total number of cells in the grid.
+            (default: `None`)
+        - `max_tree_depth: int | None`: the maximum depth of the tree. If `None`, defaults to `2 * n_accessible_cells`.
+            (default: `None`)
+        - `start_coord: Coord | None`: the starting coordinate of the generation algorithm. If `None`, defaults to a random coordinate.
+
+
+        # algorithm
         1. Choose the initial cell, mark it as visited and push it to the stack
         2. While the stack is not empty
                 1. Pop a cell from the stack and make it a current cell
@@ -131,10 +142,14 @@ class LatticeMazeGenerators:
     def gen_wilson(
         grid_shape: Coord,
     ) -> LatticeMaze:
-        """Generate a lattice maze using Wilson's algorithm. Wilson's algorithm generates an unbiased (random) maze
+        """Generate a lattice maze using Wilson's algorithm. 
+        
+        # Algorithm
+        Wilson's algorithm generates an unbiased (random) maze
         sampled from the uniform distribution over all mazes, using loop-erased random walks. The generated maze is
         acyclic and all cells are part of a unique connected space.
-        https://en.wikipedia.org/wiki/Maze_generation_algorithm#Wilson's_algorithm"""
+        https://en.wikipedia.org/wiki/Maze_generation_algorithm#Wilson's_algorithm
+        """
 
         def neighbor(current: Coord, direction: int) -> Coord:
             row, col = current

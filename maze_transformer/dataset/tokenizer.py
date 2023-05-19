@@ -38,6 +38,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     name_or_path = "maze_tokenizer"
 
+    # TODO: this should just take seq_len_max and max grid n
     def __init__(
         self,
         cfg: Union["ConfigHolder", "GPTDatasetConfig", None] = None,

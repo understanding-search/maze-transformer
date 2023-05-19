@@ -236,7 +236,7 @@ class ConfigHolder(SerializableDataclass):
             d_head=self.model_cfg.d_head,
             n_layers=self.model_cfg.n_layers,
             n_ctx=self.dataset_cfg.seq_len_max,
-            d_vocab=len(self.dataset_cfg.token_arr),
+            d_vocab=len(self.dataset_cfg.token_arr), # TODO: get this from tokenizer
         )
 
     def transformer_config(self) -> HookedTransformerConfig:

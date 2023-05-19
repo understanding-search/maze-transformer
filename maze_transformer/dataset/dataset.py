@@ -38,6 +38,9 @@ class GPTDatasetConfig(SerializableDataclass):
     """base GPTDatasetConfig class"""
 
     name: str
+
+    # TODO: get rid of all these things
+    # --------------------------------------------------
     # TODO: Do we need dtype here? What does it do?
     dtype: torch.dtype | np.dtype = serializable_field(
         default_factory=lambda: torch.int16,
@@ -46,6 +49,8 @@ class GPTDatasetConfig(SerializableDataclass):
     )
     seq_len_min: int = serializable_field(default=1)
     seq_len_max: int = serializable_field(default=512)
+    # --------------------------------------------------
+
     seed: int | None = serializable_field(default=DEFAULT_SEED)
     applied_filters: list[
         dict[typing.Literal["name", "kwargs"], str | dict]
