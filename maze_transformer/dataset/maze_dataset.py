@@ -304,7 +304,6 @@ class MazeDataset(GPTDataset):
     @classmethod
     def load(cls, data: JSONitem) -> "MazeDataset":
         """load from zanj/json"""
-        print(f"{type(data) = }")
         assert data["__format__"] == "MazeDataset"
         return cls(**{
             key: load_item_recursive(data[key], tuple())
@@ -553,7 +552,7 @@ class MazeDatasetFilters:
                             "expected either a coord of shape (2,) or a list of coords of shape (n, 2)",
                         )
                 else:
-                    print(type(value))
+                    # print(type(value))
                     raise ValueError(
                         f"Cannot collect generation meta for {key} as it is of type '{str(type(value))}'",
                         "expected either a basic type (bool, int, float, str), a numpy coord, or a numpy array of coords",

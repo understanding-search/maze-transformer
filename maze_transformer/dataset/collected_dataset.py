@@ -168,12 +168,11 @@ class MazeDatasetCollection(GPTDataset):
 
     @classmethod
     def load(cls, data: JSONitem) -> "MazeDatasetCollection":
-        return cls(
-            cfg=MazeDatasetCollectionConfig.load(data["cfg"]),
-            maze_datasets=[
-                MazeDataset.load(dataset_data) for dataset_data in data["maze_datasets"]
-            ],
-        )
+        assert data["__format__"] == "MazeDatasetCollection"
+        return cls(**{
+            key: load_item_recursive(data[key], tuple())
+            for key in ["cfg", "maze_datasets", "generation_metadata_collected"]
+        })
 
     def update_self_config(self) -> None:
         # TODO: why cant we set this directly? its not frozen, and it seems to work in a regular MazeDataset
@@ -189,7 +188,7 @@ register_loader_handler(LoaderHandler(
         and "__format__" in json_item
         and json_item["__format__"].startswith("MazeDatasetCollection")
     ),
-    load = lambda json_item, path=None, z=None: load_item_recursive(json_item, path, z),
+    load = lambda json_item, path=None, z=None: MazeDatasetCollection.load(json_item),
     uid = "MazeDatasetCollection",
     source_pckg = "maze_transformer.generation.maze_dataset_collection",
     desc = "MazeDatasetCollection"

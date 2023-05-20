@@ -77,8 +77,8 @@ class TestMazeDatasetCollection:
         assert loaded.cfg == self.test_collection.cfg
 
     def test_save_read(self):
-        self.test_collection.save("test/_temp/collected_dataset_test_save_read.zanj")
-        loaded = MazeDatasetCollection.read("test/_temp/collected_dataset_test_save_read.zanj")
+        self.test_collection.save("tests/_temp/collected_dataset_test_save_read.zanj")
+        loaded = MazeDatasetCollection.read("tests/_temp/collected_dataset_test_save_read.zanj")
         assert loaded.mazes == self.test_collection.mazes
         assert loaded.cfg == self.test_collection.cfg        
 
