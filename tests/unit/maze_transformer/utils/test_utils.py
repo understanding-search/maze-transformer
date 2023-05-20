@@ -1,10 +1,13 @@
 from pathlib import Path
 
 import numpy as np
-
 import pytest
 
-from maze_transformer.utils.utils import get_checkpoint_paths_for_run, register_method, corner_first_ndindex
+from maze_transformer.utils.utils import (
+    corner_first_ndindex,
+    get_checkpoint_paths_for_run,
+    register_method,
+)
 
 
 @pytest.mark.usefixtures("temp_dir")
@@ -51,9 +54,9 @@ def test_register_method():
     assert list(evalsA.keys()) == ["eval_function"]
     assert list(evalsB.keys()) == ["other_eval_function"]
 
+
 def test_corner_first_ndindex():
     for n in range(1, 11):
         a_n = corner_first_ndindex(n)
-        a_n_plus_1 = corner_first_ndindex(n+1)
-        assert np.all(a_n == a_n_plus_1[:n**2])
-
+        a_n_plus_1 = corner_first_ndindex(n + 1)
+        assert np.all(a_n == a_n_plus_1[: n**2])

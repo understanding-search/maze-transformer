@@ -1,6 +1,6 @@
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
-from maze_transformer.training.wandb_logger import WandbProject
 from maze_transformer.training.train_model import TrainingResult, train_model
+from maze_transformer.training.wandb_logger import WandbProject
 
 
 def test_train_model():

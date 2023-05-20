@@ -132,7 +132,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
     def node_token_map(self) -> dict[CoordTup, str]:
         """map from node to token"""
         return {
-            tuple(coord): _coord_to_str(coord) 
+            tuple(coord): _coord_to_str(coord)
             for coord in corner_first_ndindex(self.max_grid_n)
         }
 

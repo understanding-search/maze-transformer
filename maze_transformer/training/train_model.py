@@ -4,11 +4,7 @@ from pathlib import Path
 from typing import Union
 
 import torch
-from muutils.json_serialize import (
-    SerializableDataclass,
-    serializable_dataclass,
-    serializable_field,
-)
+from muutils.json_serialize import SerializableDataclass, serializable_dataclass
 from torch.utils.data import DataLoader
 
 from maze_transformer.dataset.maze_dataset import MazeDataset

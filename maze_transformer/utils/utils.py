@@ -81,10 +81,11 @@ def register_method(method_dict: dict[str, Callable[..., Any]]) -> Callable[[F],
 
     return decorator
 
+
 def corner_first_ndindex(n: int, ndim: int = 2) -> list[CoordTup]:
     """returns an array of indices, sorted by distance from the corner
-    
-    this gives the property that `np.ndindex((n,n))` is equal to 
+
+    this gives the property that `np.ndindex((n,n))` is equal to
     the first n^2 elements of `np.ndindex((n+1, n+1))`
 
     ```
@@ -98,13 +99,7 @@ def corner_first_ndindex(n: int, ndim: int = 2) -> list[CoordTup]:
     """
 
     unsorted: list = list(np.ndindex(tuple([n for _ in range(ndim)])))
-    return sorted(
-        unsorted, 
-        key=lambda x: (
-            max(x), 
-            x if x[0] % 2 == 0 else x[::-1]
-        )
-    )
+    return sorted(unsorted, key=lambda x: (max(x), x if x[0] % 2 == 0 else x[::-1]))
 
     # alternate numpy version from GPT-4:
     """
