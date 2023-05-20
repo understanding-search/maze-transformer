@@ -15,8 +15,8 @@ from muutils.json_serialize import (
     serializable_dataclass,
     serializable_field,
 )
-from muutils.zanj.loading import load_item_recursive
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
+from muutils.zanj.loading import load_item_recursive
 from muutils.zanj.torchutil import ConfiguredModel, set_config_class
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
@@ -204,10 +204,11 @@ class ConfigHolder(SerializableDataclass):
 
     dataset_cfg: GPTDatasetConfig = serializable_field(
         # serialization_fn=lambda self: json_serialize(self.serializ,
-        loading_fn = lambda data: load_item_recursive(
-            data["dataset_cfg"], path=tuple("dataset_cfg"),
+        loading_fn=lambda data: load_item_recursive(
+            data["dataset_cfg"],
+            path=tuple("dataset_cfg"),
         ),
-        assert_type = True,
+        assert_type=True,
     )
     model_cfg: BaseGPTConfig
     train_cfg: TrainConfig
@@ -236,7 +237,7 @@ class ConfigHolder(SerializableDataclass):
             d_head=self.model_cfg.d_head,
             n_layers=self.model_cfg.n_layers,
             n_ctx=self.dataset_cfg.seq_len_max,
-            d_vocab=len(self.dataset_cfg.token_arr), # TODO: get this from tokenizer
+            d_vocab=len(self.dataset_cfg.token_arr),  # TODO: get this from tokenizer
         )
 
     def transformer_config(self) -> HookedTransformerConfig:

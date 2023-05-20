@@ -7,6 +7,7 @@ from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 TEMP_DIR: Path = Path("tests/_temp/test_dataset")
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
+
 class TestGPTDatasetConfig:
     def test_tokenizer_map(self):
         cfg = MazeDatasetConfig(name="test", grid_n=3, n_mazes=1)
@@ -17,7 +18,6 @@ class TestGPTDataset:
     class TestFromConfig:
         cfg = MazeDatasetConfig(name="test", grid_n=3, n_mazes=1)
         dataset = MazeDataset.generate(cfg)
-
 
         def test_load_local(self, mocker):
             local_path = TEMP_DIR / Path(f"{self.cfg.to_fname()}.zanj")
@@ -59,7 +59,6 @@ class TestGPTDataset:
             download.assert_called_once()
             generate.assert_not_called()
 
-
         def test_generate(self, mocker):
             # download is not implemented - when it is, we'll need to mock it
             generate = mocker.patch.object(MazeDataset, "generate")
@@ -75,7 +74,6 @@ class TestGPTDataset:
 
             assert output == self.dataset
             generate.assert_called_once()
-
 
         def test_all_fail(self):
             with pytest.raises(ValueError):

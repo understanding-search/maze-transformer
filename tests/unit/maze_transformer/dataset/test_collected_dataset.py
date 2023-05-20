@@ -36,7 +36,9 @@ class TestMazeDatasetCollection:
         )
 
     def test_dataset_lengths(self):
-        assert np.all(np.array(self.test_collection.dataset_lengths) == np.array(DATASET_LENGTHS))
+        assert np.all(
+            np.array(self.test_collection.dataset_lengths) == np.array(DATASET_LENGTHS)
+        )
 
     def test_dataset_cum_lengths(self):
         assert (
@@ -63,8 +65,14 @@ class TestMazeDatasetCollection:
         assert self.test_collection[6].connection_list.shape == (2, 4, 4)
 
         for i in range(sum(DATASET_LENGTHS)):
-            assert self.test_collection[i].connection_list.shape == self.test_collection.mazes[i].connection_list.shape
-            assert (self.test_collection[i].connection_list == self.test_collection.mazes[i].connection_list).all()
+            assert (
+                self.test_collection[i].connection_list.shape
+                == self.test_collection.mazes[i].connection_list.shape
+            )
+            assert (
+                self.test_collection[i].connection_list
+                == self.test_collection.mazes[i].connection_list
+            ).all()
 
     def test_download(self):
         # TODO
@@ -78,7 +86,8 @@ class TestMazeDatasetCollection:
 
     def test_save_read(self):
         self.test_collection.save("tests/_temp/collected_dataset_test_save_read.zanj")
-        loaded = MazeDatasetCollection.read("tests/_temp/collected_dataset_test_save_read.zanj")
+        loaded = MazeDatasetCollection.read(
+            "tests/_temp/collected_dataset_test_save_read.zanj"
+        )
         assert loaded.mazes == self.test_collection.mazes
-        assert loaded.cfg == self.test_collection.cfg        
-
+        assert loaded.cfg == self.test_collection.cfg

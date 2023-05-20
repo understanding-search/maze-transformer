@@ -3,12 +3,8 @@ from pathlib import Path
 
 from muutils.zanj import ZANJ
 
-from maze_transformer.training.config import (
-    BaseGPTConfig,
-    ConfigHolder,
-    TrainConfig,
-)
 from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
+from maze_transformer.training.config import BaseGPTConfig, ConfigHolder, TrainConfig
 
 
 def test_misc():

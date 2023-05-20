@@ -2,7 +2,6 @@ import copy
 import functools
 import json
 import multiprocessing
-import sys
 import typing
 import warnings
 from collections import Counter, defaultdict
@@ -20,7 +19,11 @@ from muutils.json_serialize import (
 )
 from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import sanitize_fname, stable_hash
-from muutils.zanj.loading import register_loader_handler, LoaderHandler, load_item_recursive
+from muutils.zanj.loading import (
+    LoaderHandler,
+    load_item_recursive,
+    register_loader_handler,
+)
 
 from maze_transformer.dataset.dataset import (
     DatasetFilterProtocol,
@@ -53,8 +56,10 @@ __MAZEDATASET_PROPERTIES_TO_VALIDATE: list[str] = [
     "n_tokens",
 ]
 
+
 def _coord_to_str(coord: Coord) -> str:
     return f"({','.join(str(c) for c in coord)})"
+
 
 def _str_to_coord(coord_str: str) -> Coord:
     return np.array(tuple(int(x) for x in coord_str.strip("() \t").split(",")))
@@ -115,15 +120,14 @@ class MazeDatasetConfig(GPTDatasetConfig):
     @property
     def grid_shape_np(self) -> Coord:
         return np.array(self.grid_shape)
-    
+
     # TODO: use max grid shape for tokenization, have it be a property but then override it in collected dataset
 
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:
         """map from node to token"""
         return {
-            tuple(coord): _coord_to_str(coord)
-            for coord in np.ndindex(self.grid_shape)
+            tuple(coord): _coord_to_str(coord) for coord in np.ndindex(self.grid_shape)
         }
 
     @cached_property
@@ -305,10 +309,12 @@ class MazeDataset(GPTDataset):
     def load(cls, data: JSONitem) -> "MazeDataset":
         """load from zanj/json"""
         assert data["__format__"] == "MazeDataset"
-        return cls(**{
-            key: load_item_recursive(data[key], tuple())
-            for key in ["cfg", "mazes", "generation_metadata_collected"]
-        })
+        return cls(
+            **{
+                key: load_item_recursive(data[key], tuple())
+                for key in ["cfg", "mazes", "generation_metadata_collected"]
+            }
+        )
 
     def serialize(self) -> JSONitem:
         """serialize to zanj/json"""
@@ -359,17 +365,19 @@ class MazeDataset(GPTDataset):
 
 
 MazeDatasetConfig._dataset_class = property(lambda self: MazeDataset)
-register_loader_handler(LoaderHandler(
-        check= lambda json_item, path=None, z=None: (
-        isinstance(json_item, typing.Mapping)
-        and "__format__" in json_item
-        and json_item["__format__"].startswith("MazeDataset")
-    ),
-    load = lambda json_item, path=None, z=None: MazeDataset.load(json_item),
-    uid = "MazeDataset",
-    source_pckg = "maze_transformer.generation.maze_dataset",
-    desc = "MazeDataset"
-))
+register_loader_handler(
+    LoaderHandler(
+        check=lambda json_item, path=None, z=None: (
+            isinstance(json_item, typing.Mapping)
+            and "__format__" in json_item
+            and json_item["__format__"].startswith("MazeDataset")
+        ),
+        load=lambda json_item, path=None, z=None: MazeDataset.load(json_item),
+        uid="MazeDataset",
+        source_pckg="maze_transformer.generation.maze_dataset",
+        desc="MazeDataset",
+    )
+)
 
 
 def register_maze_filter(

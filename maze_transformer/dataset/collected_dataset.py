@@ -1,13 +1,22 @@
 import itertools
 import json
-from functools import cached_property
 import typing
+from functools import cached_property
 
 import numpy as np
 from jaxtyping import Int
-from muutils.json_serialize import JSONitem, serializable_dataclass, serializable_field, json_serialize
+from muutils.json_serialize import (
+    JSONitem,
+    json_serialize,
+    serializable_dataclass,
+    serializable_field,
+)
 from muutils.misc import sanitize_fname, stable_hash
-from muutils.zanj.loading import register_loader_handler, LoaderHandler, load_item_recursive
+from muutils.zanj.loading import (
+    LoaderHandler,
+    load_item_recursive,
+    register_loader_handler,
+)
 
 from maze_transformer.dataset.dataset import GPTDataset, GPTDatasetConfig
 from maze_transformer.dataset.maze_dataset import (
@@ -69,7 +78,7 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
             *list(SPECIAL_TOKENS.values()),
             *list(self.node_token_map.values()),
         ]
-    
+
     @cached_property
     def padding_token_index(self) -> int:
         return self.tokenizer_map[SPECIAL_TOKENS["padding"]]
@@ -125,14 +134,14 @@ class MazeDatasetCollection(GPTDataset):
 
     def __getitem__(self, index: int):
         # find which dataset the index belongs to
-        # we add 1, since np.searchsorted returns the 
+        # we add 1, since np.searchsorted returns the
         # index of the last element that is strictly less than the target
         # while we want the index of the last element less than or equal to the target
-        dataset_idx: int = np.searchsorted(self.dataset_cum_lengths, index+1)
+        dataset_idx: int = np.searchsorted(self.dataset_cum_lengths, index + 1)
         index_adjusted: int = index
         if dataset_idx > 0:
-            # if the index is 0, `dataset_idx - 1` will be -1. 
-            # We just want to use the base index 
+            # if the index is 0, `dataset_idx - 1` will be -1.
+            # We just want to use the base index
             index_adjusted -= self.dataset_cum_lengths[dataset_idx - 1]
         return self.maze_datasets[dataset_idx][index_adjusted]
 
@@ -158,10 +167,10 @@ class MazeDatasetCollection(GPTDataset):
 
     def serialize(self) -> JSONitem:
         return dict(
-            __format__ = "MazeDatasetCollection",
+            __format__="MazeDatasetCollection",
             cfg=self.cfg.serialize(),
             maze_datasets=[dataset.serialize() for dataset in self.maze_datasets],
-            generation_metadata_collected = json_serialize(
+            generation_metadata_collected=json_serialize(
                 self.generation_metadata_collected
             ),
         )
@@ -169,10 +178,12 @@ class MazeDatasetCollection(GPTDataset):
     @classmethod
     def load(cls, data: JSONitem) -> "MazeDatasetCollection":
         assert data["__format__"] == "MazeDatasetCollection"
-        return cls(**{
-            key: load_item_recursive(data[key], tuple())
-            for key in ["cfg", "maze_datasets", "generation_metadata_collected"]
-        })
+        return cls(
+            **{
+                key: load_item_recursive(data[key], tuple())
+                for key in ["cfg", "maze_datasets", "generation_metadata_collected"]
+            }
+        )
 
     def update_self_config(self) -> None:
         # TODO: why cant we set this directly? its not frozen, and it seems to work in a regular MazeDataset
@@ -182,14 +193,16 @@ class MazeDatasetCollection(GPTDataset):
 
 
 MazeDatasetCollectionConfig._dataset_class = MazeDatasetCollection
-register_loader_handler(LoaderHandler(
-    check= lambda json_item, path=None, z=None: (
-        isinstance(json_item, typing.Mapping)
-        and "__format__" in json_item
-        and json_item["__format__"].startswith("MazeDatasetCollection")
-    ),
-    load = lambda json_item, path=None, z=None: MazeDatasetCollection.load(json_item),
-    uid = "MazeDatasetCollection",
-    source_pckg = "maze_transformer.generation.maze_dataset_collection",
-    desc = "MazeDatasetCollection"
-))
+register_loader_handler(
+    LoaderHandler(
+        check=lambda json_item, path=None, z=None: (
+            isinstance(json_item, typing.Mapping)
+            and "__format__" in json_item
+            and json_item["__format__"].startswith("MazeDatasetCollection")
+        ),
+        load=lambda json_item, path=None, z=None: MazeDatasetCollection.load(json_item),
+        uid="MazeDatasetCollection",
+        source_pckg="maze_transformer.generation.maze_dataset_collection",
+        desc="MazeDatasetCollection",
+    )
+)

@@ -142,8 +142,8 @@ class LatticeMazeGenerators:
     def gen_wilson(
         grid_shape: Coord,
     ) -> LatticeMaze:
-        """Generate a lattice maze using Wilson's algorithm. 
-        
+        """Generate a lattice maze using Wilson's algorithm.
+
         # Algorithm
         Wilson's algorithm generates an unbiased (random) maze
         sampled from the uniform distribution over all mazes, using loop-erased random walks. The generated maze is

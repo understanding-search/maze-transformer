@@ -9,13 +9,13 @@ from muutils.zanj.torchutil import (
     assert_model_exact_equality,
 )
 
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 from maze_transformer.training.config import (
     BaseGPTConfig,
     ConfigHolder,
     TrainConfig,
     ZanjHookedTransformer,
 )
-from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 
 ZANJ_MODEL_CFG: ConfigHolder = ConfigHolder(
     train_cfg=TrainConfig(name="test_cfg_save-train"),
