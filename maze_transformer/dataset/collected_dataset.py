@@ -98,6 +98,10 @@ class MazeDatasetCollection(GPTDataset):
         super().__init__()
         self.cfg: MazeDatasetCollectionConfig = cfg
         self.maze_datasets: list[MazeDataset] = list(maze_datasets)
+        for c, ds in zip(self.cfg.maze_dataset_configs, self.maze_datasets):
+            assert c.name == ds.cfg.name
+            assert c == ds.cfg
+
         self.generation_metadata_collected: dict | None = generation_metadata_collected
 
     @property
@@ -121,7 +125,10 @@ class MazeDatasetCollection(GPTDataset):
 
     def __getitem__(self, index: int):
         # find which dataset the index belongs to
-        dataset_idx: int = np.searchsorted(self.dataset_cum_lengths, index)
+        # we add 1, since np.searchsorted returns the 
+        # index of the last element that is strictly less than the target
+        # while we want the index of the last element less than or equal to the target
+        dataset_idx: int = np.searchsorted(self.dataset_cum_lengths, index+1)
         index_adjusted: int = index
         if dataset_idx > 0:
             # if the index is 0, `dataset_idx - 1` will be -1. 

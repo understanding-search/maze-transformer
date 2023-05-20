@@ -55,8 +55,16 @@ class TestMazeDatasetCollection:
         # print(len(self.test_collection))
         # print(self.test_collection.mazes)
         assert self.test_collection[0].connection_list.shape == (2, 5, 5)
-        assert self.test_collection[1].connection_list.shape == (2, 1, 1)
+        assert self.test_collection[1].connection_list.shape == (2, 3, 3)
+        assert self.test_collection[2].connection_list.shape == (2, 3, 3)
+        assert self.test_collection[3].connection_list.shape == (2, 3, 3)
+        assert self.test_collection[4].connection_list.shape == (2, 3, 3)
+        assert self.test_collection[5].connection_list.shape == (2, 3, 3)
         assert self.test_collection[6].connection_list.shape == (2, 4, 4)
+
+        for i in range(sum(DATASET_LENGTHS)):
+            assert self.test_collection[i].connection_list.shape == self.test_collection.mazes[i].connection_list.shape
+            assert (self.test_collection[i].connection_list == self.test_collection.mazes[i].connection_list).all()
 
     def test_download(self):
         # TODO
@@ -67,3 +75,10 @@ class TestMazeDatasetCollection:
         loaded = MazeDatasetCollection.load(serialized)
         assert loaded.mazes == self.test_collection.mazes
         assert loaded.cfg == self.test_collection.cfg
+
+    def test_save_read(self):
+        self.test_collection.save("test/_temp/collected_dataset_test_save_read.zanj")
+        loaded = MazeDatasetCollection.read("test/_temp/collected_dataset_test_save_read.zanj")
+        assert loaded.mazes == self.test_collection.mazes
+        assert loaded.cfg == self.test_collection.cfg        
+
