@@ -95,6 +95,19 @@ class TrainConfig(SerializableDataclass):
     checkpoint_interval: int = serializable_field(default=50000)
 
 
+    def summary(self) -> dict:
+        """return a human-readable summary of the config"""
+        return dict(
+            name=self.name,
+            optimizer=self.optimizer.__name__,
+            optimizer_kwargs=self.optimizer_kwargs,
+            batch_size=self.batch_size,
+            dataloader_cfg=self.dataloader_cfg,
+            print_loss_interval=self.print_loss_interval,
+            checkpoint_interval=self.checkpoint_interval,
+        )
+
+
 # actual configuration setups
 # ==================================================
 
@@ -216,6 +229,15 @@ class ConfigHolder(SerializableDataclass):
     pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
         default=None
     )
+
+    def summary(self) -> str:
+        return {
+            "name": self.name,
+            "dataset_cfg": self.dataset_cfg.summary(),
+            "model_cfg": self.model_cfg.serialize(),
+            "train_cfg": self.train_cfg.summary(),
+            "pretrainedtokenizer_kwargs": self.pretrainedtokenizer_kwargs,
+        }
 
     @property
     def seed(self) -> int:

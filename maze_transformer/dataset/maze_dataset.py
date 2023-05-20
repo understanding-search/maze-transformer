@@ -164,29 +164,31 @@ class MazeDatasetConfig(GPTDatasetConfig):
         return sanitize_fname(
             f"{self.name}-g{self.grid_n}-n{self.n_mazes}-a_{self.maze_ctor.__name__.removeprefix('gen_')}-h{self.stable_hash_cfg()%10**5}"
         )
-
-    def summary(self) -> dict[str, JSONitem]:
-        """abbreviated serialization, for human readability (not for loading!)"""
-        s = self.serialize()
-        output: dict[str, JSONitem] = {
-            k: s[k]
-            for k in [
-                "name",
-                "seq_len_min",
-                "seq_len_max",
-                "seed",
-                "applied_filters",
-                "grid_n",
-                "n_mazes",
-                "maze_ctor",
-                "maze_ctor_kwargs",
-            ]
+    
+    def summary(self) -> dict:
+        """return a summary of the config"""
+        super_summary: dict = super().summary()
+        self_ser: dict = self.serialize()
+        return {
+            **dict(
+                name=self.name,
+                fname=self.to_fname(),
+                sdc_hash=self.stable_hash_cfg(),
+                seed=self.seed,
+                seq_len_min=self.seq_len_min,
+                seq_len_max=self.seq_len_max,
+                padding_token_index=self.padding_token_index,
+                token_arr_joined=" ".join(self.token_arr),
+                applied_filters=self.applied_filters,
+            ),
+            **{
+                "grid_n": self_ser["grid_n"],
+                "grid_shape": self_ser["grid_shape"],
+                "n_mazes": self_ser["n_mazes"],
+                "maze_ctor_name": self_ser["maze_ctor"]["__name__"],
+                "maze_ctor_kwargs": self_ser["maze_ctor_kwargs"],
+            },
         }
-        # add the hashes
-        output["sdc_hash"] = self.stable_hash_cfg()
-        output["fname"] = self.to_fname()
-        return output
-
 
 def _generate_maze_helper(index: int) -> SolvedMaze:
     maze: LatticeMaze = _GLOBAL_WORKER_CONFIG.maze_ctor(

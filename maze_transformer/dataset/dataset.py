@@ -39,7 +39,7 @@ class GPTDatasetConfig(SerializableDataclass):
 
     name: str
 
-    # TODO: get rid of all these things
+    # TODO: get rid of all these things?
     # --------------------------------------------------
     # TODO: Do we need dtype here? What does it do?
     dtype: torch.dtype | np.dtype = serializable_field(
@@ -68,6 +68,19 @@ class GPTDatasetConfig(SerializableDataclass):
             )
 
         set_reproducibility(self.seed)
+
+    def summary(self) -> dict:
+        """return a summary of the config"""
+        self_ser: dict = self.serialize()
+        return dict(
+            name=self.name,
+            seq_len_min=self.seq_len_min,
+            seq_len_max=self.seq_len_max,
+            seed=self.seed,
+            applied_filters=self.applied_filters,
+            padding_token_index=self.padding_token_index,
+            token_arr_joined=" ".join(self.token_arr),
+        )
 
     @cached_property
     def token_arr(self) -> list[str]:

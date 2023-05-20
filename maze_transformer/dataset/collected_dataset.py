@@ -43,6 +43,13 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
         ],
     )
 
+    def summary(self) -> dict:
+        """return a summary of the config"""
+        return [
+            c.summary()
+            for c in self.maze_dataset_configs
+        ]
+
     @property
     def n_mazes(self) -> int:
         return sum(config.n_mazes for config in self.maze_dataset_configs)
