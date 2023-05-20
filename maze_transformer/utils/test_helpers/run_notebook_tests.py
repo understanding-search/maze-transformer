@@ -53,6 +53,8 @@ def test_notebooks(
                 )
             converted_notebooks.append(converted_file)
 
+        converted_file = None
+
         # the location of this line is important
         os.chdir(notebooks_dir)
 
@@ -62,16 +64,20 @@ def test_notebooks(
             output_file: Path = file.with_suffix(CI_output_suffix)
             print(f"  Output in {output_file}")
 
-            command: str = f"poetry run python {root_relative_to_notebooks / converted_file} > {root_relative_to_notebooks / output_file} 2>&1"
+            command: str = f"poetry run python {root_relative_to_notebooks / file} > {root_relative_to_notebooks / output_file} 2>&1"
             process: subprocess.CompletedProcess = subprocess.run(
                 command, shell=True, text=True
             )
+
+            print(f"  Run completed with return code {process.returncode}")
 
             # print the output of the file to the console if it failed
             if process.returncode != 0:
                 with open(root_relative_to_notebooks / output_file, "r") as f:
                     file_output: str = f.read()
                 raise NotebookTestError(f"Error in {file}:\n\n{file_output}")
+
+            process = None
 
     except NotebookTestError as e:
         print("!" * 50, file=sys.stderr)
