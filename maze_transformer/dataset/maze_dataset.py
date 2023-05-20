@@ -35,6 +35,7 @@ from maze_transformer.dataset.dataset import (
 from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
+from maze_transformer.utils.utils import corner_first_ndindex
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",
@@ -123,11 +124,16 @@ class MazeDatasetConfig(GPTDatasetConfig):
 
     # TODO: use max grid shape for tokenization, have it be a property but then override it in collected dataset
 
+    @property
+    def max_grid_n(self) -> int:
+        return max(self.grid_shape)
+
     @cached_property
     def node_token_map(self) -> dict[CoordTup, str]:
         """map from node to token"""
         return {
-            tuple(coord): _coord_to_str(coord) for coord in np.ndindex(self.grid_shape)
+            tuple(coord): _coord_to_str(coord) 
+            for coord in corner_first_ndindex(self.max_grid_n)
         }
 
     @cached_property

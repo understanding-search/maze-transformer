@@ -18,7 +18,7 @@ from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbProject
 from maze_transformer.utils.test_helpers.assertions import assert_model_output_equality
-from scripts.train_model import TrainingResult, train_model
+from maze_transformer.training.train_model import TrainingResult, train_model
 
 temp_dir: Path = Path("tests/_temp/test_eval_model")
 
@@ -31,7 +31,7 @@ def test_model_loading():
     )
     # get config
     cfg: ConfigHolder = ConfigHolder.get_config_multisource(
-        cfg_names=("test-g3-n5-a_dfs-h10466", "nano-v1", "test-v1"),
+        cfg_names=("test-g3-n5-a_dfs-h82387", "nano-v1", "test-v1"),
     )
     # train model
     result: TrainingResult = train_model(
@@ -58,7 +58,7 @@ def test_model_loading():
 def test_predict_maze_paths():
     # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
     cfg: ConfigHolder = ConfigHolder.get_config_multisource(
-        cfg_names=("test-g3-n5-a_dfs-h10466", "nano-v1", "test-v1"),
+        cfg_names=("test-g3-n5-a_dfs-h82387", "nano-v1", "test-v1"),
     )
     # train model
     result: TrainingResult = train_model(
@@ -91,7 +91,7 @@ def test_predict_maze_paths():
 def test_evaluate_model(temp_dir):
     # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
     cfg: ConfigHolder = ConfigHolder.get_config_multisource(
-        cfg_names=("test-g3-n5-a_dfs-h10466", "nano-v1", "test-v1"),
+        cfg_names=("test-g3-n5-a_dfs-h82387", "nano-v1", "test-v1"),
     )
     # train model
     result: TrainingResult = train_model(
