@@ -18,7 +18,7 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.json_serialize.util import safe_getsource, string_as_lines
-from muutils.misc import sanitize_fname, stable_hash
+from muutils.misc import sanitize_fname, stable_hash, shorten_numerical_to_str
 from muutils.zanj.loading import (
     LoaderHandler,
     load_item_recursive,
@@ -162,7 +162,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
 
     def to_fname(self) -> str:
         return sanitize_fname(
-            f"{self.name}-g{self.grid_n}-n{self.n_mazes}-a_{self.maze_ctor.__name__.removeprefix('gen_')}-h{self.stable_hash_cfg()%10**5}"
+            f"{self.name}-g{self.grid_n}-n{shorten_numerical_to_str(self.n_mazes)}-a_{self.maze_ctor.__name__.removeprefix('gen_')}-h{self.stable_hash_cfg()%10**5}"
         )
     
     def summary(self) -> dict:

@@ -14,7 +14,7 @@ from muutils.json_serialize import (
     serializable_dataclass,
     serializable_field,
 )
-from muutils.misc import sanitize_fname
+from muutils.misc import sanitize_fname, shorten_numerical_to_str
 from muutils.tensor_utils import DTYPE_MAP
 from muutils.zanj import ZANJ
 from torch.utils.data import Dataset
@@ -107,7 +107,7 @@ class GPTDatasetConfig(SerializableDataclass):
         warnings.warn(
             f"using fallblack to_fname() method for {self.__class__.__name__}, this should be implemented by subclasses!"
         )
-        return sanitize_fname(f"f{self.name}_{self_json_hash}")
+        return sanitize_fname(f"f{self.name}-n{shorten_numerical_to_str(len(self))}-h{self_json_hash}")
 
 
 def _dataset_config_load(*args, **kwargs) -> "GPTDatasetConfig":

@@ -156,8 +156,8 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             num_workers=0,
             drop_last=False,
         ),
-        print_loss_interval=100,
-        checkpoint_interval=1000,
+        print_loss_interval=10,
+        checkpoint_interval=100,
     ),
     TrainConfig(
         name="tiny-v1",

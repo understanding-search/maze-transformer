@@ -40,6 +40,8 @@ def train_model(
     cfg_file: str | Path | None = None,
     cfg_names: typing.Sequence[str] | None = None,
     do_generate_dataset: bool = False,
+    dataset_verbose: bool = True,
+    device: torch.device|None = None,
     help: bool = False,
     **kwargs,
 ) -> TrainingResult:
@@ -57,6 +59,9 @@ def train_model(
     if help:
         print(train_model.__doc__)
         return
+    
+    if device is None:
+        device = get_device()
 
     cfg = ConfigHolder.get_config_multisource(
         cfg=cfg,
@@ -67,6 +72,7 @@ def train_model(
 
     # set up path, save config
     base_path = Path(base_path)
+    base_path.mkdir(parents=True, exist_ok=True)
     output_path = base_path / TRAIN_SAVE_FILES.model_run_dir(cfg)
     output_path = Path(output_path)
     output_path.mkdir(parents=True)
@@ -89,22 +95,26 @@ def train_model(
                 "data_cfg.name": cfg.dataset_cfg.name,
                 "train_cfg.name": cfg.train_cfg.name,
                 "model_cfg.name": cfg.model_cfg.name,
+                "cfg_summary": cfg.summary(),
                 "cfg": cfg.serialize(),
             },
         )
     )
+    logger.progress("Summary logged, getting dataset")
 
     # load dataset
     dataset: MazeDataset = MazeDataset.from_config(
         cfg=cfg.dataset_cfg,
         do_generate=do_generate_dataset,
+        local_base_path=base_path,
+        verbose=dataset_verbose,
     )
-    logger.progress("loaded dataset")
+    logger.progress("finished getting dataset")
 
-    # get dataloader, device, and then train
+    # get dataloader and then train
     dataloader: DataLoader = get_dataloader(dataset, cfg, logger)
-    device: torch.device = get_device()
 
+    logger.progress("finished dataloader, passing to train()")
     trained_model: ZanjHookedTransformer = train(
         cfg=cfg,
         dataloader=dataloader,
