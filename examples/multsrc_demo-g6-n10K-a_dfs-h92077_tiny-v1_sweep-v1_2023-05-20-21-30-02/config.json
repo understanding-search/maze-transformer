@@ -1,0 +1,447 @@
+{
+	"__format__": "ConfigHolder(SerializableDataclass)",
+	"dataset_cfg": {
+		"__format__": "MazeDatasetConfig(SerializableDataclass)",
+		"name": "demo",
+		"dtype": "torch.int16",
+		"seq_len_min": 1,
+		"seq_len_max": 512,
+		"seed": 42,
+		"applied_filters": [],
+		"grid_n": 6,
+		"n_mazes": 10000,
+		"maze_ctor": {
+			"__name__": "gen_dfs",
+			"__module__": "maze_transformer.generation.generators",
+			"__doc__": [
+				"generate a lattice maze using depth first search, iterative",
+				"",
+				"        # Arguments",
+				"        - `grid_shape: Coord`: the shape of the grid",
+				"        - `lattice_dim: int`: the dimension of the lattice",
+				"          (default: `2`)",
+				"        - `n_accessible_cells: int | None`: the number of accessible cells in the maze. If `None`, defaults to the total number of cells in the grid.",
+				"            (default: `None`)",
+				"        - `max_tree_depth: int | None`: the maximum depth of the tree. If `None`, defaults to `2 * n_accessible_cells`.",
+				"            (default: `None`)",
+				"        - `start_coord: Coord | None`: the starting coordinate of the generation algorithm. If `None`, defaults to a random coordinate.",
+				"",
+				"",
+				"        # algorithm",
+				"        1. Choose the initial cell, mark it as visited and push it to the stack",
+				"        2. While the stack is not empty",
+				"                1. Pop a cell from the stack and make it a current cell",
+				"                2. If the current cell has any neighbours which have not been visited",
+				"                        1. Push the current cell to the stack",
+				"                        2. Choose one of the unvisited neighbours",
+				"                        3. Remove the wall between the current cell and the chosen cell",
+				"                        4. Mark the chosen cell as visited and push it to the stack",
+				"        "
+			],
+			"source_code": [
+				"    @staticmethod",
+				"    def gen_dfs(",
+				"        grid_shape: Coord,",
+				"        lattice_dim: int = 2,",
+				"        n_accessible_cells: int | None = None,",
+				"        max_tree_depth: int | None = None,",
+				"        start_coord: Coord | None = None,",
+				"    ) -> LatticeMaze:",
+				"        \"\"\"generate a lattice maze using depth first search, iterative",
+				"",
+				"        # Arguments",
+				"        - `grid_shape: Coord`: the shape of the grid",
+				"        - `lattice_dim: int`: the dimension of the lattice",
+				"          (default: `2`)",
+				"        - `n_accessible_cells: int | None`: the number of accessible cells in the maze. If `None`, defaults to the total number of cells in the grid.",
+				"            (default: `None`)",
+				"        - `max_tree_depth: int | None`: the maximum depth of the tree. If `None`, defaults to `2 * n_accessible_cells`.",
+				"            (default: `None`)",
+				"        - `start_coord: Coord | None`: the starting coordinate of the generation algorithm. If `None`, defaults to a random coordinate.",
+				"",
+				"",
+				"        # algorithm",
+				"        1. Choose the initial cell, mark it as visited and push it to the stack",
+				"        2. While the stack is not empty",
+				"                1. Pop a cell from the stack and make it a current cell",
+				"                2. If the current cell has any neighbours which have not been visited",
+				"                        1. Push the current cell to the stack",
+				"                        2. Choose one of the unvisited neighbours",
+				"                        3. Remove the wall between the current cell and the chosen cell",
+				"                        4. Mark the chosen cell as visited and push it to the stack",
+				"        \"\"\"",
+				"",
+				"        # Default values if no constraints have been passed",
+				"        grid_shape: Coord = np.array(grid_shape)",
+				"        n_total_cells: int = int(np.prod(grid_shape))",
+				"        if n_accessible_cells is None:",
+				"            n_accessible_cells = n_total_cells",
+				"        if max_tree_depth is None:",
+				"            max_tree_depth = (",
+				"                2 * n_total_cells",
+				"            )  # We define max tree depth counting from the start coord in two directions. Therefore we divide by two in the if clause for neighboring sites later and multiply by two here.",
+				"        if start_coord is None:",
+				"            start_coord: Coord = np.random.randint(",
+				"                0,",
+				"                np.maximum(grid_shape - 1, 1),",
+				"                size=2,",
+				"            )",
+				"        else:",
+				"            start_coord = np.array(start_coord)",
+				"",
+				"        # initialize the maze with no connections",
+				"        connection_list: ConnectionList = np.zeros(",
+				"            (lattice_dim, grid_shape[0], grid_shape[1]), dtype=np.bool_",
+				"        )",
+				"",
+				"        # initialize the stack with the target coord",
+				"        visited_cells: set[tuple[int, int]] = set()",
+				"        visited_cells.add(tuple(start_coord))",
+				"        stack: list[Coord] = [start_coord]",
+				"",
+				"        # initialize tree_depth_counter",
+				"        current_tree_depth: int = 1",
+				"",
+				"        # loop until the stack is empty or n_connected_cells is reached",
+				"        while stack and (len(visited_cells) < n_accessible_cells):",
+				"            # get the current coord from the stack",
+				"            current_coord: Coord = stack.pop()",
+				"",
+				"            # filter neighbors by being within grid bounds and being unvisited",
+				"            unvisited_neighbors_deltas: list[tuple[Coord, Coord]] = [",
+				"                (neighbor, delta)",
+				"                for neighbor, delta in zip(",
+				"                    current_coord + NEIGHBORS_MASK, NEIGHBORS_MASK",
+				"                )",
+				"                if (",
+				"                    (tuple(neighbor) not in visited_cells)",
+				"                    and (0 <= neighbor[0] < grid_shape[0])",
+				"                    and (0 <= neighbor[1] < grid_shape[1])",
+				"                )",
+				"            ]",
+				"",
+				"            # don't continue if max_tree_depth/2 is already reached (divide by 2 because we can branch to multiple directions)",
+				"            if unvisited_neighbors_deltas and (",
+				"                current_tree_depth <= max_tree_depth / 2",
+				"            ):",
+				"                stack.append(current_coord)",
+				"",
+				"                # choose one of the unvisited neighbors",
+				"                chosen_neighbor, delta = random.choice(unvisited_neighbors_deltas)",
+				"",
+				"                # add connection",
+				"                dim: int = np.argmax(np.abs(delta))",
+				"                # if positive, down/right from current coord",
+				"                # if negative, up/left from current coord (down/right from neighbor)",
+				"                clist_node: Coord = (",
+				"                    current_coord if (delta.sum() > 0) else chosen_neighbor",
+				"                )",
+				"                connection_list[dim, clist_node[0], clist_node[1]] = True",
+				"",
+				"                # add to visited cells and stack",
+				"                visited_cells.add(tuple(chosen_neighbor))",
+				"                stack.append(chosen_neighbor)",
+				"",
+				"                # Update current tree depth",
+				"                current_tree_depth += 1",
+				"            else:",
+				"                current_tree_depth -= 1",
+				"",
+				"        return LatticeMaze(",
+				"            connection_list=connection_list,",
+				"            generation_meta=dict(",
+				"                func_name=\"gen_dfs\",",
+				"                grid_shape=grid_shape,",
+				"                start_coord=start_coord,",
+				"                visited_cells={tuple(int(x) for x in coord) for coord in visited_cells},",
+				"                n_accessible_cells=int(n_accessible_cells),",
+				"                max_tree_depth=int(max_tree_depth),",
+				"                fully_connected=bool(len(visited_cells) == n_accessible_cells),",
+				"            ),",
+				"        )"
+			]
+		},
+		"maze_ctor_kwargs": {},
+		"padding_token_index": 10,
+		"token_arr": [
+			"<ADJLIST_START>",
+			"<ADJLIST_END>",
+			"<TARGET_START>",
+			"<TARGET_END>",
+			"<ORIGIN_START>",
+			"<ORIGIN_END>",
+			"<PATH_START>",
+			"<PATH_END>",
+			"<-->",
+			";",
+			"<PADDING>",
+			"(0,0)",
+			"(0,1)",
+			"(1,0)",
+			"(1,1)",
+			"(0,2)",
+			"(2,0)",
+			"(1,2)",
+			"(2,1)",
+			"(2,2)",
+			"(0,3)",
+			"(3,0)",
+			"(3,1)",
+			"(2,3)",
+			"(3,2)",
+			"(1,3)",
+			"(3,3)",
+			"(0,4)",
+			"(2,4)",
+			"(4,0)",
+			"(1,4)",
+			"(4,1)",
+			"(4,2)",
+			"(3,4)",
+			"(4,3)",
+			"(4,4)",
+			"(0,5)",
+			"(5,0)",
+			"(5,1)",
+			"(2,5)",
+			"(5,2)",
+			"(5,3)",
+			"(4,5)",
+			"(5,4)",
+			"(1,5)",
+			"(3,5)",
+			"(5,5)"
+		],
+		"tokenizer_map": {
+			"<ADJLIST_START>": 0,
+			"<ADJLIST_END>": 1,
+			"<TARGET_START>": 2,
+			"<TARGET_END>": 3,
+			"<ORIGIN_START>": 4,
+			"<ORIGIN_END>": 5,
+			"<PATH_START>": 6,
+			"<PATH_END>": 7,
+			"<-->": 8,
+			";": 9,
+			"<PADDING>": 10,
+			"(0,0)": 11,
+			"(0,1)": 12,
+			"(1,0)": 13,
+			"(1,1)": 14,
+			"(0,2)": 15,
+			"(2,0)": 16,
+			"(1,2)": 17,
+			"(2,1)": 18,
+			"(2,2)": 19,
+			"(0,3)": 20,
+			"(3,0)": 21,
+			"(3,1)": 22,
+			"(2,3)": 23,
+			"(3,2)": 24,
+			"(1,3)": 25,
+			"(3,3)": 26,
+			"(0,4)": 27,
+			"(2,4)": 28,
+			"(4,0)": 29,
+			"(1,4)": 30,
+			"(4,1)": 31,
+			"(4,2)": 32,
+			"(3,4)": 33,
+			"(4,3)": 34,
+			"(4,4)": 35,
+			"(0,5)": 36,
+			"(5,0)": 37,
+			"(5,1)": 38,
+			"(2,5)": 39,
+			"(5,2)": 40,
+			"(5,3)": 41,
+			"(4,5)": 42,
+			"(5,4)": 43,
+			"(1,5)": 44,
+			"(3,5)": 45,
+			"(5,5)": 46
+		},
+		"grid_shape": [
+			6,
+			6
+		],
+		"token_node_map": {
+			"(0,0)": [
+				0,
+				0
+			],
+			"(0,1)": [
+				0,
+				1
+			],
+			"(1,0)": [
+				1,
+				0
+			],
+			"(1,1)": [
+				1,
+				1
+			],
+			"(0,2)": [
+				0,
+				2
+			],
+			"(2,0)": [
+				2,
+				0
+			],
+			"(1,2)": [
+				1,
+				2
+			],
+			"(2,1)": [
+				2,
+				1
+			],
+			"(2,2)": [
+				2,
+				2
+			],
+			"(0,3)": [
+				0,
+				3
+			],
+			"(3,0)": [
+				3,
+				0
+			],
+			"(3,1)": [
+				3,
+				1
+			],
+			"(2,3)": [
+				2,
+				3
+			],
+			"(3,2)": [
+				3,
+				2
+			],
+			"(1,3)": [
+				1,
+				3
+			],
+			"(3,3)": [
+				3,
+				3
+			],
+			"(0,4)": [
+				0,
+				4
+			],
+			"(2,4)": [
+				2,
+				4
+			],
+			"(4,0)": [
+				4,
+				0
+			],
+			"(1,4)": [
+				1,
+				4
+			],
+			"(4,1)": [
+				4,
+				1
+			],
+			"(4,2)": [
+				4,
+				2
+			],
+			"(3,4)": [
+				3,
+				4
+			],
+			"(4,3)": [
+				4,
+				3
+			],
+			"(4,4)": [
+				4,
+				4
+			],
+			"(0,5)": [
+				0,
+				5
+			],
+			"(5,0)": [
+				5,
+				0
+			],
+			"(5,1)": [
+				5,
+				1
+			],
+			"(2,5)": [
+				2,
+				5
+			],
+			"(5,2)": [
+				5,
+				2
+			],
+			"(5,3)": [
+				5,
+				3
+			],
+			"(4,5)": [
+				4,
+				5
+			],
+			"(5,4)": [
+				5,
+				4
+			],
+			"(1,5)": [
+				1,
+				5
+			],
+			"(3,5)": [
+				3,
+				5
+			],
+			"(5,5)": [
+				5,
+				5
+			]
+		},
+		"n_tokens": 47
+	},
+	"model_cfg": {
+		"__format__": "BaseGPTConfig(SerializableDataclass)",
+		"name": "tiny-v1",
+		"act_fn": "gelu",
+		"d_model": 32,
+		"d_head": 16,
+		"n_layers": 4,
+		"weight_processing": {
+			"are_layernorms_folded": false,
+			"are_weights_processed": false
+		}
+	},
+	"train_cfg": {
+		"__format__": "TrainConfig(SerializableDataclass)",
+		"name": "sweep-v1",
+		"optimizer": "AdamW",
+		"optimizer_kwargs": {
+			"lr": 0.0001
+		},
+		"batch_size": 64,
+		"dataloader_cfg": {
+			"shuffle": true,
+			"num_workers": 8,
+			"persistent_workers": true,
+			"drop_last": true
+		},
+		"print_loss_interval": 1000,
+		"checkpoint_interval": 5000
+	},
+	"name": "multsrc_demo-g6-n10K-a_dfs-h92077_tiny-v1_sweep-v1",
+	"pretrainedtokenizer_kwargs": null
+}
