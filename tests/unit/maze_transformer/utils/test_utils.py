@@ -23,7 +23,7 @@ def test_get_checkpoint_paths_for_run(temp_dir):
     checkpoint2_path.touch()
     other_path.touch()
 
-    checkpoint_paths = get_checkpoint_paths_for_run(run_path)
+    checkpoint_paths = get_checkpoint_paths_for_run(run_path, "pt")
 
     assert checkpoint_paths == [(123, checkpoint1_path), (456, checkpoint2_path)]
 

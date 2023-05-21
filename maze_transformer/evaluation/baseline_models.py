@@ -32,7 +32,7 @@ class RandomBaseline(HookedTransformer):
     def __init__(self, config: ConfigHolder, bias: float = 0.0):
         assert isinstance(
             config, ConfigHolder
-        ), f"config must be a ConfigHolder, got {type(config) = }"
+        ), f"config must be a ConfigHolder, got {str(type(config)) = }"
         self.config: ConfigHolder = config
         self.bias: float = bias
         super().__init__(cfg=config.hooked_transformer_cfg, tokenizer=config.tokenizer)
