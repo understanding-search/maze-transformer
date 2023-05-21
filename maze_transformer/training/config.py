@@ -46,6 +46,17 @@ class BaseGPTConfig(SerializableDataclass):
         )
     )
 
+    def summary(self) -> dict:
+        """return a human-readable summary of the config"""
+        return dict(
+            name=self.name,
+            act_fn=self.act_fn,
+            d_model=self.d_model,
+            d_head=self.d_head,
+            n_layers=self.n_layers,
+            weight_processing=self.weight_processing,
+        )
+
 
 # ==================================================
 
@@ -233,7 +244,7 @@ class ConfigHolder(SerializableDataclass):
         return {
             "name": self.name,
             "dataset_cfg": self.dataset_cfg.summary(),
-            "model_cfg": self.model_cfg.serialize(),
+            "model_cfg": self.model_cfg.summary(),
             "train_cfg": self.train_cfg.summary(),
             "pretrainedtokenizer_kwargs": self.pretrainedtokenizer_kwargs,
         }
