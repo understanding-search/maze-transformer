@@ -144,6 +144,7 @@ class GPTDataset(Dataset):
         zanj: ZANJ | None = None,
         do_download: bool = True,
         local_base_path: Path = Path("data/maze_dataset"),
+        verbose: bool = False,
         **kwargs,
     ) -> "GPTDataset":
         """base class for gpt datasets
@@ -228,20 +229,32 @@ class GPTDataset(Dataset):
                 "no way to load dataset! you said not to load local, not to download, and not to generate"
             )
 
+        dataset_path: Path = local_base_path / fname
+
         # try loading
         if load_local:
-            if (local_base_path / fname).exists():
-                output = cls.read(local_base_path / fname, zanj=zanj)
+            if dataset_path.exists():
+                if verbose:
+                    print(f"loading dataset from {dataset_path.as_posix()}")
+                output = cls.read(dataset_path, zanj=zanj)
                 did_load_local = True
 
         if do_download and output is None:
+            if verbose:
+                print("seeing if we can download the dataset...")
             try:
                 output = cls.download(cfg, **kwargs)
+                if verbose:
+                    print("download successful!")
             except NotImplementedError:
+                if verbose:
+                    print("no download found, or download failed")
                 pass
 
         if do_generate and output is None:
-            output = cls.generate(cfg, **kwargs)
+            if verbose:
+                print("generating dataset...")
+            output = cls.generate(cfg, verbose=verbose, **kwargs)
             # only if we generated it, apply filters
             output = output._apply_filters_from_config()
 
@@ -253,8 +266,12 @@ class GPTDataset(Dataset):
             raise ValueError(f"config mismatch: {cfg.diff(output.cfg)}")
 
         if save_local and not did_load_local:
-            output.save(local_base_path / fname, zanj=zanj)
+            if verbose:
+                print(f"saving dataset to {dataset_path}")
+            output.save(dataset_path, zanj=zanj)
 
+        if verbose:
+            print(f"Got dataset {output.cfg.name} with {len(output)} items. {output.cfg.to_fname() = }")
         return output
 
     def save(self, file_path: Path | str, zanj: ZANJ | None = None):
