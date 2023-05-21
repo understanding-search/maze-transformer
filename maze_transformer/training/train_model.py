@@ -41,7 +41,7 @@ def train_model(
     cfg_names: typing.Sequence[str] | None = None,
     do_generate_dataset: bool = False,
     dataset_verbose: bool = True,
-    device: torch.device|None = None,
+    device: torch.device | None = None,
     help: bool = False,
     **kwargs,
 ) -> TrainingResult:
@@ -59,7 +59,7 @@ def train_model(
     if help:
         print(train_model.__doc__)
         return
-    
+
     if device is None:
         device = get_device()
 

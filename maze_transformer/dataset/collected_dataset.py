@@ -11,7 +11,7 @@ from muutils.json_serialize import (
     serializable_dataclass,
     serializable_field,
 )
-from muutils.misc import sanitize_fname, stable_hash, shorten_numerical_to_str
+from muutils.misc import sanitize_fname, shorten_numerical_to_str, stable_hash
 from muutils.zanj.loading import (
     LoaderHandler,
     load_item_recursive,
@@ -45,10 +45,7 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
 
     def summary(self) -> dict:
         """return a summary of the config"""
-        return [
-            c.summary()
-            for c in self.maze_dataset_configs
-        ]
+        return [c.summary() for c in self.maze_dataset_configs]
 
     @property
     def n_mazes(self) -> int:
@@ -100,7 +97,9 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
 
     def to_fname(self) -> str:
         """convert config to a filename"""
-        return sanitize_fname(f"collected-{self.name}-n{shorten_numerical_to_str(self.n_mazes)}-h{self.stable_hash_cfg()%10**5}")
+        return sanitize_fname(
+            f"collected-{self.name}-n{shorten_numerical_to_str(self.n_mazes)}-h{self.stable_hash_cfg()%10**5}"
+        )
 
 
 class MazeDatasetCollection(GPTDataset):

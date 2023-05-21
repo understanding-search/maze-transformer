@@ -18,7 +18,7 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.json_serialize.util import safe_getsource, string_as_lines
-from muutils.misc import sanitize_fname, stable_hash, shorten_numerical_to_str
+from muutils.misc import sanitize_fname, shorten_numerical_to_str, stable_hash
 from muutils.zanj.loading import (
     LoaderHandler,
     load_item_recursive,
@@ -164,7 +164,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
         return sanitize_fname(
             f"{self.name}-g{self.grid_n}-n{shorten_numerical_to_str(self.n_mazes)}-a_{self.maze_ctor.__name__.removeprefix('gen_')}-h{self.stable_hash_cfg()%10**5}"
         )
-    
+
     def summary(self) -> dict:
         """return a summary of the config"""
         super_summary: dict = super().summary()
@@ -189,6 +189,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
                 "maze_ctor_kwargs": self_ser["maze_ctor_kwargs"],
             },
         }
+
 
 def _generate_maze_helper(index: int) -> SolvedMaze:
     maze: LatticeMaze = _GLOBAL_WORKER_CONFIG.maze_ctor(

@@ -94,7 +94,6 @@ class TrainConfig(SerializableDataclass):
     print_loss_interval: int = serializable_field(default=1000)
     checkpoint_interval: int = serializable_field(default=50000)
 
-
     def summary(self) -> dict:
         """return a human-readable summary of the config"""
         return dict(

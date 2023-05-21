@@ -87,14 +87,15 @@ def train(
     logger.summary({"n_batches": n_batches})
 
     checkpoint_interval_iters: int = max(
-        1, 
+        1,
         int(cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size),
     )
     loss_interval_iters: int = max(
-        1, 
-        int(cfg.train_cfg.print_loss_interval // cfg.train_cfg.batch_size)
+        1, int(cfg.train_cfg.print_loss_interval // cfg.train_cfg.batch_size)
     )
-    logger.progress(f"will train for {n_batches} batches, {checkpoint_interval_iters = }, {loss_interval_iters = }")
+    logger.progress(
+        f"will train for {n_batches} batches, {checkpoint_interval_iters = }, {loss_interval_iters = }"
+    )
     for iteration, batch in enumerate(dataloader):
         loss: SingleLoss
         logits: Float[torch.Tensor, "batch pos d_vocab"]

@@ -1,9 +1,9 @@
 import os
 import random
+import typing
 from itertools import islice
 from pathlib import Path
 from typing import Any, Callable, TypeVar
-import typing
 
 import numpy as np
 import torch
@@ -55,10 +55,10 @@ def chunks(it, chunk_size):
 
 
 def get_checkpoint_paths_for_run(
-        run_path: Path, 
-        extension: typing.Literal["pt", "zanj"],
-        checkpoints_format: str = "checkpoints/model.iter_*.{extension}",         
-    ) -> list[tuple[int, Path]]:
+    run_path: Path,
+    extension: typing.Literal["pt", "zanj"],
+    checkpoints_format: str = "checkpoints/model.iter_*.{extension}",
+) -> list[tuple[int, Path]]:
     """get checkpoints of the format from the run_path
 
     note that `checkpoints_format` should contain a glob pattern with:
@@ -69,7 +69,7 @@ def get_checkpoint_paths_for_run(
     assert (
         run_path.is_dir()
     ), f"Model path {run_path} is not a directory (expect run directory, not model files)"
-    
+
     return [
         (int(checkpoint_path.stem.split("_")[-1].split(".")[0]), checkpoint_path)
         for checkpoint_path in sorted(

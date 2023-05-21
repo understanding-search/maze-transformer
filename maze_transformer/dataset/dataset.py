@@ -107,7 +107,9 @@ class GPTDatasetConfig(SerializableDataclass):
         warnings.warn(
             f"using fallblack to_fname() method for {self.__class__.__name__}, this should be implemented by subclasses!"
         )
-        return sanitize_fname(f"f{self.name}-n{shorten_numerical_to_str(len(self))}-h{self_json_hash}")
+        return sanitize_fname(
+            f"f{self.name}-n{shorten_numerical_to_str(len(self))}-h{self_json_hash}"
+        )
 
 
 def _dataset_config_load(*args, **kwargs) -> "GPTDatasetConfig":
@@ -271,7 +273,9 @@ class GPTDataset(Dataset):
             output.save(dataset_path, zanj=zanj)
 
         if verbose:
-            print(f"Got dataset {output.cfg.name} with {len(output)} items. {output.cfg.to_fname() = }")
+            print(
+                f"Got dataset {output.cfg.name} with {len(output)} items. {output.cfg.to_fname() = }"
+            )
         return output
 
     def save(self, file_path: Path | str, zanj: ZANJ | None = None):
