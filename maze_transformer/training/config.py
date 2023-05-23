@@ -27,7 +27,7 @@ from maze_transformer.dataset.maze_dataset_configs import MAZE_DATASET_CONFIGS
 from maze_transformer.dataset.tokenizer import HuggingMazeTokenizer
 
 
-@serializable_dataclass(kw_only=True)
+@serializable_dataclass(kw_only=True, properties_to_serialize=["n_heads"])
 class BaseGPTConfig(SerializableDataclass):
     """
     Add a name property and serialization to HookedTransformerConfig
@@ -46,6 +46,10 @@ class BaseGPTConfig(SerializableDataclass):
         )
     )
 
+    @property
+    def n_heads(self) -> int:
+        return self.d_model // self.d_head
+
     def summary(self) -> dict:
         """return a human-readable summary of the config"""
         return dict(
@@ -55,6 +59,7 @@ class BaseGPTConfig(SerializableDataclass):
             d_head=self.d_head,
             n_layers=self.n_layers,
             weight_processing=self.weight_processing,
+            n_heads=self.n_heads,
         )
 
 
