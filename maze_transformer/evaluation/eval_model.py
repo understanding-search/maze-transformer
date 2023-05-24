@@ -15,6 +15,7 @@ from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.training import TRAIN_SAVE_FILES
 from maze_transformer.utils.token_utils import (
     WhenMissing,
+    get_context_tokens,
     get_path_tokens,
     get_tokens_up_to_path_start,
     tokens_to_coords,
@@ -105,26 +106,20 @@ def predict_maze_paths(
     max_new_tokens: int = 8,
     verbose: bool = False,
     when_noncoord: WhenMissing = "skip",
+    temperature: float = 0.0,
 ) -> list[str|list[tuple[int, int]]]:
     indices_batch: list[ATensor] = []
-    # for tokens in tokens_batch:
-    #     maze = get_tokens_up_to_path_start(tokens)
-    #     indices = torch.tensor(
-    #         [data_cfg.tokenizer_map[t] for t in maze], dtype=torch.long
-    #     )
-    #     indices_batch.append(indices)
-
-    
-    prediction_batch: list[str] = [
-        model.generate(
-            " ".join(tokens),
-            eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
-            stop_at_eos=True,
-            max_new_tokens=max_new_tokens,
-            verbose=verbose,
-        )
-        for tokens in tokens_batch
-    ]
+    prediction_batch: list[str] = list()
+    for tokens in tokens_batch:
+        context: str = " ".join(get_context_tokens(tokens))
+        prediction_batch.append(model.generate(
+                context,
+                eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
+                stop_at_eos=True,
+                max_new_tokens=max_new_tokens,
+                verbose=verbose,
+                temperature=temperature,
+        ))
 
     paths: list[list[tuple[int, int]]] = []
     for preds in prediction_batch:
