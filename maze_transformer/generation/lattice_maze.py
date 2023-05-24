@@ -35,6 +35,20 @@ BinaryPixelGrid = Bool[np.ndarray, "x y"]
 ConnectionList = Bool[np.ndarray, "lattice_dim x y"]
 
 
+def _fill_edges_with_walls(connection_list: ConnectionList) -> ConnectionList:
+    """fill the last elements of the connections lists as false for each dim"""
+    for dim in range(connection_list.shape[0]):
+        # last row for down
+        if dim == 0:
+            connection_list[dim, -1, :] = False
+        # last column for right
+        elif dim == 1:
+            connection_list[dim, :, -1] = False
+        else:
+            raise NotImplementedError(f"only 2d lattices supported. got {dim=}")
+    return connection_list
+
+
 def color_in_pixel_grid(pixel_grid: PixelGrid, color: RGB) -> bool:
     for row in pixel_grid:
         for pixel in row:
@@ -190,6 +204,28 @@ class LatticeMaze(SerializableDataclass):
                 2,
             ), f"invalid shape: {output.shape}, expected ({len(neighbors)}, 2))\n{c = }\n{neighbors = }\n{self.as_ascii()}"
         return output
+
+    def gen_connected_component_from(self, c: Coord) -> CoordArray:
+        """return the connected component from a given coordinate"""
+        # Stack for DFS
+        stack: list[Coord] = [c]
+
+        # Set to store visited nodes
+        visited: set[CoordTup] = set()
+
+        while stack:
+            current_node = stack.pop()
+            visited.add(tuple(current_node.tolist()))
+
+            # Get the neighbors of the current node
+            neighbors = self.get_coord_neighbors(current_node)
+
+            # Iterate over neighbors
+            for neighbor in neighbors:
+                if tuple(neighbor.tolist()) not in visited:
+                    stack.append(neighbor)
+
+        return np.array(list(visited))
 
     def find_shortest_path(
         self,
