@@ -33,7 +33,7 @@ from maze_transformer.dataset.dataset import (
     register_filter_namespace_for_dataset,
 )
 from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
-from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
+from maze_transformer.generation.generators import GENERATORS_MAP
 from maze_transformer.generation.lattice_maze import (
     LatticeMaze,
     SolvedMaze,
@@ -89,10 +89,10 @@ class MazeDatasetConfig(GPTDatasetConfig):
     """maze dataset configuration, including tokenizers"""
 
     grid_n: int
-    
+
     # not comparing n_mazes is done primarily to avoid conflicts which happen during `from_config` when we have applied filters
     n_mazes: int = serializable_field(compare=False)
-    
+
     maze_ctor: Callable = serializable_field(
         default=GENERATORS_MAP["gen_dfs"],
         serialization_fn=lambda gen_func: {

@@ -83,9 +83,9 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 
 def register_method(
-        method_dict: dict[str, Callable[..., Any]],
-        custom_name: str|None = None,
-    ) -> Callable[[F], F]:
+    method_dict: dict[str, Callable[..., Any]],
+    custom_name: str | None = None,
+) -> Callable[[F], F]:
     """Decorator to add a method to the method_dict"""
 
     def decorator(method: F) -> F:
