@@ -218,7 +218,9 @@ def test_targeted_solved_maze():
         maze: LatticeMaze = maze_gen_func(np.array([n, n]))
         solution = maze.generate_random_path()
         tgt_maze: TargetedLatticeMaze = TargetedLatticeMaze.from_lattice_maze(
-            maze, solution[0], solution[-1],
+            maze,
+            solution[0],
+            solution[-1],
         )
 
         tgt_maze_pixels: np.ndarray = tgt_maze.as_pixels()
