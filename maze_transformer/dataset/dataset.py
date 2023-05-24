@@ -357,12 +357,13 @@ class GPTDataset(Dataset):
                     raise ValueError(
                         f"the dataset {output.cfg.to_fname()} was filtering using an unknown filter: '{filter_name}'"
                     )
-            filter_args: list = filter_info["args"]
-            filter_kwargs: dict = filter_info["kwargs"]
+            filter_args: list = filter_info["args"] if "args" in filter_info else list()
+            filter_kwargs: dict = filter_info["kwargs"] if "kwargs" in filter_info else dict()
             output = getattr(output.filter_by, filter_name)(
                 *filter_args, **filter_kwargs
             )
         # update the config
+        # TODO: some funny business with manually specified filters here?
         output.update_self_config()
         assert (
             output.cfg.applied_filters == applied_filters_old

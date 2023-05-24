@@ -20,10 +20,14 @@ def get_adj_list_tokens(tokens: list[str]) -> list[str]:
     )
 
 
-def get_path_tokens(tokens: list[str]) -> list[str]:
-    """The path is considered everything from the first path coord to the end of the list, including the path_end token (ie everything we are asking the model to predict)"""
-    start_idx = tokens.index(SPECIAL_TOKENS["path_start"]) + 1
-    return tokens[start_idx:]
+def get_path_tokens(tokens: list[str], trim_end: bool = False) -> list[str]:
+    """The path is considered everything from the first path coord to the path_end token, if it exists.
+    """
+    start_idx: int = tokens.index(SPECIAL_TOKENS["path_start"]) + 1
+    end_idx: int|None = None
+    if trim_end and (SPECIAL_TOKENS["path_end"] in tokens):
+        end_idx = tokens.index(SPECIAL_TOKENS["path_end"])
+    return tokens[start_idx:end_idx]
 
 
 def get_origin_token(tokens: list[str]) -> str:
