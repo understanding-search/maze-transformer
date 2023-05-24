@@ -250,7 +250,7 @@ class LatticeMazeGenerators:
     @staticmethod
     def gen_percolation(
         grid_shape: Coord,
-        p: float,
+        p: float = 0.4,
         lattice_dim: int = 2,
         start_coord: Coord | None = None,
     ) -> LatticeMaze:
@@ -292,7 +292,7 @@ class LatticeMazeGenerators:
     @staticmethod
     def gen_dfs_percolation(
         grid_shape: Coord,
-        p: float,
+        p: float = 0.4,
         lattice_dim: int = 2,
         n_accessible_cells: int | None = None,
         max_tree_depth: int | None = None,
