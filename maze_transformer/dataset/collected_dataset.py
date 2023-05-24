@@ -23,11 +23,11 @@ from maze_transformer.dataset.maze_dataset import (
     _MAZEDATASET_PROPERTIES_TO_SERIALIZE,
     MazeDataset,
     MazeDatasetConfig,
-    _coord_to_str,
 )
 from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
 from maze_transformer.generation.lattice_maze import LatticeMaze
 from maze_transformer.utils.utils import corner_first_ndindex
+from maze_transformer.generation.lattice_maze import coord_to_str
 
 
 @serializable_dataclass(
@@ -67,7 +67,7 @@ class MazeDatasetCollectionConfig(GPTDatasetConfig):
     def node_token_map(self) -> dict[CoordTup, str]:
         """map from node to token"""
         return {
-            tuple(coord): _coord_to_str(coord)
+            tuple(coord): coord_to_str(coord)
             for coord in corner_first_ndindex(self.max_grid_n)
         }
 

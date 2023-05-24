@@ -1,4 +1,5 @@
 import os
+import json
 import random
 import typing
 from itertools import islice
@@ -129,3 +130,6 @@ def corner_first_ndindex(n: int, ndim: int = 2) -> list[CoordTup]:
     sorted_order = np.lexsort((*indices_copy.T, max_indices))
     return indices[sorted_order]
     """
+
+def pprint_summary(summary: dict):
+	print(json.dumps(summary, indent=2))

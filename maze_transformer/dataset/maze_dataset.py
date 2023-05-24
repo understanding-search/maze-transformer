@@ -36,6 +36,7 @@ from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTu
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
 from maze_transformer.utils.utils import corner_first_ndindex
+from maze_transformer.generation.lattice_maze import coord_to_str
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",
@@ -56,10 +57,6 @@ __MAZEDATASET_PROPERTIES_TO_VALIDATE: list[str] = [
     "token_node_map",
     "n_tokens",
 ]
-
-
-def _coord_to_str(coord: Coord) -> str:
-    return f"({','.join(str(c) for c in coord)})"
 
 
 def _str_to_coord(coord_str: str) -> Coord:
@@ -132,7 +129,7 @@ class MazeDatasetConfig(GPTDatasetConfig):
     def node_token_map(self) -> dict[CoordTup, str]:
         """map from node to token"""
         return {
-            tuple(coord): _coord_to_str(coord)
+            tuple(coord): coord_to_str(coord)
             for coord in corner_first_ndindex(self.max_grid_n)
         }
 
