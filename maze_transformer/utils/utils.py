@@ -82,14 +82,22 @@ def get_checkpoint_paths_for_run(
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def register_method(method_dict: dict[str, Callable[..., Any]]) -> Callable[[F], F]:
+def register_method(
+        method_dict: dict[str, Callable[..., Any]],
+        custom_name: str|None = None,
+    ) -> Callable[[F], F]:
     """Decorator to add a method to the method_dict"""
 
     def decorator(method: F) -> F:
+        if custom_name is None:
+            method_name: str = method.__name__
+        else:
+            method_name = custom_name
+            method.__name__ = custom_name
         assert (
-            method.__name__ not in method_dict
-        ), f"Method name already exists in method_dict: {method.__name__ = }, {list(method_dict.keys()) = }"
-        method_dict[method.__name__] = method
+            method_name not in method_dict
+        ), f"Method name already exists in method_dict: {method_name = }, {list(method_dict.keys()) = }"
+        method_dict[method_name] = method
         return method
 
     return decorator

@@ -12,7 +12,7 @@ from maze_transformer.generation.lattice_maze import (
     LatticeMaze,
     SolvedMaze,
 )
-
+from maze_transformer.utils.utils import register_method
 
 class LatticeMazeGenerators:
     """namespace for lattice maze generation algorithms"""
@@ -236,21 +236,11 @@ class LatticeMazeGenerators:
             ),
         )
 
-    @classmethod
-    def gen_dfs_with_solution(cls, grid_shape: Coord):
-        warnings.warn(
-            "gen_dfs_with_solution is deprecated, use get_maze_with_solution instead",
-            DeprecationWarning,
-        )
-        return get_maze_with_solution("gen_dfs", grid_shape)
-
-
-# TODO: use the thing @valedan wrote for the evals function to make this automatic?
+# cant automatically populate this because it messes with pickling :(
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
     "gen_dfs": LatticeMazeGenerators.gen_dfs,
     "gen_wilson": LatticeMazeGenerators.gen_wilson,
 }
-
 
 def get_maze_with_solution(
     gen_name: str,

@@ -82,6 +82,7 @@ class TestMazeDatasetCollection:
         serialized = self.test_collection.serialize()
         loaded = MazeDatasetCollection.load(serialized)
         assert loaded.mazes == self.test_collection.mazes
+        assert loaded.cfg.diff(self.test_collection.cfg) == {}
         assert loaded.cfg == self.test_collection.cfg
 
     def test_save_read(self):
@@ -90,4 +91,5 @@ class TestMazeDatasetCollection:
             "tests/_temp/collected_dataset_test_save_read.zanj"
         )
         assert loaded.mazes == self.test_collection.mazes
+        assert loaded.cfg.diff(self.test_collection.cfg) == {}
         assert loaded.cfg == self.test_collection.cfg

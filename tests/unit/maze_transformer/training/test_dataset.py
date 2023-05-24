@@ -93,4 +93,7 @@ class TestGPTDataset:
         dataset.save(filepath)
         loaded = MazeDataset.read(filepath)
 
-        assert dataset == loaded
+        assert dataset.cfg.diff(loaded.cfg) == {}
+        assert dataset.cfg == loaded.cfg
+        for x, y in zip(dataset, loaded):
+            assert x.diff(y) == {}

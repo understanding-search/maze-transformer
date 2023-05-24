@@ -73,7 +73,7 @@ def _load_maze_ctor(maze_ctor_serialized: str | dict) -> Callable:
     elif isinstance(maze_ctor_serialized, str):
         # this is a version I switched to for a while but now we are switching back
         warnings.warn(
-            f"you are loading an old model/config!!! this should not be happening, please report to miv@knc.ai"
+            f"you are loading an old model/config in `_load_maze_ctor()`!!! this should not be happening, please report to miv@knc.ai"
         )
         return GENERATORS_MAP[maze_ctor_serialized]
     else:
@@ -89,11 +89,12 @@ class MazeDatasetConfig(GPTDatasetConfig):
     """maze dataset configuration, including tokenizers"""
 
     grid_n: int
-    n_mazes: int = serializable_field(
-        compare=False
-    )  # this is primarily to avoid conflicts which happen during `from_config` when we have applied filters
+    
+    # not comparing n_mazes is done primarily to avoid conflicts which happen during `from_config` when we have applied filters
+    n_mazes: int = serializable_field(compare=False)
+    
     maze_ctor: Callable = serializable_field(
-        default_factory=lambda: LatticeMazeGenerators.gen_dfs,
+        default=GENERATORS_MAP["gen_dfs"],
         serialization_fn=lambda gen_func: {
             "__name__": gen_func.__name__,
             "__module__": gen_func.__module__,
@@ -262,16 +263,17 @@ class MazeDataset(GPTDataset):
     ) -> "MazeDataset":
         """generate a maze dataset"""
 
-        cfg = copy.deepcopy(cfg)
+        # avoid copying since we dont want to pickle the staticmethod, just load/serialize it to avoid modifying the original config
+        cfg_cpy = MazeDatasetConfig.load(cfg.serialize())
 
         if pool_kwargs is None:
             pool_kwargs = dict()
         mazes: list[SolvedMaze] = list()
-        maze_indexes: Int[np.int8, "maze_index"] = np.arange(cfg.n_mazes)
+        maze_indexes: Int[np.int8, "maze_index"] = np.arange(cfg_cpy.n_mazes)
 
         solved_mazes: list[SolvedMaze]
         tqdm_kwargs: dict = dict(
-            total=cfg.n_mazes,
+            total=cfg_cpy.n_mazes,
             unit="maze",
             desc="generating & solving mazes",
             disable=not verbose,
@@ -280,7 +282,7 @@ class MazeDataset(GPTDataset):
             with multiprocessing.Pool(
                 **pool_kwargs,
                 initializer=_maze_gen_init_worker,
-                initargs=(cfg,),
+                initargs=(cfg_cpy,),
             ) as pool:
                 solved_mazes = list(
                     tqdm.tqdm(
@@ -292,7 +294,7 @@ class MazeDataset(GPTDataset):
                     )
                 )
         else:
-            _maze_gen_init_worker(cfg)
+            _maze_gen_init_worker(cfg_cpy)
             solved_mazes = list(
                 tqdm.tqdm(
                     map(
@@ -303,10 +305,10 @@ class MazeDataset(GPTDataset):
                 )
             )
         # reset seed to default value
-        np.random.seed(cfg.seed)
+        np.random.seed(cfg_cpy.seed)
 
         return cls(
-            cfg=cfg,
+            cfg=cfg_cpy,
             mazes=solved_mazes,
         )
 
@@ -335,19 +337,6 @@ class MazeDataset(GPTDataset):
                 self.generation_metadata_collected
             ),
         }
-
-    @classmethod
-    def disk_load(cls, path: str, **kwargs) -> "MazeDataset":
-        """load from disk"""
-        warnings.warn(
-            "deprecated, use `MazeDataset.read(path)` or `MazeDataset.load(ZANJ().read(path)))` instead",
-            DeprecationWarning,
-        )
-        if kwargs:
-            warnings.warn(
-                f"kwargs to disk_load dont do anything: {kwargs = }", DeprecationWarning
-            )
-        return cls.read(path)
 
     def update_self_config(self):
         """update the config to match the current state of the dataset"""
