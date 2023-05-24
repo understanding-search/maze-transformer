@@ -337,13 +337,22 @@ class LatticeMaze(SerializableDataclass):
         assert self.grid_shape[0] > 1 and self.grid_shape[1] > 1
 
         connected_component: CoordArray = self.get_connected_component()
-        positions: Int[np.int8, "2 2"] = connected_component[
-            np.random.choice(
-                len(connected_component),
-                size=2,
-                replace=False,
+        positions: Int[np.int8, "2 2"]
+        if len(connected_component) < 2:
+            warnings.warn(
+                f"maze has only one node in its connected component:\n{connected_component=}\n{self.as_ascii()}"
             )
-        ]
+            assert len(connected_component) == 1
+            # just connect it to itself
+            positions = np.array([connected_component[0], connected_component[0]])
+        else:
+            positions = connected_component[
+                np.random.choice(
+                    len(connected_component),
+                    size=2,
+                    replace=False,
+                )
+            ]
 
         return self.find_shortest_path(positions[0], positions[1])
 
