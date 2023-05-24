@@ -1,5 +1,5 @@
-import os
 import json
+import os
 import random
 import typing
 from itertools import islice
@@ -131,5 +131,6 @@ def corner_first_ndindex(n: int, ndim: int = 2) -> list[CoordTup]:
     return indices[sorted_order]
     """
 
+
 def pprint_summary(summary: dict):
-	print(json.dumps(summary, indent=2))
+    print(json.dumps(summary, indent=2))

@@ -1,51 +1,35 @@
 # Generic
-import html
-import os
-from pathlib import Path
 import typing
-import json
-import os
-from pathlib import Path
-import typing
-import html
-import copy
 
-# Transformers
-import circuitsvis
-from circuitsvis.attention import attention_heads
-from circuitsvis.tokens import colored_tokens_multi
+# plotting
+import IPython
+import matplotlib
 import matplotlib.pyplot as plt
 
 # Numerical Computing
 import numpy as np
 import torch
-import pandas as pd
-from jaxtyping import Float, Int
 
-# plotting
-import IPython
-import matplotlib
+# Transformers
+from circuitsvis.attention import attention_heads
+from circuitsvis.tokens import colored_tokens_multi
+from jaxtyping import Float
 
 # Utilities
-from muutils.statcounter import StatCounter
-from muutils.json_serialize import serializable_dataclass, SerializableDataclass, serializable_field
+from muutils.json_serialize import SerializableDataclass, serializable_dataclass
+
+from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.dataset.tokenizer import SPECIAL_TOKENS
+from maze_transformer.evaluation.eval_model import predict_maze_paths
+from maze_transformer.evaluation.plot_maze import MazePlot
+from maze_transformer.generation.constants import CoordTup
 
 # Our Code
-from maze_transformer.utils.notebook_utils import configure_notebook
-from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
-from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.dataset.tokenizer import SPECIAL_TOKENS, HuggingMazeTokenizer
-from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
-from maze_transformer.evaluation.plot_maze import MazePlot, PathFormat
-from maze_transformer.evaluation.eval_model import load_model_with_configs
-from maze_transformer.utils.token_utils import tokens_to_coords
-from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
-from maze_transformer.dataset.maze_dataset_configs import MAZE_DATASET_CONFIGS
-from maze_transformer.generation.lattice_maze import coord_str_to_tuple_noneable
-from maze_transformer.generation.constants import CoordTup
-from maze_transformer.evaluation.eval_model import predict_maze_paths
-
-
+from maze_transformer.generation.lattice_maze import (
+    SolvedMaze,
+    coord_str_to_tuple_noneable,
+)
+from maze_transformer.training.config import ZanjHookedTransformer
 
 
 @serializable_dataclass
@@ -58,8 +42,8 @@ class ProcessedMazeAttention(SerializableDataclass):
     n_heads: int
     attention_dict: dict[str, Float[torch.Tensor, "1 n_heads n_positions n_positions"]]
     attention_tensored: Float[torch.Tensor, "n_layers n_heads n_tokens n_tokens"]
-    attention_names: list[str] # names for attention_tensored
- 
+    attention_names: list[str]  # names for attention_tensored
+
     @classmethod
     def from_model_and_dataset(
         cls,
@@ -67,14 +51,11 @@ class ProcessedMazeAttention(SerializableDataclass):
         dataset: MazeDataset,
         n_mazes: int = 1,
         context_maze_only: bool = True,
-        context_maze_fn: typing.Callable[[list[str]], list[str]]|None = None,
+        context_maze_fn: typing.Callable[[list[str]], list[str]] | None = None,
     ) -> list["ProcessedMazeAttention"]:
-
         outputs: list[ProcessedMazeAttention] = list()
 
-
         for i in range(n_mazes):
-            
             # get the maze from the dataset and process into tokens
             solved_maze: SolvedMaze = dataset[i]
             tokens: list[str] = solved_maze.as_tokens(dataset.cfg.node_token_map)
@@ -83,7 +64,7 @@ class ProcessedMazeAttention(SerializableDataclass):
             if context_maze_only:
                 assert context_maze_fn is None
                 path_start_index: int = tokens.index(SPECIAL_TOKENS["path_start"])
-                tokens_context = tokens[:path_start_index + 1]
+                tokens_context = tokens[: path_start_index + 1]
             else:
                 assert context_maze_fn is not None
                 tokens_context = context_maze_fn(tokens)
@@ -91,43 +72,52 @@ class ProcessedMazeAttention(SerializableDataclass):
             # get the model's prediction and attention data
             with torch.no_grad():
                 # we have to join here, since otherwise run_with_cache assumes each token is a separate batch
-                logits, cache = model.run_with_cache(' '.join(tokens_context))
+                logits, cache = model.run_with_cache(" ".join(tokens_context))
 
             # filter and append to outputs
             attention_data: dict[str, torch.Tensor] = {
-                k:w 
-                for k, w in cache.items() 
-                if 'hook_pattern' in k
+                k: w for k, w in cache.items() if "hook_pattern" in k
             }
 
             assert model.zanj_model_config.model_cfg.n_layers == len(attention_data)
-            example_attention_data: Float[torch.Tensor, "1 n_heads n_positions n_positions"] = attention_data[list(attention_data.keys())[0]]
-            assert model.zanj_model_config.model_cfg.n_heads == example_attention_data.shape[1]
+            example_attention_data: Float[
+                torch.Tensor, "1 n_heads n_positions n_positions"
+            ] = attention_data[list(attention_data.keys())[0]]
+            assert (
+                model.zanj_model_config.model_cfg.n_heads
+                == example_attention_data.shape[1]
+            )
             n_tokens: int = example_attention_data.shape[2]
 
-            attention_tensored: Float[torch.Tensor, "n_layers_heads n_tokens n_tokens"] = torch.concatenate(
-                [w for k,w in attention_data.items()],
+            attention_tensored: Float[
+                torch.Tensor, "n_layers_heads n_tokens n_tokens"
+            ] = torch.concatenate(
+                [w for k, w in attention_data.items()],
                 dim=0,
-            ).reshape(-1, n_tokens, n_tokens)
-            
-            outputs.append(ProcessedMazeAttention(
-                input_maze=solved_maze,
-                tokens=tokens,
-                tokens_context=tokens_context,
-                logits=logits,
-                n_layers=model.zanj_model_config.model_cfg.n_layers,
-                n_heads=model.zanj_model_config.model_cfg.n_heads,
-                attention_dict=attention_data,
-                attention_tensored=attention_tensored,
-                attention_names=[
-                    f"Layer {i} Head {j}" 
-                    for i in range(model.zanj_model_config.model_cfg.n_layers) 
-                    for j in range(model.zanj_model_config.model_cfg.n_heads)
-                ],
-            ))
+            ).reshape(
+                -1, n_tokens, n_tokens
+            )
+
+            outputs.append(
+                ProcessedMazeAttention(
+                    input_maze=solved_maze,
+                    tokens=tokens,
+                    tokens_context=tokens_context,
+                    logits=logits,
+                    n_layers=model.zanj_model_config.model_cfg.n_layers,
+                    n_heads=model.zanj_model_config.model_cfg.n_heads,
+                    attention_dict=attention_data,
+                    attention_tensored=attention_tensored,
+                    attention_names=[
+                        f"Layer {i} Head {j}"
+                        for i in range(model.zanj_model_config.model_cfg.n_layers)
+                        for j in range(model.zanj_model_config.model_cfg.n_heads)
+                    ],
+                )
+            )
 
         return outputs
-    
+
     def summary(self) -> dict:
         return {
             "tokens": " ".join(self.tokens),
@@ -139,39 +129,41 @@ class ProcessedMazeAttention(SerializableDataclass):
             "attention_names": " ".join(self.attention_names),
             "attention_dict.keys()": " ".join(list(self.attention_dict.keys())),
         }
-    
+
     def plot_attentions(self, **kwargs):
         """plot using circuitsvis attention_heads. kwargs passed on"""
         return attention_heads(
-            self.attention_tensored, 
-            self.tokens_context, 
+            self.attention_tensored,
+            self.tokens_context,
             self.attention_names,
             **kwargs,
         )
-    
+
     def plot_colored_tokens_multi(self, from_token: int = 0, **kwargs):
         """plot using circuitsvis colored_tokens_multi. kwargs passed on"""
-        attentions_from_token: Float[torch.Tensor, "n_tokens-from_token n_layers_heads"] = torch.sum(
-            self.attention_tensored[:, from_token+1:, from_token+1:],
-            dim=2, # TODO: is this the correct dimension?
+        attentions_from_token: Float[
+            torch.Tensor, "n_tokens-from_token n_layers_heads"
+        ] = torch.sum(
+            self.attention_tensored[:, from_token + 1 :, from_token + 1 :],
+            dim=2,  # TODO: is this the correct dimension?
         ).T
         return colored_tokens_multi(
-            self.tokens_context[from_token:], 
-            attentions_from_token, 
+            self.tokens_context[from_token:],
+            attentions_from_token,
             self.attention_names,
             **kwargs,
         )
-    
+
     def plot_attentions_on_maze(
-            self, 
-            predict_path_len: int|None = None,
-            model: ZanjHookedTransformer|None = None,
-            dataset_cfg: MazeDatasetConfig|None = None,
-            color_map: str = "Blues",
-            subplot_kwargs: dict|None = None,
-        ):
+        self,
+        predict_path_len: int | None = None,
+        model: ZanjHookedTransformer | None = None,
+        dataset_cfg: MazeDatasetConfig | None = None,
+        color_map: str = "Blues",
+        subplot_kwargs: dict | None = None,
+    ):
         """plot the attention weights on the maze itself, for each head
-        
+
         if predict_path_len is not None, then the path will be predicted and plotted as well
         this requires a model and dataset_cfg to be passed in
         if it is None, no path will be predicted or plotted
@@ -185,7 +177,9 @@ class ProcessedMazeAttention(SerializableDataclass):
             # predict
             print(self.tokens_context)
             prediction: list[CoordTup] = predict_maze_paths(
-                tokens_batch=[self.tokens_context], # need to wrap in a list since a batch is expected
+                tokens_batch=[
+                    self.tokens_context
+                ],  # need to wrap in a list since a batch is expected
                 data_cfg=dataset_cfg,
                 model=model,
                 max_new_tokens=predict_path_len,
@@ -204,33 +198,40 @@ class ProcessedMazeAttention(SerializableDataclass):
             for i in range(self.n_layers)
         ]
 
-        for idx_attn, (name, attn) in enumerate(zip(self.attention_names, self.attention_tensored)):
+        for idx_attn, (name, attn) in enumerate(
+            zip(self.attention_names, self.attention_tensored)
+        ):
             # empty node values
-            node_values: Float[np.ndarray, "grid_n grid_n"] = np.zeros(self.input_maze.grid_shape)
+            node_values: Float[np.ndarray, "grid_n grid_n"] = np.zeros(
+                self.input_maze.grid_shape
+            )
             # get node values for each token
             for idx_token, token in enumerate(self.tokens_context):
-                coord: CoordTup|None = coord_str_to_tuple_noneable(token)
+                coord: CoordTup | None = coord_str_to_tuple_noneable(token)
                 if coord is not None:
                     node_values[coord[0], coord[1]] += np.sum(attn[idx_token].numpy())
 
                 # update MazePlot objects
-                mazeplots[idx_attn // self.n_heads][idx_attn % self.n_heads].add_node_values(
-                    node_values = node_values,
-                    color_map = color_map,
+                mazeplots[idx_attn // self.n_heads][
+                    idx_attn % self.n_heads
+                ].add_node_values(
+                    node_values=node_values,
+                    color_map=color_map,
                 )
 
         # create a shared figure
-        fig, axs = plt.subplots(self.n_layers, self.n_heads, figsize=(20, 20), **subplot_kwargs)
+        fig, axs = plt.subplots(
+            self.n_layers, self.n_heads, figsize=(20, 20), **subplot_kwargs
+        )
         # plot on the shared figure and add titles
         for i in range(self.n_layers):
             for j in range(self.n_heads):
                 mazeplots[i][j].plot(
-                    title = f"Layer {i} Head {j}",
-                    fig_ax = (fig, axs[i, j]),
+                    title=f"Layer {i} Head {j}",
+                    fig_ax=(fig, axs[i, j]),
                 )
 
         return fig, axs
-
 
 
 def colorize(

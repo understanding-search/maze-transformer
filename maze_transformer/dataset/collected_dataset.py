@@ -25,9 +25,8 @@ from maze_transformer.dataset.maze_dataset import (
     MazeDatasetConfig,
 )
 from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
-from maze_transformer.generation.lattice_maze import LatticeMaze
+from maze_transformer.generation.lattice_maze import LatticeMaze, coord_to_str
 from maze_transformer.utils.utils import corner_first_ndindex
-from maze_transformer.generation.lattice_maze import coord_to_str
 
 
 @serializable_dataclass(

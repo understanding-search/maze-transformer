@@ -34,9 +34,12 @@ from maze_transformer.dataset.dataset import (
 )
 from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
 from maze_transformer.generation.generators import GENERATORS_MAP, LatticeMazeGenerators
-from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
+from maze_transformer.generation.lattice_maze import (
+    LatticeMaze,
+    SolvedMaze,
+    coord_to_str,
+)
 from maze_transformer.utils.utils import corner_first_ndindex
-from maze_transformer.generation.lattice_maze import coord_to_str
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",

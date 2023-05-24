@@ -212,7 +212,7 @@ class MazePlot:
         self,
         node_values: Float[np.ndarray, "grid_n grid_n"],
         color_map: str = "Blues",
-        target_token_coord: Coord|None = None,
+        target_token_coord: Coord | None = None,
         preceeding_tokens_coords: CoordArray = None,
     ) -> MazePlot:
         assert (
@@ -232,11 +232,11 @@ class MazePlot:
         return self
 
     def plot(
-            self, 
-            dpi: int = 100, 
-            title: str = "",
-            fig_ax: tuple|None = None,
-        ) -> MazePlot:
+        self,
+        dpi: int = 100,
+        title: str = "",
+        fig_ax: tuple | None = None,
+    ) -> MazePlot:
         """Plot the maze and paths."""
         if fig_ax is None:
             self.fig = plt.figure(dpi=dpi)
