@@ -134,7 +134,7 @@ class PathEvals:
 
         return streak_length
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def distance_between_end_nodes(
         solution: MazePath, prediction: MazePath, **_
@@ -145,7 +145,7 @@ class PathEvals:
 
         return np.linalg.norm(solution[-1] - prediction[-1])
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def corner_jumps(prediction: MazePath, **_) -> float:
         """Looks for corner jumps in the predicted path. A corner jump is if the transformer predicts predicts
@@ -159,7 +159,7 @@ class PathEvals:
         normed_distances = np.linalg.norm(distance_between_nodes, axis=1)
         return np.count_nonzero(normed_distances == np.sqrt(2))
 
-    @register_method(evals)
+    @register_method(fast)
     @staticmethod
     def average_predicted_step_size(prediction: MazePath, **_) -> float:
         """Returns average step size in the predicted path."""

@@ -16,8 +16,8 @@ from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder
-from maze_transformer.training.maze_dataset import MazeDataset, MazeDatasetConfig
-from maze_transformer.training.tokenizer import HuggingMazeTokenizer
+from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_transformer.dataset.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.utils.token_utils import (
     get_path_tokens,
@@ -225,12 +225,7 @@ def evaluate_logits(
             for token_str in tokenizer.batch_decode(batch)
         ]
 
-        # This won't work until #180 is resolved because right now the batch does not contain valid mazes
-        # solved_mazes = [SolvedMaze.from_tokens(tokens.split(" "), config.dataset_cfg) for tokens in maze_tokens]
-        # so for now use some dummy data for testing
-        solved_mazes = [
-            LatticeMazeGenerators.gen_dfs_with_solution((3, 3)) for _ in range(5)
-        ]
+        solved_mazes = [SolvedMaze.from_tokens(tokens.split(" "), config.dataset_cfg) for tokens in maze_tokens]
         scores |= evaluate_path_predictions(solved_mazes, predicted_paths, path_evals)
 
     return scores

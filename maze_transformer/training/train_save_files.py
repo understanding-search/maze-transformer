@@ -1,4 +1,5 @@
 from datetime import datetime
+from maze_transformer.training.config import ConfigHolder
 from typing import Callable
 
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]

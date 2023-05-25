@@ -12,8 +12,7 @@ from maze_transformer.evaluation.eval_model import evaluate_logits
 from maze_transformer.evaluation.path_evals import PathEvals
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
-from maze_transformer.training.maze_dataset import MazeDataset
-from maze_transformer.training.tokenizer import HuggingMazeTokenizer
+from maze_transformer.dataset.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbLogger
 
@@ -96,6 +95,7 @@ def train(
 
         # TODO: tidy this up
         metrics: dict[str, dict[str, float | int] | float] = {"loss": float(loss)}
+        breakpoint()
         if evals_enabled:
             if (
                 fast_eval_interval_iters > 0

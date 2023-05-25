@@ -1,0 +1,19 @@
+{
+  "verbose": true,
+  "include": [
+    "maze_transformer",
+    "tests",
+    "scripts"
+  ],
+  "exclude": [
+    "**/.venv**",
+    "**/.git**",
+    "**/.github**",
+    "**/.idea**",
+    "**/.pytest_cache**",
+    "**/data**",
+    "**/wandb**"
+  ],
+  "venvPath": ".",
+  "venv": ".venv"
+}

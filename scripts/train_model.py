@@ -19,9 +19,8 @@ from maze_transformer.training.config import (
     ConfigHolder,
     ZanjHookedTransformer,
 )
-from maze_transformer.training.maze_dataset import MazeDataset
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
-from maze_transformer.training.training import TRAIN_SAVE_FILES, get_dataloader, train
+from maze_transformer.training.training import get_dataloader, train
 from maze_transformer.training.wandb_logger import (
     WandbJobType,
     WandbLogger,
