@@ -212,7 +212,7 @@ class MazePlot:
         self,
         node_values: Float[np.ndarray, "grid_n grid_n"],
         color_map: str = "Blues",
-        target_token_coord: Coord = None,
+        target_token_coord: Coord | None = None,
         preceeding_tokens_coords: CoordArray = None,
     ) -> MazePlot:
         assert (
@@ -226,14 +226,23 @@ class MazePlot:
         # Retrieve Max node value for plotting, +1e-10 to avoid division by zero
         self.max_node_value = np.max(node_values) + MAX_NODE_VALUE_EPSILON
         self.node_color_map = color_map
-        self.target_token_coord = target_token_coord
+        if target_token_coord is not None:
+            self.target_token_coord = target_token_coord
         self.preceding_tokens_coords = preceeding_tokens_coords
         return self
 
-    def plot(self, dpi: int = 100, title: str = "") -> MazePlot:
+    def plot(
+        self,
+        dpi: int = 100,
+        title: str = "",
+        fig_ax: tuple | None = None,
+    ) -> MazePlot:
         """Plot the maze and paths."""
-        self.fig = plt.figure(dpi=dpi)
-        self.ax = self.fig.add_subplot(1, 1, 1)
+        if fig_ax is None:
+            self.fig = plt.figure(dpi=dpi)
+            self.ax = self.fig.add_subplot(1, 1, 1)
+        else:
+            self.fig, self.ax = fig_ax
 
         self._plot_maze()
 
@@ -248,7 +257,7 @@ class MazePlot:
         self.ax.set_yticks(self.unit_length * (tick_arr + 0.5), tick_arr)
         self.ax.set_xlabel("col")
         self.ax.set_ylabel("row")
-        self.fig.suptitle(title)
+        self.ax.set_title(title)
 
     def _rowcol_to_coord(self, point: Coord) -> NDArray:
         """Transform Point from MazeTransformer (row, column) notation to matplotlib default (x, y) notation where x is the horizontal axis."""

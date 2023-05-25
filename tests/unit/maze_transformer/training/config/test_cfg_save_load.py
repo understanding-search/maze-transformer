@@ -3,12 +3,8 @@ from pathlib import Path
 
 from muutils.zanj import ZANJ
 
-from maze_transformer.training.config import (
-    BaseGPTConfig,
-    ConfigHolder,
-    MazeDatasetConfig,
-    TrainConfig,
-)
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
+from maze_transformer.training.config import BaseGPTConfig, ConfigHolder, TrainConfig
 
 
 def test_misc():
@@ -124,13 +120,16 @@ def test_loading_example():
         "dataset_cfg": {
             "__format__": "MazeDatasetConfig(SerializableDataclass)",
             "name": "g3-n5-test",
-            "device": "cpu",
-            "dtype": "torch.int16",
             "seq_len_min": 1,
             "seq_len_max": 512,
             "grid_n": 3,
             "n_mazes": 5,
-            "maze_ctor": "gen_dfs",
+            "maze_ctor": {
+                "__name__": "gen_dfs",
+                "__module__": "maze_transformer.generation.generators",
+                "__doc__": ["dummy_doc"],
+                "source_code": ["dummy_source_code"],
+            },
             "padding_token_index": 10,
             "token_arr": [
                 "<ADJLIST_START>",
@@ -230,13 +229,16 @@ def test_loading_example_pretrained_tok():
         "dataset_cfg": {
             "__format__": "MazeDatasetConfig(SerializableDataclass)",
             "name": "g3-n5-test",
-            "device": "cpu",
-            "dtype": "torch.int16",
             "seq_len_min": 1,
             "seq_len_max": 512,
             "grid_n": 3,
             "n_mazes": 5,
-            "maze_ctor": "gen_dfs",
+            "maze_ctor": {
+                "__name__": "gen_dfs",
+                "__module__": "maze_transformer.generation.generators",
+                "__doc__": ["dummy_doc"],
+                "source_code": ["dummy_source_code"],
+            },
             "padding_token_index": 10,
             "token_arr": [
                 "<ADJLIST_START>",
@@ -342,13 +344,16 @@ def test_other_example():
         "dataset_cfg": {
             "__format__": "MazeDatasetConfig(SerializableDataclass)",
             "name": "test_cfg_save-data",
-            "device": "cpu",
-            "dtype": "torch.int16",
             "seq_len_min": 1,
             "seq_len_max": 512,
             "grid_n": 5,
             "n_mazes": 10,
-            "maze_ctor": "gen_dfs",
+            "maze_ctor": {
+                "__name__": "gen_dfs",
+                "__module__": "maze_transformer.generation.generators",
+                "__doc__": ["dummy_doc"],
+                "source_code": ["dummy_source_code"],
+            },
             "padding_token_index": 10,
             "token_arr": [
                 "<ADJLIST_START>",

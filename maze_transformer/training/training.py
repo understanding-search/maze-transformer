@@ -69,9 +69,15 @@ def train(
     n_batches: int = len(dataloader)
     logger.summary({"n_batches": n_batches})
 
-    # TODO: These interval calculations are a bit confusing. May need some love.
-    checkpoint_interval_iters: int = int(
-        cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size
+    checkpoint_interval_iters: int = max(
+        1,
+        int(cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size),
+    )
+    loss_interval_iters: int = max(
+        1, int(cfg.train_cfg.print_loss_interval // cfg.train_cfg.batch_size)
+    )
+    logger.progress(
+        f"will train for {n_batches} batches, {checkpoint_interval_iters = }, {loss_interval_iters = }"
     )
     fast_eval_interval_iters: int = int(
         getattr(cfg.train_cfg, "fast_eval_interval", 0) // cfg.train_cfg.batch_size
@@ -127,6 +133,11 @@ def train(
 
         print("logging metrics")
         logger.log_metric(metrics)
+
+        if iteration % loss_interval_iters == 0:
+            logger.progress(
+                f"iteration {iteration}/{n_batches}: loss={loss.item():.3f}"
+            )
 
         del loss
 

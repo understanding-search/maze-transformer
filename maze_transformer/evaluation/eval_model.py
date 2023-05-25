@@ -12,14 +12,15 @@ from transformer_lens import utils as tl_utils
 
 from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
-from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.generators import LatticeMazeGenerators
 from maze_transformer.generation.lattice_maze import SolvedMaze
+from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.dataset.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.utils.token_utils import (
+    WhenMissing,
     get_path_tokens,
     get_tokens_up_to_path_start,
     remove_padding_from_token_str,
@@ -110,32 +111,40 @@ def predict_maze_paths(
     # Note: The start coord is included in the model input, so max_new_tokens is how many tokens can be predicted AFTER the start. This function returns the full paths, including start coord, so in general the max returned path length is max_new_tokens + 1
     max_new_tokens: int = 8,
     verbose: bool = False,
-) -> list[list[tuple[int, int]]]:
+    when_noncoord: WhenMissing = "skip",
+) -> list[str|list[tuple[int, int]]]:
     indices_batch: list[ATensor] = []
-    for tokens in tokens_batch:
-        maze = get_tokens_up_to_path_start(tokens)
-        indices = torch.tensor(
-            [data_cfg.tokenizer_map[t] for t in maze], dtype=torch.long
-        )
-        indices_batch.append(indices)
+    # for tokens in tokens_batch:
+    #     maze = get_tokens_up_to_path_start(tokens)
+    #     indices = torch.tensor(
+    #         [data_cfg.tokenizer_map[t] for t in maze], dtype=torch.long
+    #     )
+    #     indices_batch.append(indices)
 
-    prediction_batch = model.generate(
-        torch.stack(indices_batch),
-        eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
-        stop_at_eos=True,
-        max_new_tokens=max_new_tokens,
-        verbose=verbose,
-    )
+
+    prediction_batch: list[str] = [
+        model.generate(
+            " ".join(tokens),
+            eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
+            stop_at_eos=True,
+            max_new_tokens=max_new_tokens,
+            verbose=verbose,
+        )
+        for tokens in tokens_batch
+    ]
 
     paths: list[list[tuple[int, int]]] = []
     for preds in prediction_batch:
-        pred_tokens: list[str] = [data_cfg.token_arr[t] for t in preds]
-        path_tokens = get_path_tokens(pred_tokens)
-        path_coords = tokens_to_coords(
-            path_tokens, maze_data_cfg=data_cfg, when_noncoord="skip"
+        pred_tokens: list[str] = preds.split(" ")
+        path_tokens: list[str] = get_path_tokens(pred_tokens, trim_end=True)
+        path_coords: list[str|CoordTup] = tokens_to_coords(
+            path_tokens,
+            maze_data_cfg=data_cfg,
+            when_noncoord=when_noncoord,
         )
         # This is the correct type when using "skip"
-        paths.append(cast(list[tuple[int, int]], path_coords))
+        if when_noncoord == "skip":
+            paths.append(cast(list[tuple[int, int]], path_coords))
 
     return paths
 

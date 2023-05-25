@@ -6,12 +6,13 @@ from muutils.tensor_utils import ATensor, NDArray
 from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
+from maze_transformer.dataset.dataset import GPTDatasetConfig
 from maze_transformer.evaluation.plot_maze import MazePlot
 from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.lattice_maze import LatticeMaze
 
 if TYPE_CHECKING:
-    from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig
+    from maze_transformer.training.config import ConfigHolder
 
 # pylint: disable=unused-import, abstract-method
 
@@ -37,9 +38,10 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     name_or_path = "maze_tokenizer"
 
+    # TODO: this should just take seq_len_max and max grid n
     def __init__(
         self,
-        cfg: Union["ConfigHolder", "MazeDatasetConfig", None] = None,
+        cfg: Union["ConfigHolder", "GPTDatasetConfig", None] = None,
         token_arr: list[str] | None = None,
         seq_len_max: int | None = None,
         **kwargs,

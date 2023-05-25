@@ -1,7 +1,7 @@
 import pytest
 
 from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
-from maze_transformer.generation.generators import LatticeMazeGenerators
+from maze_transformer.generation.generators import get_maze_with_solution
 from maze_transformer.generation.lattice_maze import SolvedMaze
 
 
@@ -10,7 +10,7 @@ from maze_transformer.generation.lattice_maze import SolvedMaze
 )
 def test_from_tokens():
     maze_size = 2
-    maze, solution = LatticeMazeGenerators.gen_dfs_with_solution((maze_size, maze_size))
+    maze, solution = get_maze_with_solution("gen_dfs", (maze_size, maze_size))
 
     # See https://github.com/AISC-understanding-search/maze-transformer/issues/77
     config = MazeDatasetConfig(grid_n=maze_size, name="test", n_mazes=1)
