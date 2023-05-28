@@ -1,6 +1,14 @@
 # Maze Transformer
 
-Solving mazes with transformer models.
+This repo is built to facilitate the training and analysis of autoregressive transformers on maze-solving tasks.
+
+|     |     |     |
+| :-: | :-: | :-: |
+| ![Example of a baseline solver navigating through the maze](examples/assets/baseline_solver.png) | ![Plotting the generated path and attention over the maze of a (poorly trained) model](examples/assets/plot_attention.png) | ![An example maze generated via randomized depth-first search and percolation](examples/assets/maze_dfs_percolation.png) |
+
+
+![Visualization of attention over the input sequence of tokens](examples/assets/plot_colored_tokens.png)
+
 
 # Installation
 ```
@@ -8,6 +16,25 @@ pip install git+ssh://git@github.com/aisc-understanding-search/maze-transformer.
 ```
 
 Note: if you want to install the library in colab, follow the steps in this [Colab notebook](https://colab.research.google.com/drive/1b8E1rkqcKRdC4bs9133aBPEvqEaH5dqD#scrollTo=8VbjoPRgXlqs).
+
+You can run all tests via
+```bash
+make test
+```
+(this will take a few minutes)
+
+
+# Usage
+
+Most of the functionality is demonstrated in the ipython notebooks in the `notebooks/` folder.
+
+- `demo_dataset.ipynb` how to easily create a dataset of mazes, utilities for filtering the generates mazes via properties, and basic visualization
+- `train_model.ipynb` configuration setup and training a basic model
+- `eval_model.ipynb` loading a trained model, and computing various metrics on its performance on a dataset
+- `plot_attention.ipynb` various attention visualization utilities
+- `demo_latticemaze.ipynb` internals of the `LatticeMaze` and `SolvedMaze` objects, and advanced visualization
+- `train_model_hallway.ipynb` training a model on a customized dataset
+
 
 # Development
 
@@ -17,18 +44,12 @@ Note: if you want to install the library in colab, follow the steps in this [Col
 * Install Python 3.10
     * It's a good idea to use [pyenv](https://github.com/pyenv/pyenv) to manage python versions
     * If using pyenv, you'll need to update your Poetry config for it to use the pyenv Python version: `poetry config virtualenvs.prefer-active-python true`
-
-
-## Setup
-
-* Install dependencies
+* Install dev dependencies
     ```
     poetry config virtualenvs.in-project true
     poetry install --with dev
     ```
-
-
-* Run unit and integration tests
+* Run unit, integration, and notebook tests
     ```
     make test
     ```
@@ -38,76 +59,15 @@ Note: if you want to install the library in colab, follow the steps in this [Col
   * Restart VSCode
   * In VSCode, select the python interpreter located in `maze-transformer/.venv/bin` as your juptyer kernel
 
-# Scripts
-
-## `test_generation`
-Generate a maze and solve it algorithmically.
-
-### Example
-```
-poetry run python scripts/test_generation.py
-```
-
-## `create_dataset`
-Create or load a dataset of mazes.
-
-
-### Example
-create 10 4x4 mazes in the directory ./data/maze:
-```
-poetry run python scripts/create_dataset.py create ./data/maze 10 --grid_n=4
-```
-
-## `upload_dataset`
-Optionally upload the dataset to [Weights & Biases](https://wandb.ai/aisc-search/understanding-search/artifacts/).
-```
-poetry run wandb login
-poetry run python ./scripts/upload_dataset.py g4-n10 ./data/maze/g4-n10
-```
-
-## `train_model`
-Uses a dataset to train a model. Outputs model model and configs in a subdirectory of the dataset directory.
-
-Notes:
-* This script DOES NOT require a GPU to run. If training a small model, you can run it on your laptop's CPU. The quickest way to set the device is to add `device="cpu"` to the `"tiny-v1"` TrainConfig, defined in `_TRAINING_CONFIG_LIST` in the file `config.py`.
-* This script requires a dataset, which can be generated using `create_dataset.py`.
-* The `"tiny-v1"` model is not well optimised (i.e. it won't make good predictions).
-
-### Example
-```
-poetry run python scripts/train_model.py ./data/maze/g4-n10 --wandb-project="understanding-search"
-```
-
-
-# Development
-
-## Prerequisites
-**We are using Python 3.10 (or newer) and Poetry.**
-* Install [Poetry](https://python-poetry.org/docs/#installation)
-* Install Python 3.10
-
-## Setup
-
-* Install dependencies
-    ```
-    poetry install
-    ```
-
-
-* (Optional) Run unit and integration tests
-    ```
-    make test
-    ```
-
 
 ## Testing & Static analysis
 
-- unit tests via `make unit`
-
-- integration tests via `make integration`
+`make help` will print all available commands.
 
 - all tests via `make test`
+    - unit tests via `make unit`
+    - integration tests via `make integration`
+    - notebook tests via `make test_notebooks`
 
 - formatter (black, pycln, and isort) via `make format`
-
-- formatter in check-only mode via `make check-format`
+    - formatter in check-only mode via `make check-format`
