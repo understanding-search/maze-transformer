@@ -16,11 +16,11 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
-from zanj.loading import load_item_recursive
-from zanj.torchutil import ConfiguredModel, set_config_class
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
+from zanj.loading import load_item_recursive
+from zanj.torchutil import ConfiguredModel, set_config_class
 
 from maze_transformer.dataset.dataset import GPTDatasetConfig
 from maze_transformer.dataset.maze_dataset_configs import MAZE_DATASET_CONFIGS

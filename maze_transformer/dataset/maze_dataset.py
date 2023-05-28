@@ -19,11 +19,7 @@ from muutils.json_serialize import (
 )
 from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import sanitize_fname, shorten_numerical_to_str, stable_hash
-from zanj.loading import (
-    LoaderHandler,
-    load_item_recursive,
-    register_loader_handler,
-)
+from zanj.loading import LoaderHandler, load_item_recursive, register_loader_handler
 
 from maze_transformer.dataset.dataset import (
     DatasetFilterProtocol,

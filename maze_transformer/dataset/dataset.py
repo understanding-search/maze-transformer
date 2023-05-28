@@ -16,8 +16,8 @@ from muutils.json_serialize import (
 )
 from muutils.misc import sanitize_fname, shorten_numerical_to_str
 from muutils.tensor_utils import DTYPE_MAP
-from zanj import ZANJ
 from torch.utils.data import Dataset
+from zanj import ZANJ
 
 from maze_transformer.utils.utils import DEFAULT_SEED, GLOBAL_SEED, set_reproducibility
 

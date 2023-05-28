@@ -12,11 +12,7 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.misc import sanitize_fname, shorten_numerical_to_str, stable_hash
-from zanj.loading import (
-    LoaderHandler,
-    load_item_recursive,
-    register_loader_handler,
-)
+from zanj.loading import LoaderHandler, load_item_recursive, register_loader_handler
 
 from maze_transformer.dataset.dataset import GPTDataset, GPTDatasetConfig
 from maze_transformer.dataset.maze_dataset import (

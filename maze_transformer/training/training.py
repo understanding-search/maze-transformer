@@ -6,9 +6,9 @@ from typing import Callable
 import torch
 from jaxtyping import Float
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
-from zanj import ZANJ
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
+from zanj import ZANJ
 
 from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.generation.lattice_maze import SolvedMaze
