@@ -33,7 +33,7 @@ def get_path_tokens(tokens: list[str], trim_end: bool = False) -> list[str]:
         raise ValueError(
             f"Path start token {SPECIAL_TOKENS['path_start']} not found in tokens:\n{tokens}"
         )
-    start_idx: int = tokens.index(SPECIAL_TOKENS["path_start"]) + 1
+    start_idx: int = tokens.index(SPECIAL_TOKENS["path_start"]) + int(trim_end)
     end_idx: int|None = None
     if trim_end and (SPECIAL_TOKENS["path_end"] in tokens):
         end_idx = tokens.index(SPECIAL_TOKENS["path_end"])

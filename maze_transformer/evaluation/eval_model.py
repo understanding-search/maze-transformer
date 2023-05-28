@@ -108,22 +108,38 @@ def predict_maze_paths(
     when_noncoord: WhenMissing = "skip",
     temperature: float = 0.0,
 ) -> list[str|list[tuple[int, int]]]:
-    indices_batch: list[ATensor] = []
-    prediction_batch: list[str] = list()
-    for tokens in tokens_batch:
-        context: str = " ".join(get_context_tokens(tokens))
-        prediction_batch.append(model.generate(
-                context,
-                eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
-                stop_at_eos=True,
-                max_new_tokens=max_new_tokens,
-                verbose=verbose,
-                temperature=temperature,
-        ))
+    """given the model and a batch of context tokens, make predictions for the path"""
 
+    # check types
+    assert isinstance(tokens_batch, list), f"tokens_batch must be a list, got {type(tokens_batch)}"
+    assert all(
+        isinstance(tokens, list) for tokens in tokens_batch
+    ), f"tokens_batch must be a list of lists, got {[type(tokens) for tokens in tokens_batch] = }"
+    assert all(
+        isinstance(x, str) for tokens in tokens_batch for x in tokens
+    ), f"tokens_batch must be a list of lists of strings, got {[type(x) for tokens in tokens_batch for x in tokens] = }"
+    
+    # predict some tokens
+    prediction_batch: list[list[str]] = list()
+    for tokens in tokens_batch:
+        # context is string
+        context: str = " ".join(get_context_tokens(tokens))
+        # predict tokens
+        prediction: str = model.generate(
+            context,
+            eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
+            stop_at_eos=True,
+            max_new_tokens=max_new_tokens,
+            verbose=verbose,
+            temperature=temperature,
+        )
+        assert isinstance(prediction, str), f"prediction must be a string, got '{type(prediction)=}'\n{prediction = }"
+        # convert to strings
+        prediction_batch.append(prediction.split(" "))
+
+    # turn the predicted tokens into paths
     paths: list[list[tuple[int, int]]] = []
-    for preds in prediction_batch:
-        pred_tokens: list[str] = preds.split(" ")
+    for pred_tokens in prediction_batch:
         path_tokens: list[str] = get_path_tokens(pred_tokens, trim_end=True)
         path_coords: list[str|CoordTup] = tokens_to_coords(
             path_tokens, 
