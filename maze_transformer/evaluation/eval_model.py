@@ -5,7 +5,6 @@ from typing import cast
 import numpy as np
 import torch
 from muutils.statcounter import StatCounter
-from muutils.tensor_utils import ATensor
 from transformer_lens import HookedTransformer
 
 from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
@@ -17,7 +16,6 @@ from maze_transformer.utils.token_utils import (
     WhenMissing,
     get_context_tokens,
     get_path_tokens,
-    get_tokens_up_to_path_start,
     tokens_to_coords,
 )
 from maze_transformer.utils.utils import chunks
@@ -107,18 +105,20 @@ def predict_maze_paths(
     verbose: bool = False,
     when_noncoord: WhenMissing = "skip",
     temperature: float = 0.0,
-) -> list[str|list[tuple[int, int]]]:
+) -> list[str | list[tuple[int, int]]]:
     """given the model and a batch of context tokens, make predictions for the path"""
 
     # check types
-    assert isinstance(tokens_batch, list), f"tokens_batch must be a list, got {type(tokens_batch)}"
+    assert isinstance(
+        tokens_batch, list
+    ), f"tokens_batch must be a list, got {type(tokens_batch)}"
     assert all(
         isinstance(tokens, list) for tokens in tokens_batch
     ), f"tokens_batch must be a list of lists, got {[type(tokens) for tokens in tokens_batch] = }"
     assert all(
         isinstance(x, str) for tokens in tokens_batch for x in tokens
     ), f"tokens_batch must be a list of lists of strings, got {[type(x) for tokens in tokens_batch for x in tokens] = }"
-    
+
     # predict some tokens
     prediction_batch: list[list[str]] = list()
     for tokens in tokens_batch:
@@ -133,7 +133,9 @@ def predict_maze_paths(
             verbose=verbose,
             temperature=temperature,
         )
-        assert isinstance(prediction, str), f"prediction must be a string, got '{type(prediction)=}'\n{prediction = }"
+        assert isinstance(
+            prediction, str
+        ), f"prediction must be a string, got '{type(prediction)=}'\n{prediction = }"
         # convert to strings
         prediction_batch.append(prediction.split(" "))
 
@@ -141,9 +143,9 @@ def predict_maze_paths(
     paths: list[list[tuple[int, int]]] = []
     for pred_tokens in prediction_batch:
         path_tokens: list[str] = get_path_tokens(pred_tokens, trim_end=True)
-        path_coords: list[str|CoordTup] = tokens_to_coords(
-            path_tokens, 
-            maze_data_cfg=data_cfg, 
+        path_coords: list[str | CoordTup] = tokens_to_coords(
+            path_tokens,
+            maze_data_cfg=data_cfg,
             when_noncoord=when_noncoord,
         )
         # This is the correct type when using "skip"

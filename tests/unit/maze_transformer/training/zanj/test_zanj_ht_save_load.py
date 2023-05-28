@@ -1,5 +1,5 @@
-from pathlib import Path
 import warnings
+from pathlib import Path
 
 import torch
 from jaxtyping import Int
@@ -98,10 +98,9 @@ def _assert_model_output_equality(
             f"model outputs not equal within rtol={output_rtol_warn}:\n{torch.norm(output_a - output_b) = }"
         )
 
-    assert torch.allclose(output_a, output_b, rtol=output_rtol_assert), (
-        f"model outputs not equal within rtol={output_rtol_assert}:\n{torch.norm(output_a - output_b) = }"
-    )
-
+    assert torch.allclose(
+        output_a, output_b, rtol=output_rtol_assert
+    ), f"model outputs not equal within rtol={output_rtol_assert}:\n{torch.norm(output_a - output_b) = }"
 
 
 def test_configs_setup_correct():

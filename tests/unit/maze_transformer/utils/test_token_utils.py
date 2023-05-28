@@ -29,7 +29,6 @@ def test_get_path_tokens():
     assert result_trim == ["(1,0)", "(1,1)"]
 
 
-
 def test_get_origin_token():
     result = token_utils.get_origin_token(MAZE_TOKENS)
     assert result == "(1,0)"

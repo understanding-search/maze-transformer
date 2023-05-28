@@ -6,12 +6,12 @@ WhenMissing = Literal["except", "skip", "include"]
 
 
 def tokens_between(
-        tokens: list[str], 
-        start_value: str, 
-        end_value: str,
-        include_start: bool = False,
-        include_end: bool = False,
-    ) -> list[str]:
+    tokens: list[str],
+    start_value: str,
+    end_value: str,
+    include_start: bool = False,
+    include_end: bool = False,
+) -> list[str]:
     start_idx = tokens.index(start_value) + int(not include_start)
     end_idx = tokens.index(end_value) + int(include_end)
 
@@ -27,14 +27,13 @@ def get_adj_list_tokens(tokens: list[str]) -> list[str]:
 
 
 def get_path_tokens(tokens: list[str], trim_end: bool = False) -> list[str]:
-    """The path is considered everything from the first path coord to the path_end token, if it exists.
-    """
+    """The path is considered everything from the first path coord to the path_end token, if it exists."""
     if SPECIAL_TOKENS["path_start"] not in tokens:
         raise ValueError(
             f"Path start token {SPECIAL_TOKENS['path_start']} not found in tokens:\n{tokens}"
         )
     start_idx: int = tokens.index(SPECIAL_TOKENS["path_start"]) + int(trim_end)
-    end_idx: int|None = None
+    end_idx: int | None = None
     if trim_end and (SPECIAL_TOKENS["path_end"] in tokens):
         end_idx = tokens.index(SPECIAL_TOKENS["path_end"])
     return tokens[start_idx:end_idx]
@@ -42,8 +41,11 @@ def get_path_tokens(tokens: list[str], trim_end: bool = False) -> list[str]:
 
 def get_context_tokens(tokens: list[str]) -> list[str]:
     return tokens_between(
-        tokens, SPECIAL_TOKENS["adj_list_start"], SPECIAL_TOKENS["path_start"],
-        include_start=True, include_end=True,
+        tokens,
+        SPECIAL_TOKENS["adj_list_start"],
+        SPECIAL_TOKENS["path_start"],
+        include_start=True,
+        include_end=True,
     )
 
 

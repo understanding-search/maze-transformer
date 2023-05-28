@@ -21,15 +21,15 @@ def test_random_baseline(temp_dir):
 
     dataset: MazeDataset = MazeDataset.from_config(cfg.dataset_cfg, save_local=False)
     unbiased_model: RandomBaseline = RandomBaseline(cfg)
-    biased_model: RandomBaseline = RandomBaseline(cfg, bias=1.0)  # Always take correct path
+    biased_model: RandomBaseline = RandomBaseline(
+        cfg, bias=1.0
+    )  # Always take correct path
 
     max_new_tokens: int = 15
-    dataset_tokens: list[list[str]] = dataset.as_tokens(join_tokens_individual_maze=False)
-    # print(f"{dataset_tokens = }")
+    dataset_tokens: list[list[str]] = dataset.as_tokens(
+        join_tokens_individual_maze=False
+    )
 
-    print("="*100)
-    print("predicting unbiased paths")
-    print("="*100)
     unbiased_paths = predict_maze_paths(
         tokens_batch=dataset_tokens,
         data_cfg=cfg.dataset_cfg,
@@ -37,9 +37,6 @@ def test_random_baseline(temp_dir):
         max_new_tokens=max_new_tokens,
     )
 
-    print("="*100)
-    print("predicting biased paths")
-    print("="*100)
     biased_paths = predict_maze_paths(
         tokens_batch=dataset_tokens,
         data_cfg=cfg.dataset_cfg,
@@ -47,10 +44,7 @@ def test_random_baseline(temp_dir):
         max_new_tokens=max_new_tokens,
     )
     unbiased_coords = [
-        coord 
-        for path in unbiased_paths 
-        for coords in path 
-        for coord in coords
+        coord for path in unbiased_paths for coords in path for coord in coords
     ]
 
     assert len(unbiased_paths) == len(dataset)

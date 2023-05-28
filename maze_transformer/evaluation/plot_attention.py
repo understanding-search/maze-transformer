@@ -209,7 +209,9 @@ class ProcessedMazeAttention(SerializableDataclass):
             for idx_token, token in enumerate(self.tokens_context):
                 coord: CoordTup | None = coord_str_to_tuple_noneable(token)
                 if coord is not None:
-                    node_values[coord[0], coord[1]] += np.sum(attn[idx_token].cpu().numpy())
+                    node_values[coord[0], coord[1]] += np.sum(
+                        attn[idx_token].cpu().numpy()
+                    )
 
                 # update MazePlot objects
                 mazeplots[idx_attn // self.n_heads][

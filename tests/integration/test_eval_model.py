@@ -7,8 +7,8 @@ Test that loading the model and configuration works
 """
 from pathlib import Path
 
-import pytest
 import numpy as np
+import pytest
 from muutils.zanj import ZANJ
 from muutils.zanj.torchutil import assert_model_cfg_equality
 
@@ -84,18 +84,19 @@ def test_predict_maze_paths():
     )
 
     all_coordinates: list[CoordTup] = [coord for path in paths for coord in path]
-    
+
     assert len(paths) == 5
     # check the coords are actually coords
     assert all(
         isinstance(c, tuple) for c in all_coordinates
     ), f"expected tuples of ints in all_coordinates: {all_coordinates}"
-    assert all(len(c) == 2 for c in all_coordinates), f"expected tuples of ints in all_coordinates: {all_coordinates}"
     assert all(
-        isinstance(c[0], int) and isinstance(c[1], int) 
-        for c in all_coordinates
+        len(c) == 2 for c in all_coordinates
     ), f"expected tuples of ints in all_coordinates: {all_coordinates}"
-    
+    assert all(
+        isinstance(c[0], int) and isinstance(c[1], int) for c in all_coordinates
+    ), f"expected tuples of ints in all_coordinates: {all_coordinates}"
+
     assert max([len(path) for path in paths]) <= max_new_tokens + 1
 
     all_coordinates_np: np.ndarray = np.array(all_coordinates)

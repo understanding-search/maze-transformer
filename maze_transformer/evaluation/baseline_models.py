@@ -1,12 +1,16 @@
 import random
-from typing import Union
 
 import numpy as np
 import torch
 from jaxtyping import Float
 from transformer_lens import HookedTransformer
 
-from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordArray, CoordTup
+from maze_transformer.generation.constants import (
+    SPECIAL_TOKENS,
+    Coord,
+    CoordArray,
+    CoordTup,
+)
 from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.utils.token_utils import (
@@ -59,15 +63,19 @@ class RandomBaseline(HookedTransformer):
         if current_position == target:
             return SPECIAL_TOKENS["path_end"]
 
-        neighbors: list[CoordTup] = self._get_coord_neighbors(solved_maze, current_position)
+        neighbors: list[CoordTup] = self._get_coord_neighbors(
+            solved_maze, current_position
+        )
         unvisited_neighbors: list[CoordTup] = [
-            coord 
-            for coord in neighbors 
-            if coord not in path
+            coord for coord in neighbors if coord not in path
         ]
 
         # if the current path is already as long as the solution, there can be no correct next step
-        correct_step: CoordTup = tuple(solved_maze.solution[len(path)]) if len(solved_maze.solution) > len(path) else None
+        correct_step: CoordTup = (
+            tuple(solved_maze.solution[len(path)])
+            if len(solved_maze.solution) > len(path)
+            else None
+        )
 
         if len(unvisited_neighbors) == 0:
             # break out if dead end
@@ -96,8 +104,12 @@ class RandomBaseline(HookedTransformer):
     ) -> list[str]:
         # assemble the maze from the tokens
         maze: LatticeMaze = LatticeMaze.from_tokens(tokens)
-        origin_coord: CoordTup = self.config.dataset_cfg.token_node_map[get_origin_token(tokens)]
-        target_coord: CoordTup = self.config.dataset_cfg.token_node_map[get_target_token(tokens)]
+        origin_coord: CoordTup = self.config.dataset_cfg.token_node_map[
+            get_origin_token(tokens)
+        ]
+        target_coord: CoordTup = self.config.dataset_cfg.token_node_map[
+            get_target_token(tokens)
+        ]
         solution: CoordArray = maze.find_shortest_path(origin_coord, target_coord)
         solved_maze: SolvedMaze = SolvedMaze.from_lattice_maze(maze, solution)
         assert (solved_maze.start_pos == np.array(origin_coord)).all()
@@ -105,16 +117,10 @@ class RandomBaseline(HookedTransformer):
 
         # get the path so far
         context_existing_path: list[Coord] = tokens_to_coords(
-            tokens = get_path_tokens(tokens, trim_end=True), 
-            maze_data_cfg = self.config.dataset_cfg,
-            when_noncoord = "except",
+            tokens=get_path_tokens(tokens, trim_end=True),
+            maze_data_cfg=self.config.dataset_cfg,
+            when_noncoord="except",
         )
-
-        print("="*50)
-        print(f"{tokens = }")
-        print(solved_maze.as_ascii())
-        print(f"{origin_coord = }")
-        print(f"{target_coord = }")
 
         # assemble our predicted path
         predictions: list[Coord] = list()
@@ -127,15 +133,13 @@ class RandomBaseline(HookedTransformer):
             path: list[Coord] = context_existing_path + predictions
             predictions.append(
                 self._predict_next_step(
-                    solved_maze=solved_maze, 
+                    solved_maze=solved_maze,
                     target=target_coord,
-                    path=path, 
+                    path=path,
                 )
             )
             if predictions[-1] == SPECIAL_TOKENS["path_end"]:
                 break
-
-        print(f"{predictions = }")
 
         return coords_to_tokens(
             predictions, self.config.dataset_cfg, when_noncoord="include"
@@ -143,11 +147,10 @@ class RandomBaseline(HookedTransformer):
 
     def generate(
         self,
-        context: str|list[str]|Float[torch.Tensor, "pos"],
+        context: str | list[str] | Float[torch.Tensor, "pos"],
         max_new_tokens: int,
         **_,
     ) -> str:
-        
         # convert input to a list of tokens
         tokens: list[str]
         if isinstance(context, torch.Tensor):
@@ -156,12 +159,14 @@ class RandomBaseline(HookedTransformer):
             if all(isinstance(x, str) for x in tokens):
                 tokens = context
             else:
-                raise TypeError(f"Expected list of str, got types in list: {set(type(x) for x in context)}")
+                raise TypeError(
+                    f"Expected list of str, got types in list: {set(type(x) for x in context)}"
+                )
         elif isinstance(context, str):
             tokens = self.tokenizer.tokenize(context)
         else:
             raise TypeError(f"Expected list[str], str, or tensor, got {type(context)}")
-        
+
         # generate path
         generated_path: list[str] = self._generate_path(
             tokens,

@@ -243,13 +243,13 @@ class MazeDataset(GPTDataset):
         return self.mazes[i]
 
     def as_tokens(
-            self, 
-            limit: int|None = None,
-            join_tokens_individual_maze: bool = False,
-        ) -> list[list[str]]|list[str]:
+        self,
+        limit: int | None = None,
+        join_tokens_individual_maze: bool = False,
+    ) -> list[list[str]] | list[str]:
         """return the dataset as tokens
-        
-        if join_tokens_individual_maze is True, then the tokens of each maze are 
+
+        if join_tokens_individual_maze is True, then the tokens of each maze are
         joined with a space, and the result is a list of strings.
         i.e.:
         >>> dataset.as_tokens(join_tokens_individual_maze=False)
@@ -259,11 +259,13 @@ class MazeDataset(GPTDataset):
         """
         if join_tokens_individual_maze:
             return [
-                " ".join(maze.as_tokens(self.cfg.node_token_map)) 
+                " ".join(maze.as_tokens(self.cfg.node_token_map))
                 for maze in self.mazes[:limit]
             ]
         else:
-            return [maze.as_tokens(self.cfg.node_token_map) for maze in self.mazes[:limit]]
+            return [
+                maze.as_tokens(self.cfg.node_token_map) for maze in self.mazes[:limit]
+            ]
 
     def __len__(self) -> int:
         return len(self.mazes)
