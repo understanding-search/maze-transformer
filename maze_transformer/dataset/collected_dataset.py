@@ -12,7 +12,7 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.misc import sanitize_fname, shorten_numerical_to_str, stable_hash
-from muutils.zanj.loading import (
+from zanj.loading import (
     LoaderHandler,
     load_item_recursive,
     register_loader_handler,

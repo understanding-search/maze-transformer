@@ -6,7 +6,7 @@ from typing import Callable
 import torch
 from jaxtyping import Float
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
-from muutils.zanj import ZANJ
+from zanj import ZANJ
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
 

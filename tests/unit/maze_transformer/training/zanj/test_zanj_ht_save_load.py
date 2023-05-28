@@ -3,8 +3,8 @@ from pathlib import Path
 
 import torch
 from jaxtyping import Int
-from muutils.zanj import ZANJ
-from muutils.zanj.torchutil import (
+from zanj import ZANJ
+from zanj.torchutil import (
     ConfigMismatchException,
     assert_model_cfg_equality,
     assert_model_exact_equality,

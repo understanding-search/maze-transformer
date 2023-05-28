@@ -16,8 +16,8 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
-from muutils.zanj.loading import load_item_recursive
-from muutils.zanj.torchutil import ConfiguredModel, set_config_class
+from zanj.loading import load_item_recursive
+from zanj.torchutil import ConfiguredModel, set_config_class
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
