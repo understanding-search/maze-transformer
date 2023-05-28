@@ -1,13 +1,17 @@
 import random
-from typing import Union
 
 import numpy as np
 import torch
 from jaxtyping import Float
 from transformer_lens import HookedTransformer
 
-from maze_transformer.generation.constants import SPECIAL_TOKENS, Coord, CoordTup
-from maze_transformer.generation.lattice_maze import LatticeMaze
+from maze_transformer.generation.constants import (
+    SPECIAL_TOKENS,
+    Coord,
+    CoordArray,
+    CoordTup,
+)
+from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.utils.token_utils import (
     coords_to_tokens,
@@ -32,37 +36,49 @@ class RandomBaseline(HookedTransformer):
     def __init__(self, config: ConfigHolder, bias: float = 0.0):
         assert isinstance(
             config, ConfigHolder
-        ), f"config must be a ConfigHolder, got {type(config) = }"
+        ), f"config must be a ConfigHolder, got {str(type(config)) = }"
         self.config: ConfigHolder = config
         self.bias: float = bias
-        super().__init__(cfg=config.transformer_config(), tokenizer=config.tokenizer)
+        super().__init__(cfg=config.hooked_transformer_cfg, tokenizer=config.tokenizer)
 
     def _get_coord_neighbors(
         self, maze: LatticeMaze, current_position: CoordTup
     ) -> list[CoordTup]:
-        neighbors = maze.get_coord_neighbors(np.array(current_position))
+        neighbors = maze.get_coord_neighbors(np.array(current_position, dtype=np.int32))
         # This conversion won't be needed after https://github.com/AISC-understanding-search/maze-transformer/issues/154
         return [tuple(arr.tolist()) for arr in neighbors]
 
     def _predict_next_step(
         self,
-        maze: LatticeMaze,
+        solved_maze: SolvedMaze,
         target: CoordTup,
-        path: list[str | CoordTup],
-        solution: list[Coord],
+        path: list[CoordTup],
+        pad_eos: bool = False,
     ) -> CoordTup | str:
-        current_position = path[-1]
+        current_position: CoordTup = path[-1]
         # pad with eos up to max_new_tokens to avoid ragged tensors
-        if current_position in [target, SPECIAL_TOKENS["path_end"]]:
+        if pad_eos:
+            if current_position in [target, SPECIAL_TOKENS["path_end"]]:
+                return SPECIAL_TOKENS["path_end"]
+        if current_position == target:
             return SPECIAL_TOKENS["path_end"]
 
-        neighbors = self._get_coord_neighbors(maze, current_position)
-        unvisited_neighbors = [coord for coord in neighbors if coord not in path]
+        neighbors: list[CoordTup] = self._get_coord_neighbors(
+            solved_maze, current_position
+        )
+        unvisited_neighbors: list[CoordTup] = [
+            coord for coord in neighbors if coord not in path
+        ]
 
         # if the current path is already as long as the solution, there can be no correct next step
-        correct_step = tuple(solution[len(path)]) if len(solution) > len(path) else None
+        correct_step: CoordTup = (
+            tuple(solved_maze.solution[len(path)])
+            if len(solved_maze.solution) > len(path)
+            else None
+        )
 
         if len(unvisited_neighbors) == 0:
+            # break out if dead end
             return SPECIAL_TOKENS["path_end"]
         else:
             if correct_step not in unvisited_neighbors:
@@ -86,22 +102,44 @@ class RandomBaseline(HookedTransformer):
         tokens: list[str],
         steps_to_predict: int,
     ) -> list[str]:
-        maze = LatticeMaze.from_tokens(tokens)
-        origin_coord = self.config.dataset_cfg.token_node_map[get_origin_token(tokens)]
-        target_coord = self.config.dataset_cfg.token_node_map[get_target_token(tokens)]
-        solution = maze.find_shortest_path(origin_coord, target_coord).tolist()
+        # assemble the maze from the tokens
+        maze: LatticeMaze = LatticeMaze.from_tokens(tokens)
+        origin_coord: CoordTup = self.config.dataset_cfg.token_node_map[
+            get_origin_token(tokens)
+        ]
+        target_coord: CoordTup = self.config.dataset_cfg.token_node_map[
+            get_target_token(tokens)
+        ]
+        solution: CoordArray = maze.find_shortest_path(origin_coord, target_coord)
+        solved_maze: SolvedMaze = SolvedMaze.from_lattice_maze(maze, solution)
+        assert (solved_maze.start_pos == np.array(origin_coord)).all()
+        assert (solved_maze.end_pos == np.array(target_coord)).all()
 
-        existing_path = tokens_to_coords(
-            get_path_tokens(tokens), self.config.dataset_cfg
+        # get the path so far
+        context_existing_path: list[Coord] = tokens_to_coords(
+            tokens=get_path_tokens(tokens, trim_end=True),
+            maze_data_cfg=self.config.dataset_cfg,
+            when_noncoord="except",
         )
 
-        predictions = []
+        # assemble our predicted path
+        predictions: list[Coord] = list()
+
+        if len(context_existing_path) == 0:
+            # add the origin to the path if it's not there already
+            predictions.append(origin_coord)
 
         for i in range(steps_to_predict):
-            path = existing_path + predictions
+            path: list[Coord] = context_existing_path + predictions
             predictions.append(
-                self._predict_next_step(maze, target_coord, path, solution)
+                self._predict_next_step(
+                    solved_maze=solved_maze,
+                    target=target_coord,
+                    path=path,
+                )
             )
+            if predictions[-1] == SPECIAL_TOKENS["path_end"]:
+                break
 
         return coords_to_tokens(
             predictions, self.config.dataset_cfg, when_noncoord="include"
@@ -109,20 +147,38 @@ class RandomBaseline(HookedTransformer):
 
     def generate(
         self,
-        indices_batch: Union[str, Float[torch.Tensor, "batch pos"]],
+        context: str | list[str] | Float[torch.Tensor, "pos"],
         max_new_tokens: int,
         **_,
-    ) -> Float[torch.Tensor, "batch pos_plus_new_tokens"]:
-        tokens_batch = [self.to_str_tokens(indices) for indices in indices_batch]
+    ) -> str:
+        # convert input to a list of tokens
+        tokens: list[str]
+        if isinstance(context, torch.Tensor):
+            tokens = self.to_str_tokens(context)
+        elif isinstance(context, list):
+            if all(isinstance(x, str) for x in tokens):
+                tokens = context
+            else:
+                raise TypeError(
+                    f"Expected list of str, got types in list: {set(type(x) for x in context)}"
+                )
+        elif isinstance(context, str):
+            tokens = self.tokenizer.tokenize(context)
+        else:
+            raise TypeError(f"Expected list[str], str, or tensor, got {type(context)}")
 
-        solved_mazes = [
-            tokens
-            + self._generate_path(
-                tokens,
-                steps_to_predict=max_new_tokens,
-            )
-            for tokens in tokens_batch
-        ]
+        # generate path
+        generated_path: list[str] = self._generate_path(
+            tokens,
+            steps_to_predict=max_new_tokens,
+        )
 
-        output = self.tokenizer(solved_mazes, is_split_into_words=True)["input_ids"]
+        # assemble output and return
+        output: str = " ".join(tokens + generated_path)
+
+        # print(f"context tokens: {tokens}")
+        # print(f"Generated path: {generated_path}")
+        # print(f"Output: {output}")
+
+        # output: Float[torch.Tensor, "batch pos_plus_new_tokens"] = self.tokenizer(solved_maze, is_split_into_words=True)["input_ids"]
         return output

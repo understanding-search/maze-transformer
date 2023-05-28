@@ -9,14 +9,14 @@ from pytest import mark, param
 from transformer_lens import HookedTransformer
 
 from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
-from maze_transformer.generation.generators import LatticeMazeGenerators
+from maze_transformer.generation.generators import get_maze_with_solution
 from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
 
 
 def test_tokenization_encoding():
     # Check that wrapped tokenizer __call__ returns the same as original tokenizer
-    solved_maze: SolvedMaze = LatticeMazeGenerators.gen_dfs_with_solution((3, 3))
+    solved_maze: SolvedMaze = get_maze_with_solution("gen_dfs", (3, 3))
 
     # Need to generate a config to extract the token map >.<
     # TODO: Part of https://github.com/AISC-understanding-search/maze-transformer/issues/77

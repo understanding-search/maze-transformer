@@ -16,17 +16,18 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
+from muutils.zanj.loading import load_item_recursive
 from muutils.zanj.torchutil import ConfiguredModel, set_config_class
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
 
-from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
+from maze_transformer.dataset.dataset import GPTDatasetConfig
 from maze_transformer.dataset.maze_dataset_configs import MAZE_DATASET_CONFIGS
 from maze_transformer.dataset.tokenizer import HuggingMazeTokenizer
 
 
-@serializable_dataclass(kw_only=True)
+@serializable_dataclass(kw_only=True, properties_to_serialize=["n_heads"])
 class BaseGPTConfig(SerializableDataclass):
     """
     Add a name property and serialization to HookedTransformerConfig
@@ -44,6 +45,22 @@ class BaseGPTConfig(SerializableDataclass):
             are_weights_processed=False,
         )
     )
+
+    @property
+    def n_heads(self) -> int:
+        return self.d_model // self.d_head
+
+    def summary(self) -> dict:
+        """return a human-readable summary of the config"""
+        return dict(
+            name=self.name,
+            act_fn=self.act_fn,
+            d_model=self.d_model,
+            d_head=self.d_head,
+            n_layers=self.n_layers,
+            weight_processing=self.weight_processing,
+            n_heads=self.n_heads,
+        )
 
 
 # ==================================================
@@ -92,6 +109,18 @@ class TrainConfig(SerializableDataclass):
 
     print_loss_interval: int = serializable_field(default=1000)
     checkpoint_interval: int = serializable_field(default=50000)
+
+    def summary(self) -> dict:
+        """return a human-readable summary of the config"""
+        return dict(
+            name=self.name,
+            optimizer=self.optimizer.__name__,
+            optimizer_kwargs=self.optimizer_kwargs,
+            batch_size=self.batch_size,
+            dataloader_cfg=self.dataloader_cfg,
+            print_loss_interval=self.print_loss_interval,
+            checkpoint_interval=self.checkpoint_interval,
+        )
 
 
 # actual configuration setups
@@ -142,8 +171,8 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             num_workers=0,
             drop_last=False,
         ),
-        print_loss_interval=100,
-        checkpoint_interval=1000,
+        print_loss_interval=10,
+        checkpoint_interval=100,
     ),
     TrainConfig(
         name="tiny-v1",
@@ -201,13 +230,29 @@ class ConfigHolder(SerializableDataclass):
     Handles any logic that moves data between the configs below it.
     """
 
-    dataset_cfg: MazeDatasetConfig
+    dataset_cfg: GPTDatasetConfig = serializable_field(
+        # serialization_fn=lambda self: json_serialize(self.serializ,
+        loading_fn=lambda data: load_item_recursive(
+            data["dataset_cfg"],
+            path=tuple("dataset_cfg"),
+        ),
+        assert_type=True,
+    )
     model_cfg: BaseGPTConfig
     train_cfg: TrainConfig
     name: str = serializable_field(default="default")
     pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
         default=None
     )
+
+    def summary(self) -> str:
+        return {
+            "name": self.name,
+            "dataset_cfg": self.dataset_cfg.summary(),
+            "model_cfg": self.model_cfg.summary(),
+            "train_cfg": self.train_cfg.summary(),
+            "pretrainedtokenizer_kwargs": self.pretrainedtokenizer_kwargs,
+        }
 
     @property
     def seed(self) -> int:
@@ -229,7 +274,7 @@ class ConfigHolder(SerializableDataclass):
             d_head=self.model_cfg.d_head,
             n_layers=self.model_cfg.n_layers,
             n_ctx=self.dataset_cfg.seq_len_max,
-            d_vocab=len(self.dataset_cfg.token_arr),
+            d_vocab=len(self.dataset_cfg.token_arr),  # TODO: get this from tokenizer
         )
 
     def transformer_config(self) -> HookedTransformerConfig:

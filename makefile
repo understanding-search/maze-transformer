@@ -57,7 +57,7 @@ test_notebooks: convert_notebooks
 
 .PHONY: test
 test: clean unit integration test_notebooks
-	@echo "run all testts: unit, integration, and notebooks"
+	@echo "ran all tests: unit, integration, and notebooks"
 
 
 .PHONY: clean

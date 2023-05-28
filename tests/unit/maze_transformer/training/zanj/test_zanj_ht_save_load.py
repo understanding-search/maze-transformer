@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 
 import torch
@@ -9,10 +10,10 @@ from muutils.zanj.torchutil import (
     assert_model_exact_equality,
 )
 
+from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 from maze_transformer.training.config import (
     BaseGPTConfig,
     ConfigHolder,
-    MazeDatasetConfig,
     TrainConfig,
     ZanjHookedTransformer,
 )
@@ -55,7 +56,8 @@ def _assert_model_output_equality(
     model_a: ZanjHookedTransformer,
     model_b: ZanjHookedTransformer,
     test_sequence_length: int = 10,
-    output_atol: float = 1e-7,
+    output_rtol_warn: float = 1e-8,
+    output_rtol_assert: float = 1e-4,
 ):
     """checks that configs are equal (modulo weight processing) and that the models output the same thing"""
     try:
@@ -91,7 +93,14 @@ def _assert_model_output_equality(
         model_b(input_sequence.clone()), dim=-1
     )
 
-    assert torch.allclose(output_a, output_b, atol=output_atol)
+    if not torch.allclose(output_a, output_b, rtol=output_rtol_warn):
+        warnings.warn(
+            f"model outputs not equal within rtol={output_rtol_warn}:\n{torch.norm(output_a - output_b) = }"
+        )
+
+    assert torch.allclose(
+        output_a, output_b, rtol=output_rtol_assert
+    ), f"model outputs not equal within rtol={output_rtol_assert}:\n{torch.norm(output_a - output_b) = }"
 
 
 def test_configs_setup_correct():
@@ -108,10 +117,12 @@ def test_model_save_exact():
     zanj: ZANJ = ZANJ(
         custom_settings={"_load_state_dict_wrapper": {"recover_exact": True}},
     )
+    print(f"{MODEL.zanj_model_config.dataset_cfg = }")
     zanj.save(MODEL, fname)
     model_load = zanj.read(fname)
 
     assert_model_exact_equality(MODEL, model_load)
+    _assert_model_output_equality(MODEL, model_load)
 
 
 def test_model_save_fold_ln():

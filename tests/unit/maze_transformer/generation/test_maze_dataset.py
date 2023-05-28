@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import pytest
 
@@ -114,8 +116,10 @@ class TestMazeDatasetFilters:
             @staticmethod
             def drop_nth(dataset: TestDataset, n: int) -> TestDataset:
                 """Filter mazes by path length"""
-                return TestDataset(
-                    dataset.cfg, [maze for i, maze in enumerate(dataset) if i != n]
+                return copy.deepcopy(
+                    TestDataset(
+                        dataset.cfg, [maze for i, maze in enumerate(dataset) if i != n]
+                    )
                 )
 
         maze1 = SolvedMaze(
@@ -167,3 +171,76 @@ class TestMazeDatasetFilters:
         filtered = dataset.filter_by.cut_percentile_shortest(49.0)
 
         assert filtered.mazes == mazes[:2]
+
+
+DUPE_DATASET = [
+    """
+#####
+#  E#
+###X#
+#SXX#
+##### 
+""",
+    """
+#####
+#SXE#
+### #
+#   #
+##### 
+""",
+    """
+#####
+#  E#
+###X#
+#SXX#
+##### 
+""",
+    """
+#####
+# # #
+# # #
+#EXS#
+##### 
+""",
+    """
+#####
+#SXX#
+###X#
+#EXX#
+##### 
+""",
+]
+
+
+def _helper_dataset_from_ascii(ascii: str) -> MazeDataset:
+    mazes: list[SolvedMaze] = list()
+    for maze in ascii:
+        mazes.append(SolvedMaze.from_ascii(maze.strip()))
+
+    return MazeDataset(
+        MazeDatasetConfig(
+            name="test", grid_n=mazes[0].grid_shape[0], n_mazes=len(mazes)
+        ),
+        mazes,
+    )
+
+
+def test_remove_duplicates():
+    dataset: MazeDataset = _helper_dataset_from_ascii(DUPE_DATASET)
+    dataset_deduped: MazeDataset = dataset.filter_by.remove_duplicates()
+
+    assert len(dataset) == 5
+    assert dataset_deduped.mazes == [dataset.mazes[3], dataset.mazes[4]]
+
+
+def test_remove_duplicates_fast():
+    dataset: MazeDataset = _helper_dataset_from_ascii(DUPE_DATASET)
+    dataset_deduped: MazeDataset = dataset.filter_by.remove_duplicates_fast()
+
+    assert len(dataset) == 5
+    assert dataset_deduped.mazes == [
+        dataset.mazes[0],
+        dataset.mazes[1],
+        dataset.mazes[3],
+        dataset.mazes[4],
+    ]

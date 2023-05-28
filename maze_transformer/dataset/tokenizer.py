@@ -6,12 +6,13 @@ from muutils.tensor_utils import ATensor, NDArray
 from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
+from maze_transformer.dataset.dataset import GPTDatasetConfig
 from maze_transformer.evaluation.plot_maze import MazePlot
 from maze_transformer.generation.constants import SPECIAL_TOKENS
 from maze_transformer.generation.lattice_maze import LatticeMaze
 
 if TYPE_CHECKING:
-    from maze_transformer.training.config import ConfigHolder, MazeDatasetConfig
+    from maze_transformer.training.config import ConfigHolder
 
 # pylint: disable=unused-import, abstract-method
 
@@ -21,7 +22,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     vocab: dict[str, int]  # map of token_ids to strings
 
-    bos_token: str = SPECIAL_TOKENS["path_start"]
+    bos_token: str = SPECIAL_TOKENS["adj_list_start"]
     eos_token: str = SPECIAL_TOKENS["path_end"]
     pad_token: str = SPECIAL_TOKENS["padding"]
     unk_token: str = "<UNK>"
@@ -37,9 +38,10 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     name_or_path = "maze_tokenizer"
 
+    # TODO: this should just take seq_len_max and max grid n
     def __init__(
         self,
-        cfg: Union["ConfigHolder", "MazeDatasetConfig", None] = None,
+        cfg: Union["ConfigHolder", "GPTDatasetConfig", None] = None,
         token_arr: list[str] | None = None,
         seq_len_max: int | None = None,
         **kwargs,
@@ -86,10 +88,22 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         """
         try:
             return super().__call__(text, **kwargs)
-        except NotImplementedError as e:
+        except (NotImplementedError, ValueError) as e:
             raise NotImplementedError(
-                f"Caught an error during tokenization - probably because you are trying to encode a token not present in the tokenizer's vocabulary"
+                f"Caught an error during tokenization - probably because you are trying to encode a token not present in the tokenizer's vocabulary",
+                f"text: '{text}'",
             )
+
+    def _tokenize(self, text: str, **kwargs) -> list[str]:
+        assert len(kwargs) == 0, f"kwargs not supported: {kwargs}"
+
+        return text.split(" ")
+
+    def _convert_token_to_id(self, token: str) -> int:
+        if token in self.vocab:
+            return self.vocab[token]
+        else:
+            raise ValueError(f"Token not in vocab: '{token}'")
 
     def batch_decode(
         self,

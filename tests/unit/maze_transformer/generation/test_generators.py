@@ -1,6 +1,7 @@
 import numpy as np
 
 from maze_transformer.generation.generators import (
+    GENERATORS_MAP,
     LatticeMazeGenerators,
     get_maze_with_solution,
 )
@@ -21,14 +22,10 @@ def test_gen_dfs_oblong():
     assert maze.connection_list.shape == (2, 3, 4)
 
 
-def test_gen_dfs_with_solution():
+def test_get_maze_with_solution():
     three_by_three: Coord = np.array([3, 3])
-    maze: SolvedMaze = get_maze_with_solution("gen_dfs", three_by_three)
+    for key in GENERATORS_MAP:
+        maze: SolvedMaze = get_maze_with_solution(key, three_by_three)
 
-    assert maze.connection_list.shape == (2, 3, 3)
-    assert len(maze.solution[0]) == 2
-
-
-def test_wilson_generation():
-    maze = LatticeMazeGenerators.gen_wilson(np.array([2, 2]))
-    assert maze.connection_list.shape == (2, 2, 2)
+        assert maze.connection_list.shape == (2, 3, 3)
+        assert len(maze.solution[0]) == 2

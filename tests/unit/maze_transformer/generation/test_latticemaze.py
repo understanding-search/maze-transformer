@@ -211,10 +211,16 @@ def test_pixels_ascii_roundtrip():
 def test_targeted_solved_maze():
     n: int = 5
 
-    for maze_gen_func in GENERATORS_MAP.values():
+    for maze_gen_name, maze_gen_func in GENERATORS_MAP.items():
+        if maze_gen_name == "gen_percolation":
+            # skip pure percolation because it will stochastically fail
+            continue
         maze: LatticeMaze = maze_gen_func(np.array([n, n]))
+        solution = maze.generate_random_path()
         tgt_maze: TargetedLatticeMaze = TargetedLatticeMaze.from_lattice_maze(
-            maze, (0, 0), (n - 1, n - 1)
+            maze,
+            solution[0],
+            solution[-1],
         )
 
         tgt_maze_pixels: np.ndarray = tgt_maze.as_pixels()

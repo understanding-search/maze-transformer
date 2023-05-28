@@ -12,6 +12,7 @@ from wandb.sdk.wandb_run import Run
 
 class WandbProject(Enum):
     UNDERSTANDING_SEARCH = "understanding-search"
+    DEMO_NOTEBOOKS = "demo-notebooks"
     INTEGRATION_TESTS = "integration-tests"
 
 

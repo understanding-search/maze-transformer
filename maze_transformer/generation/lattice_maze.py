@@ -35,6 +35,28 @@ BinaryPixelGrid = Bool[np.ndarray, "x y"]
 ConnectionList = Bool[np.ndarray, "lattice_dim x y"]
 
 
+def _fill_edges_with_walls(connection_list: ConnectionList) -> ConnectionList:
+    """fill the last elements of the connections lists as false for each dim"""
+    for dim in range(connection_list.shape[0]):
+        # last row for down
+        if dim == 0:
+            connection_list[dim, -1, :] = False
+        # last column for right
+        elif dim == 1:
+            connection_list[dim, :, -1] = False
+        else:
+            raise NotImplementedError(f"only 2d lattices supported. got {dim=}")
+    return connection_list
+
+
+def color_in_pixel_grid(pixel_grid: PixelGrid, color: RGB) -> bool:
+    for row in pixel_grid:
+        for pixel in row:
+            if np.all(pixel == color):
+                return True
+    return False
+
+
 @dataclass(frozen=True)
 class PixelColors:
     WALL: RGB = (0, 0, 0)
@@ -62,6 +84,18 @@ ASCII_PIXEL_PAIRINGS: dict[str, RGB] = {
 }
 
 
+def str_is_coord(coord_str: str) -> bool:
+    """return True if the string is a coordinate string, False otherwise"""
+    return all(
+        [
+            coord_str.startswith("("),
+            coord_str.endswith(")"),
+            "," in coord_str,
+            all([x.isdigit() for x in coord_str.lstrip("(").rstrip(")").split(",")]),
+        ]
+    )
+
+
 def coord_str_to_tuple(coord_str: str) -> CoordTup:
     """convert a coordinate string to a tuple"""
 
@@ -69,7 +103,23 @@ def coord_str_to_tuple(coord_str: str) -> CoordTup:
     return tuple(int(x) for x in stripped.split(","))
 
 
-@serializable_dataclass(frozen=True, kw_only=True)
+def coord_str_to_tuple_noneable(coord_str: str) -> CoordTup | None:
+    """convert a coordinate string to a tuple, or None if the string is not a coordinate string"""
+    if not str_is_coord(coord_str):
+        return None
+    return coord_str_to_tuple(coord_str)
+
+
+def coord_to_str(coord: typing.Sequence[int]) -> str:
+    """convert a coordinate to a string"""
+    return f"({','.join(str(c) for c in coord)})"
+
+
+@serializable_dataclass(
+    frozen=True,
+    kw_only=True,
+    properties_to_serialize=["lattice_dim", "generation_meta"],
+)
 class LatticeMaze(SerializableDataclass):
     """lattice maze (nodes on a lattice, connections only to neighboring nodes)
 
@@ -108,10 +158,9 @@ class LatticeMaze(SerializableDataclass):
 
     connection_list: ConnectionList
     generation_meta: dict | None = serializable_field(default=None, compare=False)
-    lattice_dim: int = serializable_field(default=2)
 
+    lattice_dim = property(lambda self: self.connection_list.shape[0])
     grid_shape = property(lambda self: self.connection_list.shape[1:])
-
     n_connections = property(lambda self: self.connection_list.sum())
 
     # ============================================================
@@ -121,6 +170,9 @@ class LatticeMaze(SerializableDataclass):
     def heuristic(a: CoordTup, b: CoordTup) -> float:
         """return manhattan distance between two points"""
         return np.abs(a[0] - b[0]) + np.abs(a[1] - b[1])
+
+    def __hash__(self) -> int:
+        return hash(self.connection_list.tobytes())
 
     def nodes_connected(self, a: Coord, b: Coord, /) -> bool:
         """returns whether two nodes are connected"""
@@ -152,6 +204,28 @@ class LatticeMaze(SerializableDataclass):
                 2,
             ), f"invalid shape: {output.shape}, expected ({len(neighbors)}, 2))\n{c = }\n{neighbors = }\n{self.as_ascii()}"
         return output
+
+    def gen_connected_component_from(self, c: Coord) -> CoordArray:
+        """return the connected component from a given coordinate"""
+        # Stack for DFS
+        stack: list[Coord] = [c]
+
+        # Set to store visited nodes
+        visited: set[CoordTup] = set()
+
+        while stack:
+            current_node = stack.pop()
+            visited.add(tuple(current_node.tolist()))
+
+            # Get the neighbors of the current node
+            neighbors = self.get_coord_neighbors(current_node)
+
+            # Iterate over neighbors
+            for neighbor in neighbors:
+                if tuple(neighbor.tolist()) not in visited:
+                    stack.append(neighbor)
+
+        return np.array(list(visited))
 
     def find_shortest_path(
         self,
@@ -263,13 +337,22 @@ class LatticeMaze(SerializableDataclass):
         assert self.grid_shape[0] > 1 and self.grid_shape[1] > 1
 
         connected_component: CoordArray = self.get_connected_component()
-        positions: Int[np.int8, "2 2"] = connected_component[
-            np.random.choice(
-                len(connected_component),
-                size=2,
-                replace=False,
+        positions: Int[np.int8, "2 2"]
+        if len(connected_component) < 2:
+            warnings.warn(
+                f"maze has only one node in its connected component:\n{connected_component=}\n{self.as_ascii()}"
             )
-        ]
+            assert len(connected_component) == 1
+            # just connect it to itself
+            positions = np.array([connected_component[0], connected_component[0]])
+        else:
+            positions = connected_component[
+                np.random.choice(
+                    len(connected_component),
+                    size=2,
+                    replace=False,
+                )
+            ]
 
         return self.find_shortest_path(positions[0], positions[1])
 
@@ -619,21 +702,24 @@ class LatticeMaze(SerializableDataclass):
                 end_pos=end_pos,
             )
 
-        # solution
+        # raw solution, only contains path elements and not start or end
         solution_raw: CoordArray = marked_pos["solution"]
-        assert (
-            solution_raw.shape[1] == 2
-        ), f"solution {solution_raw} has shape {solution_raw.shape}, expected shape (n, 2)"
-        assert (
-            start_pos in solution_raw
-        ), f"start_pos {start_pos} not in solution {solution_raw}"
-        assert (
-            end_pos in solution_raw
-        ), f"end_pos {end_pos} not in solution {solution_raw}"
+        if len(solution_raw.shape) == 2:
+            assert (
+                solution_raw.shape[1] == 2
+            ), f"solution {solution_raw} has shape {solution_raw.shape}, expected shape (n, 2)"
+        elif solution_raw.shape == (0,):
+            # the solution and end should be immediately adjacent
+            assert (
+                np.sum(np.abs(start_pos - end_pos)) == 1
+            ), f"start_pos {start_pos} and end_pos {end_pos} are not adjacent, but no solution was given"
+
         # order the solution, by creating a list from the start to the end
+        # add end pos, since we will iterate over all these starting from the start pos
         solution_raw_list: list[CoordTup] = [tuple(c) for c in solution_raw] + [
             tuple(end_pos)
         ]
+        # solution starts with start point
         solution: list[CoordTup] = [tuple(start_pos)]
         while solution[-1] != tuple(end_pos):
             # use `get_coord_neighbors` to find connected neighbors
@@ -781,6 +867,7 @@ class TargetedLatticeMaze(LatticeMaze):
             connection_list=lattice_maze.connection_list,
             start_pos=start_pos,
             end_pos=end_pos,
+            generation_meta=lattice_maze.generation_meta,
         )
 
 
@@ -795,7 +882,6 @@ class SolvedMaze(TargetedLatticeMaze):
         connection_list: ConnectionList,
         solution: CoordArray,
         generation_meta: dict | None = None,
-        lattice_dim: int = 2,
         start_pos: Coord | None = None,
         end_pos: Coord | None = None,
     ) -> None:
@@ -804,7 +890,6 @@ class SolvedMaze(TargetedLatticeMaze):
             generation_meta=generation_meta,
             start_pos=np.array(solution[0]),
             end_pos=np.array(solution[-1]),
-            lattice_dim=lattice_dim,
         )
         self.__dict__["solution"] = solution
 
@@ -816,6 +901,9 @@ class SolvedMaze(TargetedLatticeMaze):
             assert np.array_equal(
                 np.array(end_pos), self.end_pos
             ), f"when trying to create a SolvedMaze, the given end_pos does not match the one in the solution: given={end_pos}, solution={self.end_pos}"
+
+    def __hash__(self) -> int:
+        return hash((self.connection_list.tobytes(), self.solution.tobytes()))
 
     def get_solution_tokens(self, node_token_map: dict[CoordTup, str]) -> list[str]:
         return [
@@ -840,6 +928,7 @@ class SolvedMaze(TargetedLatticeMaze):
         return cls(
             connection_list=lattice_maze.connection_list,
             solution=solution,
+            generation_meta=lattice_maze.generation_meta,
         )
 
     @classmethod
@@ -854,6 +943,7 @@ class SolvedMaze(TargetedLatticeMaze):
         return cls(
             connection_list=targeted_lattice_maze.connection_list,
             solution=np.array(solution),
+            generation_meta=targeted_lattice_maze.generation_meta,
         )
 
     @classmethod
@@ -878,8 +968,10 @@ class SolvedMaze(TargetedLatticeMaze):
 
 def detect_pixels_type(data: PixelGrid) -> typing.Type[LatticeMaze]:
     """Detects the type of pixels data by checking for the presence of start and end pixels"""
-    if PixelColors.START in data or PixelColors.END in data:
-        if PixelColors.PATH in data:
+    if color_in_pixel_grid(data, PixelColors.START) or color_in_pixel_grid(
+        data, PixelColors.END
+    ):
+        if color_in_pixel_grid(data, PixelColors.PATH):
             return SolvedMaze
         else:
             return TargetedLatticeMaze

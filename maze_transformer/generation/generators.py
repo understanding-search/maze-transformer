@@ -1,5 +1,4 @@
 import random
-import warnings
 from typing import Any, Callable
 
 import numpy as np
@@ -11,7 +10,21 @@ from maze_transformer.generation.lattice_maze import (
     Coord,
     LatticeMaze,
     SolvedMaze,
+    _fill_edges_with_walls,
 )
+
+
+def _random_start_coord(grid_shape: Coord, start_coord: Coord | None) -> Coord:
+    if start_coord is None:
+        start_coord: Coord = np.random.randint(
+            0,  # lower bound
+            np.maximum(grid_shape - 1, 1),  # upper bound (at least 1)
+            size=len(grid_shape),  # dimensionality
+        )
+    else:
+        start_coord = np.array(start_coord)
+
+    return start_coord
 
 
 class LatticeMazeGenerators:
@@ -23,11 +36,24 @@ class LatticeMazeGenerators:
         lattice_dim: int = 2,
         n_accessible_cells: int | None = None,
         max_tree_depth: int | None = None,
+        do_forks: bool = True,
         start_coord: Coord | None = None,
     ) -> LatticeMaze:
         """generate a lattice maze using depth first search, iterative
 
-        algorithm:
+        # Arguments
+        - `grid_shape: Coord`: the shape of the grid
+        - `lattice_dim: int`: the dimension of the lattice
+          (default: `2`)
+        - `n_accessible_cells: int | None`: the number of accessible cells in the maze. If `None`, defaults to the total number of cells in the grid.
+            (default: `None`)
+        - `max_tree_depth: int | None`: the maximum depth of the tree. If `None`, defaults to `2 * n_accessible_cells`.
+            (default: `None`)
+        - `do_forks: bool`: whether to allow forks in the maze. If `False`, the maze will be have no forks and will be a simple hallway.
+        - `start_coord: Coord | None`: the starting coordinate of the generation algorithm. If `None`, defaults to a random coordinate.
+
+
+        # algorithm
         1. Choose the initial cell, mark it as visited and push it to the stack
         2. While the stack is not empty
                 1. Pop a cell from the stack and make it a current cell
@@ -40,21 +66,15 @@ class LatticeMazeGenerators:
 
         # Default values if no constraints have been passed
         grid_shape: Coord = np.array(grid_shape)
-        n_total_cells: int = np.prod(grid_shape)
+        n_total_cells: int = int(np.prod(grid_shape))
         if n_accessible_cells is None:
             n_accessible_cells = n_total_cells
         if max_tree_depth is None:
             max_tree_depth = (
                 2 * n_total_cells
             )  # We define max tree depth counting from the start coord in two directions. Therefore we divide by two in the if clause for neighboring sites later and multiply by two here.
-        if start_coord is None:
-            start_coord: Coord = np.random.randint(
-                0,
-                np.maximum(grid_shape - 1, 1),
-                size=2,
-            )
-        else:
-            start_coord = np.array(start_coord)
+
+        start_coord = _random_start_coord(grid_shape, start_coord)
 
         # initialize the maze with no connections
         connection_list: ConnectionList = np.zeros(
@@ -91,7 +111,9 @@ class LatticeMazeGenerators:
             if unvisited_neighbors_deltas and (
                 current_tree_depth <= max_tree_depth / 2
             ):
-                stack.append(current_coord)
+                # if we want a maze without forks, simply don't add the current coord back to the stack
+                if do_forks:
+                    stack.append(current_coord)
 
                 # choose one of the unvisited neighbors
                 chosen_neighbor, delta = random.choice(unvisited_neighbors_deltas)
@@ -120,10 +142,10 @@ class LatticeMazeGenerators:
                 func_name="gen_dfs",
                 grid_shape=grid_shape,
                 start_coord=start_coord,
-                visited_cells=visited_cells,
-                n_accessible_cells=n_accessible_cells,
-                max_tree_depth=max_tree_depth,
-                fully_connected=(len(visited_cells) == n_accessible_cells),
+                n_accessible_cells=int(n_accessible_cells),
+                max_tree_depth=int(max_tree_depth),
+                fully_connected=bool(len(visited_cells) == n_accessible_cells),
+                visited_cells={tuple(int(x) for x in coord) for coord in visited_cells},
             ),
         )
 
@@ -131,10 +153,14 @@ class LatticeMazeGenerators:
     def gen_wilson(
         grid_shape: Coord,
     ) -> LatticeMaze:
-        """Generate a lattice maze using Wilson's algorithm. Wilson's algorithm generates an unbiased (random) maze
+        """Generate a lattice maze using Wilson's algorithm.
+
+        # Algorithm
+        Wilson's algorithm generates an unbiased (random) maze
         sampled from the uniform distribution over all mazes, using loop-erased random walks. The generated maze is
         acyclic and all cells are part of a unique connected space.
-        https://en.wikipedia.org/wiki/Maze_generation_algorithm#Wilson's_algorithm"""
+        https://en.wikipedia.org/wiki/Maze_generation_algorithm#Wilson's_algorithm
+        """
 
         def neighbor(current: Coord, direction: int) -> Coord:
             row, col = current
@@ -221,19 +247,95 @@ class LatticeMazeGenerators:
             ),
         )
 
-    @classmethod
-    def gen_dfs_with_solution(cls, grid_shape: Coord):
-        warnings.warn(
-            "gen_dfs_with_solution is deprecated, use get_maze_with_solution instead",
-            DeprecationWarning,
+    @staticmethod
+    def gen_percolation(
+        grid_shape: Coord,
+        p: float = 0.4,
+        lattice_dim: int = 2,
+        start_coord: Coord | None = None,
+    ) -> LatticeMaze:
+        """generate a lattice maze using simple percolation
+
+        note that p in the range (0.4, 0.7) gives the most interesting mazes
+
+        # Arguments
+        - `grid_shape: Coord`: the shape of the grid
+        - `lattice_dim: int`: the dimension of the lattice (default: `2`)
+        - `p: float`: the probability of a cell being accessible (default: `0.5`)
+        - `start_coord: Coord | None`: the starting coordinate for the connected component (default: `None` will give a random start)
+        """
+        assert p >= 0 and p <= 1, f"p must be between 0 and 1, got {p}"
+        grid_shape: Coord = np.array(grid_shape)
+
+        start_coord = _random_start_coord(grid_shape, start_coord)
+
+        connection_list: ConnectionList = np.random.rand(lattice_dim, *grid_shape) < p
+
+        connection_list = _fill_edges_with_walls(connection_list)
+
+        output: LatticeMaze = LatticeMaze(
+            connection_list=connection_list,
+            generation_meta=dict(
+                func_name="gen_percolation",
+                grid_shape=grid_shape,
+                percolation_p=p,
+                start_coord=start_coord,
+            ),
         )
-        return get_maze_with_solution("gen_dfs", grid_shape)
+
+        output.generation_meta["visited_cells"] = output.gen_connected_component_from(
+            start_coord
+        )
+
+        return output
+
+    @staticmethod
+    def gen_dfs_percolation(
+        grid_shape: Coord,
+        p: float = 0.4,
+        lattice_dim: int = 2,
+        n_accessible_cells: int | None = None,
+        max_tree_depth: int | None = None,
+        start_coord: Coord | None = None,
+    ) -> LatticeMaze:
+        """dfs and then percolation (adds cycles)"""
+        grid_shape: Coord = np.array(grid_shape)
+        start_coord = _random_start_coord(grid_shape, start_coord)
+
+        # generate initial maze via dfs
+        maze: LatticeMaze = LatticeMazeGenerators.gen_dfs(
+            grid_shape=grid_shape,
+            lattice_dim=lattice_dim,
+            n_accessible_cells=n_accessible_cells,
+            max_tree_depth=max_tree_depth,
+            start_coord=start_coord,
+        )
+
+        # percolate
+        connection_list_perc: np.ndarray = (
+            np.random.rand(*maze.connection_list.shape) < p
+        )
+        connection_list_perc = _fill_edges_with_walls(connection_list_perc)
+
+        maze.__dict__["connection_list"] = np.logical_or(
+            maze.connection_list, connection_list_perc
+        )
+
+        maze.generation_meta["func_name"] = "gen_dfs_percolation"
+        maze.generation_meta["percolation_p"] = p
+        maze.generation_meta["visited_cells"] = maze.gen_connected_component_from(
+            start_coord
+        )
+
+        return maze
 
 
-# TODO: use the thing @valedan wrote for the evals function to make this automatic?
+# cant automatically populate this because it messes with pickling :(
 GENERATORS_MAP: dict[str, Callable[[Coord, Any], "LatticeMaze"]] = {
     "gen_dfs": LatticeMazeGenerators.gen_dfs,
     "gen_wilson": LatticeMazeGenerators.gen_wilson,
+    "gen_percolation": LatticeMazeGenerators.gen_percolation,
+    "gen_dfs_percolation": LatticeMazeGenerators.gen_dfs_percolation,
 }
 
 
