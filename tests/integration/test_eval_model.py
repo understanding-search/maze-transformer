@@ -9,8 +9,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from muutils.zanj import ZANJ
-from muutils.zanj.torchutil import assert_model_cfg_equality
+from zanj import ZANJ
+from zanj.torchutil import assert_model_cfg_equality
 
 from maze_transformer.dataset.maze_dataset import MazeDataset
 from maze_transformer.evaluation.eval_model import evaluate_model, predict_maze_paths

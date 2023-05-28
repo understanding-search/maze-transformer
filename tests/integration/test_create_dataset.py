@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from muutils.zanj import ZANJ
+from zanj import ZANJ
 
 from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 
