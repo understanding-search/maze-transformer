@@ -2097,21 +2097,21 @@ dill = ">=0.3.6"
 
 [[package]]
 name = "muutils"
-version = "0.4.0"
+version = "0.4.1"
 description = "A collection of miscellaneous python utilities"
 category = "main"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "muutils-0.4.0-py3-none-any.whl", hash = "sha256:07647c37e8c875237fad12a01d8507141d3679dde1ac6c56c0e7a61ee1fd325b"},
-    {file = "muutils-0.4.0.tar.gz", hash = "sha256:a8f1062710fcc1c5d85c0a57351f2bac9cee73b182557b10ab3ccac724b95b63"},
+    {file = "muutils-0.4.1-py3-none-any.whl", hash = "sha256:c300cb1a83cf8e4fcb31420cb8248adb39e15a861bc95c19e580a3301d506a59"},
+    {file = "muutils-0.4.1.tar.gz", hash = "sha256:c4b9de72e65343d6b64a10dcc323b322e45c7fd826bf750abe69891dd6142616"},
 ]
 
 [package.dependencies]
 jaxtyping = ">=0.2.12,<0.3.0"
 numpy = ">=1.22.4,<2.0.0"
 pandas = ">=1.5.3,<2.0.0"
-torch = ">=1.12.1"
+torch = ">=1.13.1"
 
 [[package]]
 name = "mypy-extensions"
@@ -4417,22 +4417,22 @@ multidict = ">=4.0"
 
 [[package]]
 name = "zanj"
-version = "0.1.0"
+version = "0.1.1"
 description = "save and load complex objects to disk without pickling"
 category = "main"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "zanj-0.1.0-py3-none-any.whl", hash = "sha256:c3b9ef69c7da26cfc0df34d389aa8db2128f9be4c8a7c77e0c33b8fa383b427f"},
-    {file = "zanj-0.1.0.tar.gz", hash = "sha256:30f39675bc1ca3f18750de8bf9ce85e9bbd920ccd0f8b9b8395c6622ebc7ee33"},
+    {file = "zanj-0.1.1-py3-none-any.whl", hash = "sha256:b53fb19a4bb0f9e915a73ba0f7c1b132abf2d94eaa096e3ee68c875d74547dd9"},
+    {file = "zanj-0.1.1.tar.gz", hash = "sha256:a428b9fced5824241280e66b706e02df71ac4db56dbf74c58d71a814b328c413"},
 ]
 
 [package.dependencies]
 jaxtyping = ">=0.2.12,<0.3.0"
-muutils = ">=0.4.0,<0.5.0"
+muutils = ">=0.4.1,<0.5.0"
 numpy = ">=1.22.4,<2.0.0"
 pandas = ">=1.5.3,<2.0.0"
-torch = ">=1.12.1,<2.0.0"
+torch = ">=1.13.1,<2.0.0"
 
 [[package]]
 name = "zipp"
@@ -4453,4 +4453,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "ded8e4dc24b893420fd7a7c79683f79bc0c159eb4e929be18bd6ae6dbed9c97d"
+content-hash = "cdfdba1d4019ad18dc4fbfe425c63b6a7e2c71c2cc17e78aedf84d503270c0b8"
