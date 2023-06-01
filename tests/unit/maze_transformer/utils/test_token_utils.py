@@ -23,8 +23,10 @@ def test_get_adj_list_tokens():
 
 
 def test_get_path_tokens():
-    result = token_utils.get_path_tokens(MAZE_TOKENS)
-    assert result == ["(1,0)", "(1,1)", "<PATH_END>"]
+    result_notrim = token_utils.get_path_tokens(MAZE_TOKENS)
+    assert result_notrim == ["<PATH_START>", "(1,0)", "(1,1)", "<PATH_END>"]
+    result_trim = token_utils.get_path_tokens(MAZE_TOKENS, trim_end=True)
+    assert result_trim == ["(1,0)", "(1,1)"]
 
 
 def test_get_origin_token():

@@ -1,5 +1,5 @@
 import torch
-from muutils.zanj.torchutil import ConfigMismatchException, assert_model_cfg_equality
+from zanj.torchutil import ConfigMismatchException, assert_model_cfg_equality
 
 from maze_transformer.training.config import ZanjHookedTransformer
 

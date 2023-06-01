@@ -19,11 +19,7 @@ from muutils.json_serialize import (
 )
 from muutils.json_serialize.util import safe_getsource, string_as_lines
 from muutils.misc import sanitize_fname, shorten_numerical_to_str, stable_hash
-from muutils.zanj.loading import (
-    LoaderHandler,
-    load_item_recursive,
-    register_loader_handler,
-)
+from zanj.loading import LoaderHandler, load_item_recursive, register_loader_handler
 
 from maze_transformer.dataset.dataset import (
     DatasetFilterProtocol,
@@ -242,8 +238,30 @@ class MazeDataset(GPTDataset):
     def __getitem__(self, i: int) -> SolvedMaze:
         return self.mazes[i]
 
-    def as_tokens(self, limit: int = 100) -> list[list[str]]:
-        return [maze.as_tokens(self.cfg.node_token_map) for maze in self.mazes[:limit]]
+    def as_tokens(
+        self,
+        limit: int | None = None,
+        join_tokens_individual_maze: bool = False,
+    ) -> list[list[str]] | list[str]:
+        """return the dataset as tokens
+
+        if join_tokens_individual_maze is True, then the tokens of each maze are
+        joined with a space, and the result is a list of strings.
+        i.e.:
+        >>> dataset.as_tokens(join_tokens_individual_maze=False)
+        [["a", "b", "c"], ["d", "e", "f"]]
+        >>> dataset.as_tokens(join_tokens_individual_maze=True)
+        ["a b c", "d e f"]
+        """
+        if join_tokens_individual_maze:
+            return [
+                " ".join(maze.as_tokens(self.cfg.node_token_map))
+                for maze in self.mazes[:limit]
+            ]
+        else:
+            return [
+                maze.as_tokens(self.cfg.node_token_map) for maze in self.mazes[:limit]
+            ]
 
     def __len__(self) -> int:
         return len(self.mazes)

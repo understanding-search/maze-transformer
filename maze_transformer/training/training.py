@@ -3,9 +3,10 @@ from pathlib import Path
 
 import torch
 from jaxtyping import Float
-from muutils.zanj import ZANJ
+from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
+from zanj import ZANJ
 
 from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.evaluation.eval_model import evaluate_logits
@@ -79,6 +80,12 @@ def train(
     logger.progress(
         f"will train for {n_batches} batches, {checkpoint_interval_iters = }, {loss_interval_iters = }"
     )
+    loss_interval_iters: int = max(
+        1, int(cfg.train_cfg.print_loss_interval // cfg.train_cfg.batch_size)
+    )
+    logger.progress(
+        f"will train for {n_batches} batches, {checkpoint_interval_iters = }, {loss_interval_iters = }"
+    )
     fast_eval_interval_iters: int = int(
         getattr(cfg.train_cfg, "fast_eval_interval", 0) // cfg.train_cfg.batch_size
     )
@@ -133,6 +140,11 @@ def train(
 
         print("logging metrics")
         logger.log_metric(metrics)
+
+        if iteration % loss_interval_iters == 0:
+            logger.progress(
+                f"iteration {iteration}/{n_batches}: loss={loss.item():.3f}"
+            )
 
         if iteration % loss_interval_iters == 0:
             logger.progress(

@@ -1,4 +1,5 @@
 import typing
+import warnings
 
 import numpy as np
 
@@ -51,6 +52,13 @@ class PathEvals:
         solution_set = {tuple(coord) for coord in solution}
         prediction_set = {tuple(coord) for coord in prediction}
 
+        if len(solution_set) == 0:
+            warnings.warn(
+                f"node_overlap called on solution with no nodes, returning NaN:\n{solution = }\n{prediction = }\n{solution_set = }\n{prediction_set = }",
+                RuntimeWarning,
+            )
+            return float("NaN")
+
         return len(prediction_set & solution_set) / len(solution_set)
 
     @register_method(fast)
@@ -70,6 +78,13 @@ class PathEvals:
         """fraction of the connections in prediction which actually connect nodes that are adjacent on the lattice, ignoring if they are adjacent on the maze"""
         if len(prediction) == 0:
             return 0
+
+        if len(prediction) <= 1:
+            warnings.warn(
+                f"fraction_connections_adjacent_lattice called on path of length less than 2, retuning NaN\n{prediction = }",
+                RuntimeWarning,
+            )
+            return float("NaN")
 
         return PathEvals.num_connections_adjacent_lattice(prediction) / len(prediction)
 

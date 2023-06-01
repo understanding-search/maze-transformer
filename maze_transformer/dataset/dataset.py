@@ -16,8 +16,8 @@ from muutils.json_serialize import (
 )
 from muutils.misc import sanitize_fname, shorten_numerical_to_str
 from muutils.tensor_utils import DTYPE_MAP
-from muutils.zanj import ZANJ
 from torch.utils.data import Dataset
+from zanj import ZANJ
 
 from maze_transformer.utils.utils import DEFAULT_SEED, GLOBAL_SEED, set_reproducibility
 
@@ -358,7 +358,9 @@ class GPTDataset(Dataset):
                         f"the dataset {output.cfg.to_fname()} was filtering using an unknown filter: '{filter_name}'"
                     )
             filter_args: list = filter_info["args"] if "args" in filter_info else list()
-            filter_kwargs: dict = filter_info["kwargs"] if "kwargs" in filter_info else dict()
+            filter_kwargs: dict = (
+                filter_info["kwargs"] if "kwargs" in filter_info else dict()
+            )
             output = getattr(output.filter_by, filter_name)(
                 *filter_args, **filter_kwargs
             )

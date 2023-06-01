@@ -6,7 +6,6 @@ import numpy as np
 import torch
 from jaxtyping import Float
 from muutils.statcounter import StatCounter
-from muutils.tensor_utils import ATensor
 from transformer_lens import HookedTransformer
 from transformer_lens import utils as tl_utils
 
@@ -24,6 +23,8 @@ from maze_transformer.utils.token_utils import (
     get_path_tokens,
     get_tokens_up_to_path_start,
     remove_padding_from_token_str,
+    get_context_tokens,
+    get_path_tokens,
     tokens_to_coords,
 )
 from maze_transformer.utils.utils import chunks
@@ -112,32 +113,46 @@ def predict_maze_paths(
     max_new_tokens: int = 8,
     verbose: bool = False,
     when_noncoord: WhenMissing = "skip",
-) -> list[str|list[tuple[int, int]]]:
-    indices_batch: list[ATensor] = []
-    # for tokens in tokens_batch:
-    #     maze = get_tokens_up_to_path_start(tokens)
-    #     indices = torch.tensor(
-    #         [data_cfg.tokenizer_map[t] for t in maze], dtype=torch.long
-    #     )
-    #     indices_batch.append(indices)
+    temperature: float = 0.0,
+) -> list[str | list[tuple[int, int]]]:
+    """given the model and a batch of context tokens, make predictions for the path"""
 
+    # check types
+    assert isinstance(
+        tokens_batch, list
+    ), f"tokens_batch must be a list, got {type(tokens_batch)}"
+    assert all(
+        isinstance(tokens, list) for tokens in tokens_batch
+    ), f"tokens_batch must be a list of lists, got {[type(tokens) for tokens in tokens_batch] = }"
+    assert all(
+        isinstance(x, str) for tokens in tokens_batch for x in tokens
+    ), f"tokens_batch must be a list of lists of strings, got {[type(x) for tokens in tokens_batch for x in tokens] = }"
 
-    prediction_batch: list[str] = [
-        model.generate(
-            " ".join(tokens),
+    # predict some tokens
+    prediction_batch: list[list[str]] = list()
+    for tokens in tokens_batch:
+        # context is string
+        context: str = " ".join(get_context_tokens(tokens))
+        # predict tokens
+        prediction: str = model.generate(
+            context,
             eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
             stop_at_eos=True,
             max_new_tokens=max_new_tokens,
             verbose=verbose,
+            temperature=temperature,
         )
-        for tokens in tokens_batch
-    ]
+        assert isinstance(
+            prediction, str
+        ), f"prediction must be a string, got '{type(prediction)=}'\n{prediction = }"
+        # convert to strings
+        prediction_batch.append(prediction.split(" "))
 
+    # turn the predicted tokens into paths
     paths: list[list[tuple[int, int]]] = []
-    for preds in prediction_batch:
-        pred_tokens: list[str] = preds.split(" ")
+    for pred_tokens in prediction_batch:
         path_tokens: list[str] = get_path_tokens(pred_tokens, trim_end=True)
-        path_coords: list[str|CoordTup] = tokens_to_coords(
+        path_coords: list[str | CoordTup] = tokens_to_coords(
             path_tokens,
             maze_data_cfg=data_cfg,
             when_noncoord=when_noncoord,
@@ -173,17 +188,17 @@ def evaluate_path_predictions(
 def evaluate_model(
     model: HookedTransformer,
     dataset: MazeDataset,
-    path_evals: dict[str, PathEvalFunction] | None = None,
+    eval_functions: dict[str, PathEvalFunction] | None = None,
     max_new_tokens: int = 8,
     batch_size: int = 64,
     verbose: bool = False,
 ) -> dict[str, StatCounter]:
     """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function."""
-    if not path_evals:
-        path_evals = PathEvals.fast
+    if not eval_functions:
+        eval_functions = PathEvals.evals
 
-    path_scores: dict[str, StatCounter] = {
-        name: StatCounter() for name in path_evals.keys()
+    score_counters: dict[str, StatCounter] = {
+        name: StatCounter() for name in eval_functions.keys()
     }
 
     for maze_batch in chunks(dataset, batch_size):
@@ -198,12 +213,18 @@ def evaluate_model(
             verbose=verbose,
         )
 
-        batch_scores = evaluate_path_predictions(solved_mazes, predictions, path_evals)
-        # update the running totals with the batch results
-        for path_score in path_scores.keys():
-            path_scores[path_score] += batch_scores[path_score]
+        for name, func in eval_functions.items():
+            score_counters[name].update(
+                func(
+                    maze=solved_maze,
+                    solution=np.array(solved_maze.solution),
+                    prediction=np.array(prediction),
+                    model=model,
+                )
+                for solved_maze, prediction in zip(maze_batch, predictions)
+            )
 
-    return path_scores
+    return score_counters
 
 
 def evaluate_logits(

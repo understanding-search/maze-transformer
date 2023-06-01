@@ -16,11 +16,13 @@ from muutils.json_serialize import (
     serializable_field,
 )
 from muutils.tensor_utils import TORCH_OPTIMIZERS_MAP  # type: ignore[import]
-from muutils.zanj.loading import load_item_recursive
-from muutils.zanj.torchutil import ConfiguredModel, set_config_class
+from zanj.loading import load_item_recursive
+from zanj.torchutil import ConfiguredModel, set_config_class
 from transformer_lens import HookedTransformer  # type: ignore[import]
 from transformer_lens import HookedTransformerConfig
 from transformers import PreTrainedTokenizer
+from zanj.loading import load_item_recursive
+from zanj.torchutil import ConfiguredModel, set_config_class
 
 from maze_transformer.dataset.dataset import GPTDatasetConfig
 from maze_transformer.dataset.maze_dataset_configs import MAZE_DATASET_CONFIGS
@@ -113,6 +115,18 @@ class TrainConfig(SerializableDataclass):
     # training loop evals are disabled by default until their performance impact can be assessed
     fast_eval_interval: int = serializable_field(default=0)
     slow_eval_interval: int = serializable_field(default=0)
+
+    def summary(self) -> dict:
+        """return a human-readable summary of the config"""
+        return dict(
+            name=self.name,
+            optimizer=self.optimizer.__name__,
+            optimizer_kwargs=self.optimizer_kwargs,
+            batch_size=self.batch_size,
+            dataloader_cfg=self.dataloader_cfg,
+            print_loss_interval=self.print_loss_interval,
+            checkpoint_interval=self.checkpoint_interval,
+        )
 
     def summary(self) -> dict:
         """return a human-readable summary of the config"""
