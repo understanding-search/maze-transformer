@@ -195,10 +195,10 @@ def evaluate_model(
 ) -> dict[str, StatCounter]:
     """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function."""
     if not eval_functions:
-        eval_functions = PathEvals.evals
+        eval_functions = PathEvals.EVALS
 
     score_counters: dict[str, StatCounter] = {
-        name: StatCounter() for name in eval_functions.keys()
+        name: StatCounter() for name in eval_functions
     }
 
     for maze_batch in chunks(dataset, batch_size):

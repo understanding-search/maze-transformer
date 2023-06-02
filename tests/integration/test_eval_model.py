@@ -73,6 +73,7 @@ def test_predict_maze_paths():
 
     dataset: MazeDataset = MazeDataset.from_config(
         cfg=cfg.dataset_cfg,
+        verbose=False,
     )
 
     max_new_tokens = 2
@@ -120,6 +121,7 @@ def test_evaluate_model(temp_dir):
 
     dataset: MazeDataset = MazeDataset.from_config(
         cfg=cfg.dataset_cfg,
+        verbose=False,
     )
 
     path_evals = PathEvals.fast

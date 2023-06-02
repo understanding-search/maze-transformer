@@ -108,7 +108,6 @@ def train(
 
         # TODO: tidy this up
         metrics: dict[str, dict[str, float | int] | float] = {"loss": float(loss)}
-        breakpoint()
         if evals_enabled:
             if (
                 fast_eval_interval_iters > 0

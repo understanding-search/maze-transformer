@@ -3,10 +3,7 @@ from typing import Any, Iterable, Literal
 from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
 
 WhenMissing = Literal["except", "skip", "include"]
-<<<<<<< HEAD
 
-=======
->>>>>>> main
 
 
 def tokens_between(

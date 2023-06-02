@@ -63,7 +63,7 @@ def _create_dataset(
     dataset_cfg: MazeDatasetConfig = MazeDatasetConfig(
         name="test", n_mazes=n_mazes, grid_n=grid_n
     )
-    dataset = MazeDataset.from_config(dataset_cfg)
+    dataset = MazeDataset.from_config(dataset_cfg, verbose=False)
     dataset.cfg.seq_len_max = 32
     return dataset
 

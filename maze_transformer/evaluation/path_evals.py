@@ -44,6 +44,11 @@ class PathEvals:
     fast: dict[str, PathEvalFunction] = {}
     slow: dict[str, PathEvalFunction] = {}
 
+    @classmethod
+    @property
+    def EVALS(cls):
+        return {**cls.fast, **cls.slow}
+
     @register_method(fast)
     @staticmethod
     def node_overlap(solution: CoordArray, prediction: CoordArray, **_) -> float:
