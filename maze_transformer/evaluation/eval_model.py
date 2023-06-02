@@ -10,21 +10,17 @@ from transformer_lens import HookedTransformer
 from transformer_lens import utils as tl_utils
 
 from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
-from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
-from maze_transformer.generation.generators import LatticeMazeGenerators
-from maze_transformer.generation.lattice_maze import SolvedMaze
-from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
-from maze_transformer.training.config import ConfigHolder
-from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.dataset.tokenizer import HuggingMazeTokenizer
+from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
+from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
+from maze_transformer.generation.lattice_maze import SolvedMaze
+from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.utils.token_utils import (
     WhenMissing,
-    get_path_tokens,
-    get_tokens_up_to_path_start,
-    remove_padding_from_token_str,
     get_context_tokens,
     get_path_tokens,
+    remove_padding_from_token_str,
     tokens_to_coords,
 )
 from maze_transformer.utils.utils import chunks
@@ -255,7 +251,10 @@ def evaluate_logits(
             for token_str in tokenizer.batch_decode(batch)
         ]
 
-        solved_mazes = [SolvedMaze.from_tokens(tokens.split(" "), config.dataset_cfg) for tokens in maze_tokens]
+        solved_mazes = [
+            SolvedMaze.from_tokens(tokens.split(" "), config.dataset_cfg)
+            for tokens in maze_tokens
+        ]
         scores |= evaluate_path_predictions(solved_mazes, predicted_paths, path_evals)
 
     return scores

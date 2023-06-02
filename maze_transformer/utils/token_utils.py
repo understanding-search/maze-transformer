@@ -5,7 +5,6 @@ from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
 WhenMissing = Literal["except", "skip", "include"]
 
 
-
 def tokens_between(
     tokens: list[str],
     start_value: str,

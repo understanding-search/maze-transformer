@@ -46,7 +46,7 @@ def _custom_serialized_config() -> Dict[Any, Any]:
         "dataloader_cfg": {"num_workers": 8, "drop_last": False},
         "print_loss_interval": 500,
         "checkpoint_interval": 1000,
-        "fast_eval_interval": 0, 
+        "fast_eval_interval": 0,
         "slow_eval_interval": 0,
         "__format__": "TrainConfig(SerializableDataclass)",
     }

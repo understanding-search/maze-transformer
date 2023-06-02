@@ -3,14 +3,14 @@ from pathlib import Path
 
 import pytest
 
+from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.evaluation.path_evals import PathEvals
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
-from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.training import get_dataloader, train
 from maze_transformer.training.wandb_logger import WandbJobType, WandbProject
-from maze_transformer.utils.utils import get_device
 from maze_transformer.utils.test_helpers.stub_logger import StubLogger
+from maze_transformer.utils.utils import get_device
 
 
 @pytest.mark.usefixtures("temp_dir")
@@ -23,7 +23,13 @@ def test_train_model_without_evals(temp_dir: Path):
     dataloader = get_dataloader(dataset, cfg, logger)
     device = get_device()
 
-    train(dataloader=dataloader, cfg=cfg, logger=logger, output_dir=output_path, device=device)
+    train(
+        dataloader=dataloader,
+        cfg=cfg,
+        logger=logger,
+        output_dir=output_path,
+        device=device,
+    )
 
     metrics = _get_metrics(logger.logs)
     assert len(metrics) == 1
@@ -45,7 +51,13 @@ def test_train_model_with_evals(temp_dir: Path):
     cfg.train_cfg.fast_eval_interval = 5
     cfg.train_cfg.slow_eval_interval = 10
 
-    train(dataloader=dataloader, cfg=cfg, logger=logger, output_dir=output_path, device=device)
+    train(
+        dataloader=dataloader,
+        cfg=cfg,
+        logger=logger,
+        output_dir=output_path,
+        device=device,
+    )
 
     # we should have 1 loop with fast evals and 1 loop with fast and slow
     assert len(metrics) == 2
@@ -57,9 +69,7 @@ def test_train_model_with_evals(temp_dir: Path):
     }
 
 
-def _create_dataset(
-    n_mazes: int = 5, grid_n: int = 3
-) -> MazeDataset:
+def _create_dataset(n_mazes: int = 5, grid_n: int = 3) -> MazeDataset:
     dataset_cfg: MazeDatasetConfig = MazeDatasetConfig(
         name="test", n_mazes=n_mazes, grid_n=grid_n
     )
