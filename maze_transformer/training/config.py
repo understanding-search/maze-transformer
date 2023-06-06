@@ -65,6 +65,20 @@ class BaseGPTConfig(SerializableDataclass):
 
 # ==================================================
 
+_DEFAULT_INTERVAL_COUNTS: typing.Callable[[], dict[str, int]] = lambda : dict(
+    print_loss=100,
+    checkpoint=10,
+    eval_fast=20,
+    eval_slow=10,
+)
+
+def _intervals_loading_fn(data: dict) -> dict[str, int]:
+    if "intervals" in data:
+        return data["intervals"]
+    else:
+        warnings.warn("`intervals` not found in config (probably trying to load a legacy config), using None!")
+        return None
+
 
 def _optimizer_save_fn(optim: Type[torch.optim.Optimizer]) -> str:
     """convert torch optimizer to string, while checking that the conversion is reversible"""
@@ -73,10 +87,31 @@ def _optimizer_save_fn(optim: Type[torch.optim.Optimizer]) -> str:
     assert TORCH_OPTIMIZERS_MAP[optim_name] == optim
     return optim_name
 
+class ValueWarning(ValueError):
+    """raised when a value is not found, but not a fatal error"""
+    pass
+
 
 @serializable_dataclass(kw_only=True)
 class TrainConfig(SerializableDataclass):
-    """full training configuration"""
+    """full training configuration
+
+    # Usage:
+    - get the optimizer via calling `train_cfg.get_optimizer(model.parameters())`
+    - get the intervals in terms of batches via `train_cfg.intervals_batches`
+    
+    # Parameters
+
+    - `name: str`: name of the training configuration
+    - `optimizer: Type[torch.optim.Optimizer]`: optimizer class to use
+    - `optimizer_kwargs: dict[str, Any]`: kwargs to pass to the optimizer
+    - `batch_size: int`: batch size
+    - `dataloader_cfg: dict`: kwargs to pass to the dataloader
+    - `intervals: dict[str, int]`: intervals at which to perform certain actions:
+        "print_loss", "checkpoint", "eval_fast", "eval_slow"
+    - `intervals_count: dict[str, int]`: how many of each action to do over the course of the training run
+
+    """
 
     name: str
 
@@ -107,25 +142,84 @@ class TrainConfig(SerializableDataclass):
         )
     )
 
-    # TODO - check how often these run... modulo might make it less than expected
-    print_loss_interval: int = serializable_field(default=1000)
-    checkpoint_interval: int = serializable_field(default=50000)
-    # training loop evals are disabled by default until their performance impact can be assessed
-    fast_eval_interval: int = serializable_field(default=0)
-    slow_eval_interval: int = serializable_field(default=0)
+    intervals: dict[str, int]|None = serializable_field(
+        default=None,
+        loading_fn=_intervals_loading_fn,
+    )
 
-    def summary(self) -> dict:
-        """return a human-readable summary of the config"""
-        return dict(
-            name=self.name,
-            optimizer=self.optimizer.__name__,
-            optimizer_kwargs=self.optimizer_kwargs,
-            batch_size=self.batch_size,
-            dataloader_cfg=self.dataloader_cfg,
-            print_loss_interval=self.print_loss_interval,
-            checkpoint_interval=self.checkpoint_interval,
-        )
+    intervals_count: dict[str, int] = serializable_field(
+        default=None,
+        loading_fn=lambda data: data.get("intervals_count", None),
+    )
 
+    def get_intervals(
+            self, 
+            dataset_n_samples: int|None = None,
+            use_defaults_if_missing: bool = True,
+            mod_batch_size: bool = True,
+        ) -> dict[str, int]:
+        """get the intervals"""
+        
+        # handle the case where both are missing
+        if (self.intervals is None) and (self.intervals_count is None):
+            if use_defaults_if_missing:
+                self.intervals_count = _DEFAULT_INTERVAL_COUNTS()
+            else:
+                raise ValueError("both `intervals` and `intervals_count` are missing, and `use_defaults_if_missing` is False. Don't know what intervals to use!")
+
+        
+        # handle the case where we compute the intervals from counts
+        if (self.intervals_count is not None) and (dataset_n_samples is not None):
+            intervals_new: dict[str, int] = {
+                k: (
+                    dataset_n_samples // v
+                    if v > 0 
+                    else dataset_n_samples + 1 # setting a count to 0 means "dont do it"
+                )
+                for k, v in self.intervals_count.items()
+            }
+            
+            if self.intervals is not None:
+                self.intervals.update(intervals_new)
+            else:
+                self.intervals = intervals_new
+
+        # checks
+        try:
+            match (self.intervals is None, self.intervals_count is None, dataset_n_samples is None):
+                case (True, True, True):
+                    raise ValueError("need some intervals or use defaults")
+                case (True, True, False):
+                    raise ValueError(f"need some intervals or use defaults")
+                case (True, False, True):
+                    raise ValueError(f"can't compute intervals from counts without knowing the dataset size!")
+                case (True, False, False):
+                    raise ValueError(f"this should be inaccessible, since we should have computed the intervals from counts")
+                case (False, True, True):
+                    # this is fine, we just use the intervals that are already there
+                    pass
+                case (False, True, False):
+                    raise ValueWarning(f"We can't compute the intervals from the counts without knowing the dataset size! However, intervals aren't None so we'll just use that")
+                case (False, False, True):
+                    raise ValueWarning(f"You gave a dataset size, but no counts. We'll just use the intervals that are already there")
+        except (ValueError,ValueWarning) as e:
+            _debug_vals: str = f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=}, {self.intervals=}, {self.intervals_count=}"
+            if isinstance(e, ValueWarning):
+                warnings.warn(f"{_debug_vals}\ntriggered warning:\n{e}")
+            else:
+                raise ValueError(f"{_debug_vals}\ntriggered error") from e
+
+        # actually return the intervals
+        if mod_batch_size:
+            return {
+                k: max(1, v // self.batch_size) 
+                for k, v in self.intervals.items()
+            }
+        else:
+            return self.intervals
+
+
+    
     def summary(self) -> dict:
         """return a human-readable summary of the config"""
         return dict(
@@ -187,8 +281,6 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             num_workers=0,
             drop_last=False,
         ),
-        print_loss_interval=10,
-        checkpoint_interval=100,
     ),
     TrainConfig(
         name="tiny-v1",
@@ -201,8 +293,6 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             persistent_workers=True,
             drop_last=True,
         ),
-        print_loss_interval=1000,
-        checkpoint_interval=5000,
     ),
     TrainConfig(
         name="gpt2-small",
@@ -215,8 +305,6 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             persistent_workers=True,
             drop_last=True,
         ),
-        print_loss_interval=50,
-        checkpoint_interval=10000,
     ),
     TrainConfig(
         name="sweep-v1",
@@ -229,8 +317,6 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             persistent_workers=True,
             drop_last=True,
         ),
-        print_loss_interval=1000,
-        checkpoint_interval=5000,
     ),
 ]
 

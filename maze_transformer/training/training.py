@@ -69,30 +69,9 @@ def train(
     n_batches: int = len(dataloader)
     logger.summary({"n_batches": n_batches})
 
-    checkpoint_interval_iters: int = max(
-        1,
-        int(cfg.train_cfg.checkpoint_interval // cfg.train_cfg.batch_size),
-    )
-    loss_interval_iters: int = max(
-        1, int(cfg.train_cfg.print_loss_interval // cfg.train_cfg.batch_size)
-    )
     logger.progress(
-        f"will train for {n_batches} batches, {checkpoint_interval_iters = }, {loss_interval_iters = }"
-    )
-    loss_interval_iters: int = max(
-        1, int(cfg.train_cfg.print_loss_interval // cfg.train_cfg.batch_size)
-    )
-    logger.progress(
-        f"will train for {n_batches} batches, {checkpoint_interval_iters = }, {loss_interval_iters = }"
-    )
-    fast_eval_interval_iters: int = int(
-        getattr(cfg.train_cfg, "fast_eval_interval", 0) // cfg.train_cfg.batch_size
-    )
-    slow_eval_interval_iters: int = int(
-        getattr(cfg.train_cfg, "slow_eval_interval", 0) // cfg.train_cfg.batch_size
-    )
+        f"will train for {n_batches} batches, {cfg.train_cfg.intervals_batches = }")
 
-    # TODO: check what happens in final batch where remaining mazes in dataset is less than batch size
     for iteration, batch in enumerate(dataloader):
         loss: SingleLoss
         logits: Float[torch.Tensor, "batch pos d_vocab"]
