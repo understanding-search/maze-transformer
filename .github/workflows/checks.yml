@@ -54,3 +54,18 @@ jobs:
       
       - name: Notebook tests
         run: make test_notebooks
+
+  dataset_install:
+    name: Dataset install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          poetry lock --check
+
+      - name: Install dataset
+        run: pip install .[dataset]

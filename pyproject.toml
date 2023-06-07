@@ -20,12 +20,26 @@ circuitsvis = "^1.39.1"
 jupyter = "^1.0.0"
 ipykernel = "^6.22.0"
 wandb = "^0.13.5" # note: TransformerLens forces us to use 0.13.5
+jaxtyping = "^0.2.19"
+tqdm = "^4.65.0"
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.1"
 pycln = "^2.1.3"
 isort = "^5.12.0"
 black = "^23.1.0"
 pytest-mock = "^3.10.0"
+
+[project.optional-dependencies]
+dataset = [
+    "numpy",
+    "matplotlib",
+    "muutils>=0.4.1",
+    "zanj>=0.1.1",
+    "jaxtyping>=0.2.19",
+    "tqdm>=4.65.0",
+]
+python = "^3.10"
 
 [build-system]
 requires = ["poetry-core"]
