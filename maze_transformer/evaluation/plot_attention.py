@@ -18,17 +18,13 @@ from jaxtyping import Float
 # Utilities
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
 
-from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
-from maze_transformer.dataset.tokenizer import SPECIAL_TOKENS
+from maze_dataset import MazeDataset, MazeDatasetConfig, CoordTup, SolvedMaze
+from maze_dataset.maze.lattice_maze import coord_str_to_tuple_noneable
+
+from maze_transformer.tokenizer import SPECIAL_TOKENS
 from maze_transformer.evaluation.eval_model import predict_maze_paths
 from maze_transformer.evaluation.plot_maze import MazePlot
-from maze_transformer.generation.constants import CoordTup
 
-# Our Code
-from maze_transformer.generation.lattice_maze import (
-    SolvedMaze,
-    coord_str_to_tuple_noneable,
-)
 from maze_transformer.training.config import ZanjHookedTransformer
 
 

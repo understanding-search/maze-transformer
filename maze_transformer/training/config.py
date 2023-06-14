@@ -22,9 +22,9 @@ from transformers import PreTrainedTokenizer
 from zanj.loading import load_item_recursive
 from zanj.torchutil import ConfiguredModel, set_config_class
 
-from maze_transformer.dataset.dataset import GPTDatasetConfig
-from maze_transformer.dataset.maze_dataset_configs import MAZE_DATASET_CONFIGS
-from maze_transformer.dataset.tokenizer import HuggingMazeTokenizer
+from maze_dataset.dataset.dataset import GPTDatasetConfig
+from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
+from maze_transformer.tokenizer import HuggingMazeTokenizer
 
 
 @serializable_dataclass(kw_only=True, properties_to_serialize=["n_heads"])
