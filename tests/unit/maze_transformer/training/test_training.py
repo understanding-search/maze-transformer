@@ -1,7 +1,7 @@
 from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.training import get_dataloader
-from maze_transformer.training.wandb_logger import StubLogger
+from maze_transformer.test_helpers.stub_logger import StubLogger
 
 
 def test_get_dataloader():
