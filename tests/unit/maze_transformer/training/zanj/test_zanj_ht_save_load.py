@@ -17,7 +17,7 @@ from maze_transformer.training.config import (
     TrainConfig,
     ZanjHookedTransformer,
 )
-from maze_transformer.test_helpers.assertions import _assert_model_output_equality
+from maze_transformer.test_helpers.assertions import assert_model_output_equality
 
 ZANJ_MODEL_CFG: ConfigHolder = ConfigHolder(
     train_cfg=TrainConfig(name="test_cfg_save-train"),
@@ -57,7 +57,7 @@ def test_model_save_exact():
     model_load = zanj.read(fname)
 
     assert_model_exact_equality(MODEL, model_load)
-    _assert_model_output_equality(MODEL, model_load)
+    assert_model_output_equality(MODEL, model_load)
 
 
 def test_model_save_fold_ln():
@@ -69,7 +69,7 @@ def test_model_save_fold_ln():
     zanj.save(MODEL, fname)
     model_load = zanj.read(fname)
 
-    _assert_model_output_equality(MODEL, model_load)
+    assert_model_output_equality(MODEL, model_load)
 
 
 def test_model_save_refactored_attn_matrices():
@@ -86,4 +86,4 @@ def test_model_save_refactored_attn_matrices():
     zanj.save(MODEL, fname)
     model_load = zanj.read(fname)
 
-    _assert_model_output_equality(MODEL, model_load)
+    assert_model_output_equality(MODEL, model_load)

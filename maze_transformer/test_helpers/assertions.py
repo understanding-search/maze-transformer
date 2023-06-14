@@ -25,7 +25,7 @@ def _check_except_config_equality_modulo_weight_processing(
     )
 
 
-def _assert_model_output_equality(
+def assert_model_output_equality(
     model_a: ZanjHookedTransformer,
     model_b: ZanjHookedTransformer,
     test_sequence_length: int = 10,
