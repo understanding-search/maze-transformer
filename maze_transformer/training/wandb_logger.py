@@ -65,4 +65,3 @@ class WandbLogger:
     @staticmethod
     def progress(message: str) -> None:
         logging.info(message)
-

@@ -1,8 +1,7 @@
 from pathlib import Path
 
-from zanj import ZANJ
-
 from maze_dataset import MazeDataset, MazeDatasetConfig
+from zanj import ZANJ
 
 temp_dir: Path = Path("tests/_temp/dataset")
 

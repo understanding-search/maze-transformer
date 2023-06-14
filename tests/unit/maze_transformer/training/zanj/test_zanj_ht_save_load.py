@@ -1,23 +1,16 @@
-import warnings
 from pathlib import Path
 
-import torch
-from jaxtyping import Int
-from zanj import ZANJ
-from zanj.torchutil import (
-    ConfigMismatchException,
-    assert_model_cfg_equality,
-    assert_model_exact_equality,
-)
-
 from maze_dataset import MazeDatasetConfig
+from zanj import ZANJ
+from zanj.torchutil import assert_model_exact_equality
+
+from maze_transformer.test_helpers.assertions import assert_model_output_equality
 from maze_transformer.training.config import (
     BaseGPTConfig,
     ConfigHolder,
     TrainConfig,
     ZanjHookedTransformer,
 )
-from maze_transformer.test_helpers.assertions import assert_model_output_equality
 
 ZANJ_MODEL_CFG: ConfigHolder = ConfigHolder(
     train_cfg=TrainConfig(name="test_cfg_save-train"),
@@ -33,9 +26,6 @@ ZANJ_MODEL_CFG: ConfigHolder = ConfigHolder(
 
 MODEL: ZanjHookedTransformer = ZanjHookedTransformer(ZANJ_MODEL_CFG)
 MODEL_FROM_CFG_CREATE: ZanjHookedTransformer = ZANJ_MODEL_CFG.create_model_zanj()
-
-
-
 
 
 def test_configs_setup_correct():

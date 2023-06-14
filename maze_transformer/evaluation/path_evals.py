@@ -2,7 +2,6 @@ import typing
 import warnings
 
 import numpy as np
-
 from maze_dataset import Coord, CoordArray, CoordTup, LatticeMaze
 from muutils.mlutils import register_method
 

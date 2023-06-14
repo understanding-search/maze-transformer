@@ -1,5 +1,6 @@
 from maze_transformer.training.wandb_logger import WandbLogger
 
+
 class StubLogger(WandbLogger):
     """Drop-in replacement for the WandbLogger to make it easy to inspect logs during tests (and avoid uploading models and datasets in unit tests)"""
 

@@ -4,13 +4,7 @@ from typing import cast
 
 import numpy as np
 import torch
-from muutils.statcounter import StatCounter
-from transformer_lens import HookedTransformer
-
-from maze_dataset import MazeDataset, MazeDatasetConfig, SPECIAL_TOKENS, CoordTup
-from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
-from maze_transformer.training.config import ConfigHolder
-from maze_transformer.training.training import TRAIN_SAVE_FILES
+from maze_dataset import SPECIAL_TOKENS, CoordTup, MazeDataset, MazeDatasetConfig
 from maze_dataset.tokenization.token_utils import (
     WhenMissing,
     get_context_tokens,
@@ -18,6 +12,12 @@ from maze_dataset.tokenization.token_utils import (
     tokens_to_coords,
 )
 from muutils.mlutils import chunks
+from muutils.statcounter import StatCounter
+from transformer_lens import HookedTransformer
+
+from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
+from maze_transformer.training.config import ConfigHolder
+from maze_transformer.training.training import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access
 

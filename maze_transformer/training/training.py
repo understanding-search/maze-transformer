@@ -5,12 +5,12 @@ from typing import Callable
 
 import torch
 from jaxtyping import Float
+from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
 from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
 from zanj import ZANJ
 
-from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.wandb_logger import WandbLogger
 

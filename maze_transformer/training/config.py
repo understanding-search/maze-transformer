@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any, Type
 
 import torch
+from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
+from maze_dataset.dataset.dataset import GPTDatasetConfig
 from muutils.dictmagic import kwargs_to_nested_dict
 from muutils.json_serialize import (
     JSONitem,
@@ -22,8 +24,6 @@ from transformers import PreTrainedTokenizer
 from zanj.loading import load_item_recursive
 from zanj.torchutil import ConfiguredModel, set_config_class
 
-from maze_dataset.dataset.dataset import GPTDatasetConfig
-from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
 from maze_transformer.tokenizer import HuggingMazeTokenizer
 
 

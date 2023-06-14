@@ -1,4 +1,4 @@
-from maze_dataset import MazeDataset, MazeDatasetConfig, SPECIAL_TOKENS
+from maze_dataset import SPECIAL_TOKENS, MazeDataset, MazeDatasetConfig
 
 
 def test_dataset_construction():

@@ -1,7 +1,7 @@
 import warnings
-from jaxtyping import Int
 
 import torch
+from jaxtyping import Int
 from zanj.torchutil import ConfigMismatchException, assert_model_cfg_equality
 
 from maze_transformer.training.config import BaseGPTConfig, ZanjHookedTransformer

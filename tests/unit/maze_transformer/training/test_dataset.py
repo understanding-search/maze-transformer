@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from maze_dataset import MazeDataset, MazeDatasetConfig
 
 TEMP_DIR: Path = Path("tests/_temp/test_dataset")

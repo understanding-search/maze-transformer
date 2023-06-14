@@ -4,11 +4,12 @@ from pathlib import Path
 from typing import Union
 
 import torch
-from muutils.json_serialize import SerializableDataclass, serializable_dataclass
-from torch.utils.data import DataLoader
-
 from maze_dataset import MazeDataset
 from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
+from muutils.json_serialize import SerializableDataclass, serializable_dataclass
+from muutils.mlutils import get_device
+from torch.utils.data import DataLoader
+
 from maze_transformer.training.config import (
     GPT_CONFIGS,
     TRAINING_CONFIGS,
@@ -21,7 +22,6 @@ from maze_transformer.training.wandb_logger import (
     WandbLogger,
     WandbProject,
 )
-from muutils.mlutils import get_device
 
 
 @serializable_dataclass(kw_only=True)

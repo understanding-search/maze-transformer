@@ -1,6 +1,5 @@
-from maze_dataset import MazeDatasetConfig, SPECIAL_TOKENS, SolvedMaze
+from maze_dataset import SPECIAL_TOKENS, MazeDatasetConfig, SolvedMaze, utils
 from maze_dataset.generation import get_maze_with_solution
-from maze_dataset import utils
 
 
 def test_coordinate_system():
