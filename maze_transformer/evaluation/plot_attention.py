@@ -23,7 +23,7 @@ from maze_dataset.maze.lattice_maze import coord_str_to_tuple_noneable
 
 from maze_transformer.tokenizer import SPECIAL_TOKENS
 from maze_transformer.evaluation.eval_model import predict_maze_paths
-from maze_transformer.evaluation.plot_maze import MazePlot
+from maze_dataset.plotting import MazePlot
 
 from maze_transformer.training.config import ZanjHookedTransformer
 

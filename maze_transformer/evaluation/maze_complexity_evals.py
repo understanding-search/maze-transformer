@@ -1,6 +1,6 @@
 import typing
 
-from maze_transformer.generation.lattice_maze import SolvedMaze
+from maze_dataset import SolvedMaze
 from muutils.mlutils import register_method
 
 MAZE_COMPLEXITY_EVALS: dict[str, typing.Callable[[SolvedMaze], float]] = dict()

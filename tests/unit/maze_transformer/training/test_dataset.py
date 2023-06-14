@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_dataset import MazeDataset, MazeDatasetConfig
 
 TEMP_DIR: Path = Path("tests/_temp/test_dataset")
 TEMP_DIR.mkdir(parents=True, exist_ok=True)

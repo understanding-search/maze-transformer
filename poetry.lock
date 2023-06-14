@@ -1946,7 +1946,7 @@ traitlets = "*"
 
 [[package]]
 name = "maze-dataset"
-version = "0.0.1"
+version = "0.0.2"
 description = ""
 category = "main"
 optional = false
@@ -1968,7 +1968,7 @@ zanj = "^0.1.4"
 type = "git"
 url = "https://github.com/AISC-understanding-search/maze-dataset.git"
 reference = "HEAD"
-resolved_reference = "d0e1058023b22b7b4c67936944e54bd1b062aa11"
+resolved_reference = "d0bb69f837586bd3f70457bd9050d9d28d529ce6"
 
 [[package]]
 name = "mdurl"

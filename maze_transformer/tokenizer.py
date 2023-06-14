@@ -7,9 +7,8 @@ from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
 from maze_dataset.dataset.dataset import GPTDatasetConfig
-from maze_transformer.evaluation.plot_maze import MazePlot
-from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.generation.lattice_maze import LatticeMaze
+from maze_dataset.plotting import MazePlot
+from maze_dataset import SPECIAL_TOKENS, LatticeMaze
 
 if TYPE_CHECKING:
     from maze_transformer.training.config import ConfigHolder

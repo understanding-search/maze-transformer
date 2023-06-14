@@ -1,10 +1,9 @@
 import numpy as np
 import pytest
 
-from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
 from maze_transformer.evaluation.baseline_models import RandomBaseline
 from maze_transformer.evaluation.eval_model import predict_maze_paths
-from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 
 

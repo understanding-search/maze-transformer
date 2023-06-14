@@ -7,12 +7,11 @@ import torch
 from muutils.statcounter import StatCounter
 from transformer_lens import HookedTransformer
 
-from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_dataset import MazeDataset, MazeDatasetConfig, SPECIAL_TOKENS, CoordTup
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
-from maze_transformer.generation.constants import SPECIAL_TOKENS, CoordTup
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.training import TRAIN_SAVE_FILES
-from maze_transformer.utils.token_utils import (
+from maze_dataset.tokenization.token_utils import (
     WhenMissing,
     get_context_tokens,
     get_path_tokens,

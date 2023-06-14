@@ -1,8 +1,6 @@
-from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
-from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.generation.generators import get_maze_with_solution
-from maze_transformer.generation.lattice_maze import SolvedMaze
-from maze_transformer.utils.test_helpers import utils
+from maze_dataset import MazeDatasetConfig, SPECIAL_TOKENS, SolvedMaze
+from maze_dataset.generation import get_maze_with_solution
+from maze_dataset import utils
 
 
 def test_coordinate_system():

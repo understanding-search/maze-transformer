@@ -1,4 +1,4 @@
-from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
+from maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.evaluation.maze_complexity_evals import (
     MAZE_COMPLEXITY_EVALS,
     MazeComplexityEvals,

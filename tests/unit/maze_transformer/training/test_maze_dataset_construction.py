@@ -1,5 +1,4 @@
-from maze_transformer.dataset.maze_dataset import MazeDataset, MazeDatasetConfig
-from maze_transformer.generation.constants import SPECIAL_TOKENS
+from maze_dataset import MazeDataset, MazeDatasetConfig, SPECIAL_TOKENS
 
 
 def test_dataset_construction():

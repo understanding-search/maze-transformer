@@ -5,15 +5,16 @@ import torch
 from jaxtyping import Float
 from transformer_lens import HookedTransformer
 
-from maze_transformer.generation.constants import (
+from maze_dataset import (
     SPECIAL_TOKENS,
     Coord,
     CoordArray,
     CoordTup,
+    LatticeMaze, 
+    SolvedMaze,
 )
-from maze_transformer.generation.lattice_maze import LatticeMaze, SolvedMaze
 from maze_transformer.training.config import ConfigHolder
-from maze_transformer.utils.token_utils import (
+from maze_dataset.tokenization.token_utils import (
     coords_to_tokens,
     get_origin_token,
     get_path_tokens,
