@@ -9,6 +9,7 @@ repository = "https://github.com/AISC-understanding-search/maze-transformer"
 
 [tool.poetry.dependencies]
 python = "^3.10"
+maze-dataset = {git = "https://github.com/AISC-understanding-search/maze-dataset.git"}
 torch = "^1.13.1"
 transformer-lens = "^1.2.2"
 matplotlib = "^3.7.0"
