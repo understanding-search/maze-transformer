@@ -21,7 +21,7 @@ from maze_transformer.training.wandb_logger import (
     WandbLogger,
     WandbProject,
 )
-from maze_transformer.utils.utils import get_device
+from muutils.mlutils import get_device
 
 
 @serializable_dataclass(kw_only=True)

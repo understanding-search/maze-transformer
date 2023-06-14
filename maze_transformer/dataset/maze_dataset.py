@@ -35,7 +35,7 @@ from maze_transformer.generation.lattice_maze import (
     SolvedMaze,
     coord_to_str,
 )
-from maze_transformer.utils.utils import corner_first_ndindex
+from maze_dataset.utils import corner_first_ndindex
 
 _MAZEDATASET_PROPERTIES_TO_SERIALIZE: list[str] = [
     "padding_token_index",

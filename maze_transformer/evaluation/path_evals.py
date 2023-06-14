@@ -5,7 +5,7 @@ import numpy as np
 
 from maze_transformer.generation.constants import Coord, CoordArray, CoordTup
 from maze_transformer.generation.lattice_maze import LatticeMaze
-from maze_transformer.utils.utils import register_method
+from muutils.mlutils import register_method
 
 # pylint: disable=unused-argument
 MazePath = CoordArray

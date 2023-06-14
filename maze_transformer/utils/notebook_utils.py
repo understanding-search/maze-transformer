@@ -8,7 +8,7 @@ IN_JUPYTER: bool = not "_" in os.environ
 if IN_JUPYTER:
     from IPython import get_ipython
 
-from maze_transformer.utils.utils import get_device, set_reproducibility
+from muutils.mlutils import get_device, set_reproducibility
 
 
 def configure_notebook(seed=42, dark_mode=True):

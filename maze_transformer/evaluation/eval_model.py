@@ -18,7 +18,7 @@ from maze_transformer.utils.token_utils import (
     get_path_tokens,
     tokens_to_coords,
 )
-from maze_transformer.utils.utils import chunks
+from muutils.mlutils import chunks
 
 # pylint: disable=protected-access
 

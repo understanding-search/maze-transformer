@@ -1,3 +1,5 @@
+# TODO: remove, moved to maze_dataset
+
 from __future__ import annotations  # for type hinting self as return value
 
 from copy import deepcopy
