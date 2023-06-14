@@ -1,7 +1,7 @@
 NOTEBOOKS_DIR := notebooks
 CONVERTED_NOTEBOOKS_TEMP_DIR := tests/_temp/notebooks
 POETRY_RUN_PYTHON := poetry run python
-
+COVERAGE_REPORTS_DIR := examples/coverage
 
 .PHONY: default
 default: help
@@ -58,6 +58,14 @@ test_notebooks: convert_notebooks
 test: clean unit integration test_notebooks
 	@echo "ran all tests: unit, integration, and notebooks"
 
+
+.PHONY: cov
+cov:
+	@echo "run tests and generate coverage reports"
+	$(POETRY_RUN_PYTHON) -m pytest --cov=. -s tests/
+	$(POETRY_RUN_PYTHON) -m coverage report -m > $(COVERAGE_REPORTS_DIR)/coverage.txt
+	$(POETRY_RUN_PYTHON) -m coverage_badge -f -o $(COVERAGE_REPORTS_DIR)/coverage.svg
+	$(POETRY_RUN_PYTHON) -m coverage html
 
 .PHONY: clean
 clean:
