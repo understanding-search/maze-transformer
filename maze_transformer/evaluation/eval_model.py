@@ -139,6 +139,7 @@ def predict_maze_paths(
             max_new_tokens=max_new_tokens,
             verbose=verbose,
             temperature=temperature,
+            # use_past_kv_cache=False,
         )
         assert isinstance(
             prediction, str

@@ -33,7 +33,7 @@ def test_train_model_without_evals(temp_dir: Path):
     )
 
     metrics = _get_metrics(logger.logs)
-    assert len(metrics) == 1
+    assert len(metrics) == 2
     assert list(metrics[0].keys()) == ["loss"]
 
 
@@ -47,7 +47,6 @@ def test_train_model_with_evals(temp_dir: Path):
     dataloader = get_dataloader(dataset, cfg, logger)
     device = get_device()
 
-    metrics = _get_metrics(logger.logs)
     # fast should run every 5 mazes (1 batch), slow every 10 mazes (2 batches)
     cfg.train_cfg.intervals = dict(
         print_loss=1,
@@ -70,6 +69,8 @@ def test_train_model_with_evals(temp_dir: Path):
         val_dataset=val_dataset,
     )
 
+    metrics = _get_metrics(logger.logs)
+
     # we should have 1 loop with fast evals and 1 loop with fast and slow
     assert len(metrics) == 2
     assert set(metrics[0].keys()) == {"loss", *PathEvals.fast.keys()}
@@ -80,12 +81,13 @@ def test_train_model_with_evals(temp_dir: Path):
     }
 
 
-def _create_dataset(n_mazes: int = 5, grid_n: int = 3) -> MazeDataset:
+def _create_dataset(n_mazes: int = 10, grid_n: int = 3) -> MazeDataset:
     dataset_cfg: MazeDatasetConfig = MazeDatasetConfig(
         name="test", n_mazes=n_mazes, grid_n=grid_n
     )
-    dataset = MazeDataset.from_config(dataset_cfg, verbose=False)
-    dataset.cfg.seq_len_max = 32
+    dataset = MazeDataset.from_config(dataset_cfg)
+    # dataset.cfg.seq_len_max = 32
+    # TODO(@mivanit): the above line caused me much pain. setting the sequence length in the tokenizer to below the length of the actual sequence passed causes horrible things to happen in `predict_maze_paths()`
     return dataset
 
 
@@ -119,6 +121,8 @@ def _create_tokenizer_config(
 
 
 def _get_metrics(logs: list):
+    for x in logs:
+        print(x)
     metrics = [log[1][0] for log in logs if re.match("metric", log[0], re.IGNORECASE)]
 
     return metrics

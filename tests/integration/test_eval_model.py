@@ -72,7 +72,7 @@ def test_predict_maze_paths():
 
     dataset: MazeDataset = MazeDataset.from_config(cfg=cfg.dataset_cfg)
 
-    max_new_tokens = 2
+    max_new_tokens = 3
     paths = predict_maze_paths(
         tokens_batch=dataset.as_tokens(),
         data_cfg=cfg.dataset_cfg,
