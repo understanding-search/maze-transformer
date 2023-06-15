@@ -67,6 +67,11 @@ def train(
         **cfg.train_cfg.optimizer_kwargs,
     )
     logger.summary(dict(model_n_params=model.cfg.n_params))
+
+    # add wandb run url to model
+    model.training_records = {
+        "wandb_url": logger.url,
+    }
     
     # figure out whether to run evals
     # Only the HuggingMazeTokenizer has token decoding implemented, which is required for evals
