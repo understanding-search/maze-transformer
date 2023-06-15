@@ -109,6 +109,64 @@ def test_get_intervals_with_custom_counts():
         assert calculated_intervals_batched == intervals_expected_batched
 
 
+def _plus_minus_proportion(value: float, proportion: float = 0.1) -> tuple[float, float]:
+    return (
+        value * (1 - proportion),
+        value * (1 + proportion),
+    )
+
+def _in_interval(value: float, interval: tuple[float, float]) -> bool:
+    return interval[0] <= value <= interval[1]
+
+def test_get_intervals_with_custom_counts_approx():
+    # inputs
+    dataset_n_samples: int = 100_000
+    batch_size: int = 5
+    intervals_count = {
+        "print_loss": 1000,
+        "checkpoint": 10,
+        "eval_fast": 100,
+        "eval_slow": 20,
+    }
+    # expected result
+    intervals_expected = {
+        "print_loss": _plus_minus_proportion(100),
+        "checkpoint": _plus_minus_proportion(10_000),
+        "eval_fast": _plus_minus_proportion(1000),
+        "eval_slow": _plus_minus_proportion(5000),
+    }
+    intervals_expected_batched = {
+        "print_loss": _plus_minus_proportion(20),
+        "checkpoint": _plus_minus_proportion(2_000),
+        "eval_fast": _plus_minus_proportion(200),
+        "eval_slow": _plus_minus_proportion(1000),
+    }
+
+    config = TrainConfig(
+        name="test",
+        optimizer=RMSprop,
+        optimizer_kwargs={"lr": 0.001},
+        batch_size=batch_size,
+        intervals_count=intervals_count,
+    )
+
+    for use_defaults in [True, False]:
+        calculated_intervals = config.get_intervals(
+            dataset_n_samples,
+            mod_batch_size=False,
+            use_defaults_if_missing=use_defaults,
+        )
+        assert isinstance(calculated_intervals, dict)
+        for k, v in calculated_intervals.items():
+            assert _in_interval(v, intervals_expected[k])
+
+        calculated_intervals_batched = config.get_intervals(
+            dataset_n_samples, mod_batch_size=True, use_defaults_if_missing=use_defaults
+        )
+        assert isinstance(calculated_intervals_batched, dict)
+        for k, v in calculated_intervals_batched.items():
+            assert _in_interval(v, intervals_expected_batched[k])
+
 def test_get_intervals_raises_with_missing_values():
     config = TrainConfig(
         name="test", optimizer=RMSprop, optimizer_kwargs={"lr": 0.001}, batch_size=32

@@ -301,6 +301,13 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             num_workers=0,
             drop_last=False,
         ),
+        intervals_count=dict(
+            print_loss=100,
+            checkpoint=2,
+            eval_fast=4,
+            eval_slow=2,
+        ),
+        validation_dataset_cfg=10,
     ),
     TrainConfig(
         name="tiny-v1",
@@ -313,6 +320,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             persistent_workers=True,
             drop_last=True,
         ),
+        validation_dataset_cfg=10,
     ),
     TrainConfig(
         name="gpt2-small",
@@ -325,6 +333,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             persistent_workers=True,
             drop_last=True,
         ),
+        validation_dataset_cfg=10,
     ),
     TrainConfig(
         name="sweep-v1",
@@ -337,6 +346,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             persistent_workers=True,
             drop_last=True,
         ),
+        validation_dataset_cfg=50,
     ),
 ]
 

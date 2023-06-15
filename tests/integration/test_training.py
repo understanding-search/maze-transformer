@@ -121,8 +121,8 @@ def _create_tokenizer_config(
 
 
 def _get_metrics(logs: list):
-    for x in logs:
-        print(x)
+    # for x in logs:
+    #     print(x)
     metrics = [log[1][0] for log in logs if re.match("metric", log[0], re.IGNORECASE)]
 
     return metrics

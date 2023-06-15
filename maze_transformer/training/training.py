@@ -95,10 +95,17 @@ def train(
         dataset_n_samples=n_samples,
         mod_batch_size=True,
     )
+    if not evals_enabled:
+        intervals = {
+            key: value
+            if not key.startswith("eval")
+            else float("inf")
+            for key, value in intervals.items()
+        }
     logger.summary(
         {"n_batches": n_batches, "n_samples": n_samples, "intervals": intervals}
     )
-    logger.progress(f"will train for {n_batches} batches, with intervals: {intervals}")
+    logger.progress(f"will train for {n_batches} batches, {evals_enabled=}, with intervals: {intervals}")
 
     # start up training
     # ==============================
@@ -128,6 +135,7 @@ def train(
         if evals_enabled:
             for interval_key, evals_dict in PathEvals.PATH_EVALS_MAP.items():
                 if iteration % intervals[interval_key] == 0:
+                    logger.progress(f"Running evals: {interval_key}")
                     scores: dict[str, StatCounter] = evaluate_model(
                         model=model,
                         dataset=val_dataset,
@@ -156,7 +164,7 @@ def train(
                 / TRAIN_SAVE_FILES.checkpoints
                 / TRAIN_SAVE_FILES.model_checkpt_zanj(iteration)
             )
-            logger.progress(f"Saving model to {model_save_path.as_posix()}")
+            logger.progress(f"Saving model checkpoint to {model_save_path.as_posix()}")
             zanj.save(model, model_save_path)
             logger.upload_model(
                 model_save_path, aliases=["latest", f"iter-{iteration}"]

@@ -108,7 +108,7 @@ def train_model(
         cfg=cfg.dataset_cfg,
         do_generate=do_generate_dataset,
         local_base_path=base_path,
-        stdout_log=dataset_verbose,
+        verbose=dataset_verbose,
     )
     logger.progress(f"finished getting training dataset with {len(dataset)} samples")
     # validation dataset, if applicable
