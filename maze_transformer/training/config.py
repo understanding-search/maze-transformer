@@ -124,8 +124,8 @@ class TrainConfig(SerializableDataclass):
         loading_fn=lambda data: data.get("evals_max_new_tokens", 8),
     )
     validation_dataset_cfg: None|int|GPTDatasetConfig = serializable_field(
-        default=100,
-        loading_fn=lambda data: data.get("validation_dataset_size", 100),
+        default=None,
+        loading_fn=lambda data: data.get("validation_dataset_cfg", None),
     )
 
     optimizer: Type[torch.optim.Optimizer] = serializable_field(  # type: ignore

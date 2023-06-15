@@ -16,7 +16,6 @@ def test_generate_mazedataset():
         load_local=False,
         do_download=False,
         save_local=False,
-        verbose=False,
     )
 
     assert len(m) == 5
@@ -29,7 +28,6 @@ def test_load_save_mazedataset_auto():
         do_download=False,
         save_local=True,
         local_base_path=temp_dir,
-        verbose=False,
     )
 
     m2: MazeDataset = MazeDataset.from_config(
@@ -39,7 +37,6 @@ def test_load_save_mazedataset_auto():
         do_generate=False,
         save_local=False,
         local_base_path=temp_dir,
-        verbose=False,
     )
 
     assert len(m) == 5
@@ -56,7 +53,6 @@ def test_load_save_mazedataset_manual():
         do_download=False,
         save_local=True,
         local_base_path=temp_dir,
-        verbose=False,
     )
 
     m_fname: Path = temp_dir / (m.cfg.to_fname() + ".zanj")

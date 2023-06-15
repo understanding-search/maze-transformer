@@ -22,6 +22,7 @@ def test_serialize_custom_values():
 def test_load_custom_values():
     loaded = TrainConfig.load(_custom_serialized_config())
     assert loaded.optimizer == torch.optim.SGD
+    assert loaded.diff(_custom_train_config()) == {}
     assert loaded == _custom_train_config()
 
 
