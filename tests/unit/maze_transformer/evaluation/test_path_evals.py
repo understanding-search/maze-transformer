@@ -1,8 +1,8 @@
 import numpy as np
+from maze_dataset import LatticeMaze
+from maze_dataset.utils import bool_array_from_string
 
 from maze_transformer.evaluation.path_evals import PathEvals
-from maze_transformer.generation.lattice_maze import LatticeMaze
-from maze_transformer.generation.utils import bool_array_from_string
 
 
 def test_node_overlap_short_match():

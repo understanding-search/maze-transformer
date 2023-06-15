@@ -5,6 +5,8 @@ wandb
 tests/_temp/**
 tests/**/_temp/**
 
+.coverage
+htmlcov/
 
 
 # default python ignores
