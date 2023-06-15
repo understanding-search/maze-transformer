@@ -2059,7 +2059,7 @@ zanj = "^0.1.4"
 type = "git"
 url = "https://github.com/AISC-understanding-search/maze-dataset.git"
 reference = "HEAD"
-resolved_reference = "991347a3176c7aa989335d74df23822b6b0ea506"
+resolved_reference = "ce914b05c2182ccfcf93842783a585bff375d715"
 
 [[package]]
 name = "mdurl"

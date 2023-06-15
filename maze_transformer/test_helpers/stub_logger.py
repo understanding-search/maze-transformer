@@ -25,6 +25,9 @@ class StubLogger(WandbLogger):
     def log_metric(self, *args, **kwargs) -> None:
         self._log("Metric logged.", args, kwargs)
 
+    def log_metric_hist(self, *args, **kwargs) -> None:
+        self._log("Metric (Statcounter) logged.", args, kwargs)
+
     def summary(self, *args, **kwargs) -> None:
         self._log("Summary logged.", args, kwargs)
 
