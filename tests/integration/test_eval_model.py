@@ -18,7 +18,7 @@ from maze_transformer.evaluation.path_evals import PathEvals
 from maze_transformer.test_helpers.assertions import assert_model_output_equality
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.train_model import TrainingResult, train_model
-from maze_transformer.training.training import TRAIN_SAVE_FILES
+from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbProject
 
 temp_dir: Path = Path("tests/_temp/test_eval_model")

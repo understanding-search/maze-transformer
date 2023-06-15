@@ -27,7 +27,7 @@ from transformer_lens import utils as tl_utils
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.config import ConfigHolder
-from maze_transformer.training.training import TRAIN_SAVE_FILES
+from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access
 
