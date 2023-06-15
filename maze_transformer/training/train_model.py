@@ -119,10 +119,13 @@ def train_model(
             split_dataset_sizes: tuple[int, int] = [
                 len(dataset) - cfg.train_cfg.validation_dataset_cfg,
                 cfg.train_cfg.validation_dataset_cfg,
-            ]
-            sub_dataset, sub_val_dataset = random_split(dataset, split_dataset_sizes)
-            dataset = sub_dataset.dataset
-            val_dataset = sub_val_dataset.dataset
+            ]            
+            val_dataset = MazeDataset(
+                cfg.dataset_cfg, 
+                mazes=dataset.mazes[-split_dataset_sizes[1]:],
+                generation_metadata_collected=dataset.generation_metadata_collected,
+            )
+            dataset.mazes = dataset.mazes[:split_dataset_sizes[0]]
             dataset.update_self_config()
             val_dataset.update_self_config()
             logger.progress(
