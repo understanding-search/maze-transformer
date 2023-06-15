@@ -118,11 +118,9 @@ def predict_maze_paths(
     """given the model and a batch of context tokens, make predictions for the path"""
 
     # check types
-    assert isinstance(
-        tokens_batch, list
-    ), f"tokens_batch must be a list, got {type(tokens_batch)}"
+    assert isinstance(tokens_batch, (list, tuple)), f"tokens_batch must be a list, got {type(tokens_batch)}"
     assert all(
-        isinstance(tokens, list) for tokens in tokens_batch
+        isinstance(tokens, (list, tuple)) for tokens in tokens_batch
     ), f"tokens_batch must be a list of lists, got {[type(tokens) for tokens in tokens_batch] = }"
     assert all(
         isinstance(x, str) for tokens in tokens_batch for x in tokens
@@ -199,10 +197,6 @@ def evaluate_model(
     if dataset_tokens is provided, we assume that the dataset has already been tokenized and we skip tokenization. MAKE SURE THERE IS NOT A MISMATCH BETWEEN THE DATASET AND DATASET_TOKENS
     """
 
-    assert len(dataset) == len(dataset_tokens), (
-        f"dataset and dataset_tokens must be the same length and must be from corresponding mazes, got {len(dataset) = } and {len(dataset_tokens) = }"
-    )
-
     if not eval_functions:
         # TODO: potentially model evals which aren't path evals?
         eval_functions = PathEvals.EVALS
@@ -213,8 +207,13 @@ def evaluate_model(
 
     if dataset_tokens is None:
         dataset_tokens = dataset.as_tokens(join_tokens_individual_maze=False)
+    else:
+        assert len(dataset) == len(dataset_tokens), (
+            f"dataset and dataset_tokens must be the same length and must be from corresponding mazes, got {len(dataset) = } and {len(dataset_tokens) = }"
+        )
 
-    for maze_batch, tokens_batch in chunks(zip(dataset, dataset_tokens), batch_size):
+    for batch in chunks(zip(dataset, dataset_tokens), batch_size):
+        maze_batch, tokens_batch = zip(*batch)
         predictions: list[str | list[tuple[int, int]]] = predict_maze_paths(
             tokens_batch=tokens_batch,
             data_cfg=dataset.cfg,

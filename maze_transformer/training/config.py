@@ -214,7 +214,7 @@ class TrainConfig(SerializableDataclass):
 
         except ValueError as e:
             _debug_vals: str = f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=},\n{self.intervals=},\n{self.intervals_count=}"
-            raise ValueError(f"{_debug_vals}\ntriggered error") from e
+            raise ValueError(f"{_debug_vals}\ntriggered error:\n{e}") from e
 
         # disable if set to 0 or negative
         intervals_new = {

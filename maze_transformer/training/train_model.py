@@ -41,7 +41,7 @@ def train_model(
     cfg_file: str | Path | None = None,
     cfg_names: typing.Sequence[str] | None = None,
     do_generate_dataset: bool = False,
-    dataset_verbose: bool = True,
+    dataset_verbose: bool = False,
     device: torch.device | None = None,
     help: bool = False,
     **kwargs,
@@ -108,7 +108,7 @@ def train_model(
         cfg=cfg.dataset_cfg,
         do_generate=do_generate_dataset,
         local_base_path=base_path,
-        verbose=dataset_verbose,
+        stdout_log=dataset_verbose,
     )
     logger.progress(f"finished getting training dataset with {len(dataset)} samples")
     # validation dataset, if applicable

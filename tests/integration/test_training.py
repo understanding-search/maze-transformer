@@ -1,3 +1,4 @@
+from copy import deepcopy
 import re
 from pathlib import Path
 
@@ -5,7 +6,7 @@ import pytest
 
 from maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_transformer.evaluation.path_evals import PathEvals
-from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
+from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder, _DEFAULT_INTERVAL_COUNTS
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.training import get_dataloader, train
 from maze_transformer.training.wandb_logger import WandbJobType, WandbProject
@@ -48,8 +49,17 @@ def test_train_model_with_evals(temp_dir: Path):
 
     metrics = _get_metrics(logger.logs)
     # fast should run every 5 mazes (1 batch), slow every 10 mazes (2 batches)
-    cfg.train_cfg.fast_eval_interval = 5
-    cfg.train_cfg.slow_eval_interval = 10
+    cfg.train_cfg.intervals = dict(
+        print_loss=1,
+        checkpoint=10,
+        eval_fast=5,
+        eval_slow=10,
+    )
+    cfg.train_cfg.intervals_count = None
+    cfg.train_cfg.validation_dataset_cfg = deepcopy(cfg.dataset_cfg)
+    val_dataset: MazeDataset = MazeDataset.from_config(
+        cfg.train_cfg.validation_dataset_cfg,
+    )
 
     train(
         dataloader=dataloader,
@@ -57,6 +67,7 @@ def test_train_model_with_evals(temp_dir: Path):
         logger=logger,
         output_dir=output_path,
         device=device,
+        val_dataset=val_dataset,
     )
 
     # we should have 1 loop with fast evals and 1 loop with fast and slow
