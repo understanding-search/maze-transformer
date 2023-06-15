@@ -146,3 +146,50 @@ def test_get_intervals_with_no_mod_batch_size():
     )
     calculated_intervals = config.get_intervals(100, mod_batch_size=False)
     assert calculated_intervals == intervals
+
+def test_get_intervals_disabled_evals():
+    # inputs
+    dataset_n_samples: int = 100
+    batch_size: int = 5
+    intervals_count = {
+        "print_loss": 2,
+        "checkpoint": 5,
+        "eval_fast": 0,
+        "eval_slow": 0,
+    }
+    # expected result
+    intervals_expected = {
+        "print_loss": 50,
+        "checkpoint": 20,
+        "eval_fast": 101,
+        "eval_slow": 101,
+    }
+    intervals_expected_batched = {
+        "print_loss": 10,
+        "checkpoint": 4,
+        "eval_fast": 21,
+        "eval_slow": 21,
+    }
+
+    config = TrainConfig(
+        name="test",
+        optimizer=RMSprop,
+        optimizer_kwargs={"lr": 0.001},
+        batch_size=batch_size,
+        intervals_count=intervals_count,
+    )
+
+    for use_defaults in [True, False]:
+        calculated_intervals = config.get_intervals(
+            dataset_n_samples,
+            mod_batch_size=False,
+            use_defaults_if_missing=use_defaults,
+        )
+        assert isinstance(calculated_intervals, dict)
+        assert calculated_intervals == intervals_expected
+
+        calculated_intervals_batched = config.get_intervals(
+            dataset_n_samples, mod_batch_size=True, use_defaults_if_missing=use_defaults
+        )
+        assert isinstance(calculated_intervals_batched, dict)
+        assert calculated_intervals_batched == intervals_expected_batched

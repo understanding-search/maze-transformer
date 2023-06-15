@@ -42,6 +42,12 @@ class PathEvals:
     fast: dict[str, PathEvalFunction] = {}
     slow: dict[str, PathEvalFunction] = {}
 
+    PATH_EVALS_MAP: dict[str, dict[str, PathEvalFunction]] = {
+        "eval_fast": fast,
+        "eval_slow": slow,
+    }
+
+
     @classmethod
     @property
     def EVALS(cls):
