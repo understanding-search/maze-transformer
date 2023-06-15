@@ -239,6 +239,7 @@ def evaluate_logits(
     scores: dict[str, StatCounter] = {}
 
     if path_evals:
+        # this is pretty much wrong -- sampling from the logits over the sequence should not produce a valid path
         sampled_logits = tl_utils.sample_logits(logits)
         prediction_tokens = tokenizer.batch_decode(sampled_logits)
         predicted_paths = []

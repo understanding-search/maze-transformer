@@ -30,3 +30,7 @@ class StubLogger(WandbLogger):
 
     def progress(self, message: str) -> None:
         self._log(f"[INFO] - {message}")
+
+    @property
+    def url(self) -> str:
+        return "stub logger, not a url"

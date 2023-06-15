@@ -234,8 +234,8 @@ class TrainConfig(SerializableDataclass):
             optimizer_kwargs=self.optimizer_kwargs,
             batch_size=self.batch_size,
             dataloader_cfg=self.dataloader_cfg,
-            print_loss_interval=self.print_loss_interval,
-            checkpoint_interval=self.checkpoint_interval,
+            intervals=self.intervals,
+            intervals_count=self.intervals_count,
         )
 
 

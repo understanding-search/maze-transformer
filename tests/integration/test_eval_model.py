@@ -70,10 +70,7 @@ def test_predict_maze_paths():
     )
     model: ZanjHookedTransformer = result.model
 
-    dataset: MazeDataset = MazeDataset.from_config(
-        cfg=cfg.dataset_cfg,
-        verbose=False,
-    )
+    dataset: MazeDataset = MazeDataset.from_config(cfg=cfg.dataset_cfg)
 
     max_new_tokens = 2
     paths = predict_maze_paths(
@@ -118,10 +115,7 @@ def test_evaluate_model(temp_dir):
     )
     model: ZanjHookedTransformer = result.model
 
-    dataset: MazeDataset = MazeDataset.from_config(
-        cfg=cfg.dataset_cfg,
-        verbose=False,
-    )
+    dataset: MazeDataset = MazeDataset.from_config(cfg=cfg.dataset_cfg)
 
     path_evals = PathEvals.fast
     eval_names = [name for name in path_evals.keys()]
