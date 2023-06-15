@@ -4,10 +4,10 @@ from pathlib import Path
 import torch
 from jaxtyping import Float
 from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
+from muutils.statcounter import StatCounter
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
 from zanj import ZANJ
-from muutils.statcounter import StatCounter
 
 from maze_transformer.evaluation.eval_model import evaluate_logits
 from maze_transformer.evaluation.path_evals import PathEvals
@@ -45,7 +45,6 @@ def train(
     zanj: ZANJ | None = None,
     model: ZanjHookedTransformer | None = None,
 ) -> ZanjHookedTransformer:
-
     # initialize
     # ==============================
     if zanj is None:
@@ -72,7 +71,7 @@ def train(
     model.training_records = {
         "wandb_url": logger.url,
     }
-    
+
     # figure out whether to run evals
     # Only the HuggingMazeTokenizer has token decoding implemented, which is required for evals
     evals_enabled: bool = type(model.tokenizer) == HuggingMazeTokenizer
@@ -80,19 +79,19 @@ def train(
         logger.progress(
             "Using a tokenizer that cannot decode. Disabling evals for this run"
         )
-    
+
     # compute intervals
     n_samples: int = len(dataloader.dataset)
     n_batches: int = len(dataloader)
     intervals: dict[str, int] = cfg.train_cfg.get_intervals(
-        dataset_n_samples=n_samples, 
+        dataset_n_samples=n_samples,
         mod_batch_size=True,
     )
-    logger.summary({"n_batches": n_batches, "n_samples": n_samples, "intervals": intervals})
-    logger.progress(
-        f"will train for {n_batches} batches, with intervals: {intervals}"
+    logger.summary(
+        {"n_batches": n_batches, "n_samples": n_samples, "intervals": intervals}
     )
-    
+    logger.progress(f"will train for {n_batches} batches, with intervals: {intervals}")
+
     # start up training
     # ==============================
     model.train()
@@ -128,7 +127,9 @@ def train(
                         tokenizer=model.tokenizer,
                         path_evals=evals_dict,
                     )
-                    metrics.update({eval: stats.summary() for eval, stats in scores.items()})
+                    metrics.update(
+                        {eval: stats.summary() for eval, stats in scores.items()}
+                    )
         logger.log_metric(metrics)
 
         if iteration % intervals["print_loss"] == 0:

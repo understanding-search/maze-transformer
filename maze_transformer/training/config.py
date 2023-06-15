@@ -156,7 +156,7 @@ class TrainConfig(SerializableDataclass):
         dataset_n_samples: int | None = None,
         use_defaults_if_missing: bool = True,
         mod_batch_size: bool = True,
-    ) -> dict[str, int|float]:
+    ) -> dict[str, int | float]:
         """get the intervals"""
 
         # handle the case where both are missing
@@ -169,7 +169,7 @@ class TrainConfig(SerializableDataclass):
                 )
 
         # checks
-        intervals_new: dict[str, int|float]
+        intervals_new: dict[str, int | float]
         try:
             match (self.intervals is not None, self.intervals_count is not None):
                 case (False, False):
@@ -201,15 +201,15 @@ class TrainConfig(SerializableDataclass):
         except ValueError as e:
             _debug_vals: str = f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=},\n{self.intervals=},\n{self.intervals_count=}"
             raise ValueError(f"{_debug_vals}\ntriggered error") from e
-        
+
         # disable if set to 0 or negative
         intervals_new = {
-            k: v 
-            if v > 0 
-            else float("inf") # mod by infinity is always the number itself
+            k: v
+            if v > 0
+            else float("inf")  # mod by infinity is always the number itself
             for k, v in intervals_new.items()
         }
-        
+
         # check all expected keys are present
         for k in _DEFAULT_INTERVAL_COUNTS().keys():
             if k not in intervals_new:

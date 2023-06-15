@@ -147,6 +147,7 @@ def test_get_intervals_with_no_mod_batch_size():
     calculated_intervals = config.get_intervals(100, mod_batch_size=False)
     assert calculated_intervals == intervals
 
+
 def test_get_intervals_disabled_evals():
     # inputs
     dataset_n_samples: int = 100

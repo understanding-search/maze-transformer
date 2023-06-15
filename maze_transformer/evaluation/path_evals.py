@@ -47,7 +47,6 @@ class PathEvals:
         "eval_slow": slow,
     }
 
-
     @classmethod
     @property
     def EVALS(cls):

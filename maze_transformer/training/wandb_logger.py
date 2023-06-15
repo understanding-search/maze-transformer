@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, Union
 
 import wandb
-from wandb.sdk.wandb_run import Run, Artifact
+from wandb.sdk.wandb_run import Artifact, Run
 
 
 class WandbProject(Enum):
