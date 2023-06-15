@@ -162,14 +162,14 @@ def test_get_intervals_disabled_evals():
     intervals_expected = {
         "print_loss": 50,
         "checkpoint": 20,
-        "eval_fast": 101,
-        "eval_slow": 101,
+        "eval_fast": float("inf"),
+        "eval_slow": float("inf"),
     }
     intervals_expected_batched = {
         "print_loss": 10,
         "checkpoint": 4,
-        "eval_fast": 21,
-        "eval_slow": 21,
+        "eval_fast": float("inf"),
+        "eval_slow": float("inf"),
     }
 
     config = TrainConfig(

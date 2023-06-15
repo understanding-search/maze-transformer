@@ -146,7 +146,7 @@ class TrainConfig(SerializableDataclass):
         loading_fn=_intervals_loading_fn,
     )
 
-    intervals_count: dict[str, int] = serializable_field(
+    intervals_count: dict[str, int] | None = serializable_field(
         default=None,
         loading_fn=lambda data: data.get("intervals_count", None),
     )
@@ -186,16 +186,16 @@ class TrainConfig(SerializableDataclass):
                     if isinstance(dataset_n_samples, int):
                         intervals_new = {
                             k: (
-                                int(dataset_n_samples / v)
+                                int(dataset_n_samples / v) 
                                 if v > 0
                                 else float("inf")
-                                # setting a count to 0 means "dont do it"
+                                # setting a count to < 0 means "dont do it"
                             )
                             for k, v in self.intervals_count.items()
                         }
                     else:
                         raise ValueError(
-                            f"dataset_n_samples is {dataset_n_samples}, but we need it to compute the intervals"
+                            f"{dataset_n_samples = }, but we need an integer to compute the intervals"
                         )
 
         except ValueError as e:
@@ -204,9 +204,10 @@ class TrainConfig(SerializableDataclass):
 
         # disable if set to 0 or negative
         intervals_new = {
-            k: v
-            if v > 0
-            else float("inf")  # mod by infinity is always the number itself
+            k: (
+                v if v > 0
+                else float("inf") # mod by infinity is always the number itself     
+            ) 
             for k, v in intervals_new.items()
         }
 
@@ -217,7 +218,11 @@ class TrainConfig(SerializableDataclass):
 
         # actually return the intervals
         if mod_batch_size:
-            return {k: max(1, v // self.batch_size) for k, v in intervals_new.items()}
+            return {
+                k: max(1, v // self.batch_size) 
+                if isinstance(v, int) else v # if float, leave it as is since its float("inf")
+                for k, v in intervals_new.items()
+            }
         else:
             return intervals_new
 

@@ -32,8 +32,12 @@ def _custom_train_config() -> TrainConfig:
         optimizer_kwargs=dict(lr=0.01, momentum=0.9),
         batch_size=64,
         dataloader_cfg=dict(num_workers=8, drop_last=False),
-        print_loss_interval=500,
-        checkpoint_interval=1000,
+        intervals=dict(
+            print_loss=100,
+            checkpoint=10,
+            eval_fast=20,
+            eval_slow=10,
+        )
     )
 
 
@@ -44,10 +48,13 @@ def _custom_serialized_config() -> Dict[Any, Any]:
         "optimizer_kwargs": {"lr": 0.01, "momentum": 0.9},
         "batch_size": 64,
         "dataloader_cfg": {"num_workers": 8, "drop_last": False},
-        "print_loss_interval": 500,
-        "checkpoint_interval": 1000,
-        "fast_eval_interval": 0,
-        "slow_eval_interval": 0,
+        "intervals": {
+            "print_loss": 100,
+            "checkpoint": 10,
+            "eval_fast": 20,
+            "eval_slow": 10,
+        },
+        "intervals_count": None,
         "__format__": "TrainConfig(SerializableDataclass)",
     }
 
