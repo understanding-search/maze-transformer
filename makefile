@@ -39,7 +39,7 @@ unit:
 .PHONY: integration
 integration:
 	@echo "run integration tests"
-	$(POETRY_RUN_PYTHON) -m pytest -s tests/integration
+	$(POETRY_RUN_PYTHON) -m pytest tests/integration
 
 
 .PHONY: convert_notebooks
@@ -62,7 +62,7 @@ test: clean unit integration test_notebooks
 .PHONY: cov
 cov:
 	@echo "run tests and generate coverage reports"
-	$(POETRY_RUN_PYTHON) -m pytest --cov=. -s tests/
+	$(POETRY_RUN_PYTHON) -m pytest --cov=. tests/
 	$(POETRY_RUN_PYTHON) -m coverage report -m > $(COVERAGE_REPORTS_DIR)/coverage.txt
 	$(POETRY_RUN_PYTHON) -m coverage_badge -f -o $(COVERAGE_REPORTS_DIR)/coverage.svg
 	$(POETRY_RUN_PYTHON) -m coverage html

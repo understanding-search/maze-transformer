@@ -18,7 +18,7 @@ from maze_transformer.evaluation.path_evals import PathEvals
 from maze_transformer.test_helpers.assertions import assert_model_output_equality
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.train_model import TrainingResult, train_model
-from maze_transformer.training.training import TRAIN_SAVE_FILES
+from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbProject
 
 temp_dir: Path = Path("tests/_temp/test_eval_model")
@@ -70,11 +70,9 @@ def test_predict_maze_paths():
     )
     model: ZanjHookedTransformer = result.model
 
-    dataset: MazeDataset = MazeDataset.from_config(
-        cfg=cfg.dataset_cfg,
-    )
+    dataset: MazeDataset = MazeDataset.from_config(cfg=cfg.dataset_cfg)
 
-    max_new_tokens = 2
+    max_new_tokens = 3
     paths = predict_maze_paths(
         tokens_batch=dataset.as_tokens(),
         data_cfg=cfg.dataset_cfg,
@@ -117,11 +115,9 @@ def test_evaluate_model(temp_dir):
     )
     model: ZanjHookedTransformer = result.model
 
-    dataset: MazeDataset = MazeDataset.from_config(
-        cfg=cfg.dataset_cfg,
-    )
+    dataset: MazeDataset = MazeDataset.from_config(cfg=cfg.dataset_cfg)
 
-    path_evals = PathEvals.evals
+    path_evals = PathEvals.fast
     eval_names = [name for name in path_evals.keys()]
     scores = evaluate_model(dataset=dataset, model=model)
 

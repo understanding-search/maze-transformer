@@ -65,6 +65,23 @@ class BaseGPTConfig(SerializableDataclass):
 
 # ==================================================
 
+_DEFAULT_INTERVAL_COUNTS: typing.Callable[[], dict[str, int]] = lambda: dict(
+    print_loss=100,
+    checkpoint=10,
+    eval_fast=20,
+    eval_slow=10,
+)
+
+
+def _intervals_loading_fn(data: dict) -> dict[str, int]:
+    if "intervals" in data:
+        return data["intervals"]
+    else:
+        warnings.warn(
+            "`intervals` not found in config (probably trying to load a legacy config), using None!"
+        )
+        return None
+
 
 def _optimizer_save_fn(optim: Type[torch.optim.Optimizer]) -> str:
     """convert torch optimizer to string, while checking that the conversion is reversible"""
@@ -76,9 +93,40 @@ def _optimizer_save_fn(optim: Type[torch.optim.Optimizer]) -> str:
 
 @serializable_dataclass(kw_only=True)
 class TrainConfig(SerializableDataclass):
-    """full training configuration"""
+    """full training configuration
+
+    # Usage:
+    - get the optimizer via calling `train_cfg.get_optimizer(model.parameters())`
+    - get the intervals via `train_cfg.get_intervals()`
+
+    # Parameters
+
+    - `name: str`: name of the training configuration
+    - `optimizer: Type[torch.optim.Optimizer]`: optimizer class to use
+    - `optimizer_kwargs: dict[str, Any]`: kwargs to pass to the optimizer
+    - `batch_size: int`: batch size
+    - `dataloader_cfg: dict`: kwargs to pass to the dataloader
+    - `intervals: dict[str, int]`: intervals at which to perform certain actions:
+        "print_loss", "checkpoint", "eval_fast", "eval_slow"
+    - `intervals_count: dict[str, int]`: how many of each action to do over the course of the training run
+    - `evals_max_new_tokens: int`: how many new tokens to generate during evaluation
+    - `validation_dataset_cfg: None|int|GPTDatasetConfig`: validation dataset
+        - if `None`, evals are disabled
+        - if `int`, a dataset of that size is created by sampling from the training dataset using `torch.utils.data.random_split`
+        - if `GPTDatasetConfig`, a dataset is created from the specified config TODO: this is not implemented yet
+
+    """
 
     name: str
+    # TODO: loaders specified here only because of legacy models, remove this after some time and models are updated
+    evals_max_new_tokens: int = serializable_field(
+        default=8,
+        loading_fn=lambda data: data.get("evals_max_new_tokens", 8),
+    )
+    validation_dataset_cfg: None | int | GPTDatasetConfig = serializable_field(
+        default=None,
+        loading_fn=lambda data: data.get("validation_dataset_cfg", None),
+    )
 
     optimizer: Type[torch.optim.Optimizer] = serializable_field(  # type: ignore
         default_factory=lambda: torch.optim.RMSprop,
@@ -107,8 +155,92 @@ class TrainConfig(SerializableDataclass):
         )
     )
 
-    print_loss_interval: int = serializable_field(default=1000)
-    checkpoint_interval: int = serializable_field(default=50000)
+    intervals: dict[str, int] | None = serializable_field(
+        default=None,
+        loading_fn=_intervals_loading_fn,
+    )
+
+    intervals_count: dict[str, int] | None = serializable_field(
+        default=None,
+        loading_fn=lambda data: data.get("intervals_count", None),
+    )
+
+    def get_intervals(
+        self,
+        dataset_n_samples: int | None = None,
+        use_defaults_if_missing: bool = True,
+        mod_batch_size: bool = True,
+    ) -> dict[str, int | float]:
+        """get the intervals"""
+
+        # handle the case where both are missing
+        if (self.intervals is None) and (self.intervals_count is None):
+            if use_defaults_if_missing:
+                self.intervals_count = _DEFAULT_INTERVAL_COUNTS()
+            else:
+                raise ValueError(
+                    "both `intervals` and `intervals_count` are missing, and `use_defaults_if_missing` is False. Don't know what intervals to use!"
+                )
+
+        # checks
+        intervals_new: dict[str, int | float]
+        try:
+            match (self.intervals is not None, self.intervals_count is not None):
+                case (False, False):
+                    raise ValueError(
+                        "both `intervals` and `intervals_count` are None! this state should be inaccessible"
+                    )
+                case (True, True):
+                    raise ValueError(
+                        "both `intervals` and `intervals_count` are specified, this is not allowed!"
+                    )
+                case (True, False):
+                    intervals_new = self.intervals
+                case (False, True):
+                    if isinstance(dataset_n_samples, int):
+                        intervals_new = {
+                            k: (
+                                int(dataset_n_samples / v)
+                                if v > 0
+                                else float("inf")
+                                # setting a count to < 0 means "dont do it"
+                            )
+                            for k, v in self.intervals_count.items()
+                        }
+                    else:
+                        raise ValueError(
+                            f"{dataset_n_samples = }, but we need an integer to compute the intervals"
+                        )
+
+        except ValueError as e:
+            _debug_vals: str = f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=},\n{self.intervals=},\n{self.intervals_count=}"
+            raise ValueError(f"{_debug_vals}\ntriggered error:\n{e}") from e
+
+        # disable if set to 0 or negative
+        intervals_new = {
+            k: (
+                v
+                if v > 0
+                else float("inf")  # mod by infinity is always the number itself
+            )
+            for k, v in intervals_new.items()
+        }
+
+        # check all expected keys are present
+        for k in _DEFAULT_INTERVAL_COUNTS().keys():
+            if k not in intervals_new:
+                raise ValueError(f"missing key {k} in {intervals_new = }")
+
+        # actually return the intervals
+        if mod_batch_size:
+            return {
+                k: max(1, v // self.batch_size)
+                if isinstance(v, int)
+                else v  # if float, leave it as is since its float("inf")
+                for k, v in intervals_new.items()
+            }
+        else:
+            return intervals_new
 
     def summary(self) -> dict:
         """return a human-readable summary of the config"""
@@ -118,8 +250,17 @@ class TrainConfig(SerializableDataclass):
             optimizer_kwargs=self.optimizer_kwargs,
             batch_size=self.batch_size,
             dataloader_cfg=self.dataloader_cfg,
-            print_loss_interval=self.print_loss_interval,
-            checkpoint_interval=self.checkpoint_interval,
+            intervals=self.intervals,
+            intervals_count=self.intervals_count,
+            evals_max_new_tokens=self.evals_max_new_tokens,
+            validation_dataset_cfg=(
+                self.validation_dataset_cfg
+                if (
+                    isinstance(self.validation_dataset_cfg, int)
+                    or self.validation_dataset_cfg is None
+                )
+                else self.validation_dataset_cfg.summary()
+            ),
         )
 
 
@@ -171,8 +312,13 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             num_workers=0,
             drop_last=False,
         ),
-        print_loss_interval=10,
-        checkpoint_interval=100,
+        intervals_count=dict(
+            print_loss=100,
+            checkpoint=2,
+            eval_fast=4,
+            eval_slow=2,
+        ),
+        validation_dataset_cfg=10,
     ),
     TrainConfig(
         name="tiny-v1",
@@ -185,8 +331,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             persistent_workers=True,
             drop_last=True,
         ),
-        print_loss_interval=1000,
-        checkpoint_interval=5000,
+        validation_dataset_cfg=10,
     ),
     TrainConfig(
         name="gpt2-small",
@@ -199,8 +344,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             persistent_workers=True,
             drop_last=True,
         ),
-        print_loss_interval=50,
-        checkpoint_interval=10000,
+        validation_dataset_cfg=10,
     ),
     TrainConfig(
         name="sweep-v1",
@@ -213,8 +357,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             persistent_workers=True,
             drop_last=True,
         ),
-        print_loss_interval=1000,
-        checkpoint_interval=5000,
+        validation_dataset_cfg=50,
     ),
 ]
 

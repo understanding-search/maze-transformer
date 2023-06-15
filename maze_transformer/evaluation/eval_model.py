@@ -4,20 +4,30 @@ from typing import cast
 
 import numpy as np
 import torch
-from maze_dataset import SPECIAL_TOKENS, CoordTup, MazeDataset, MazeDatasetConfig
+from jaxtyping import Float
+from maze_dataset import (
+    SPECIAL_TOKENS,
+    CoordTup,
+    MazeDataset,
+    MazeDatasetConfig,
+    SolvedMaze,
+)
 from maze_dataset.tokenization.token_utils import (
     WhenMissing,
     get_context_tokens,
     get_path_tokens,
+    remove_padding_from_token_str,
     tokens_to_coords,
 )
 from muutils.mlutils import chunks
 from muutils.statcounter import StatCounter
 from transformer_lens import HookedTransformer
+from transformer_lens import utils as tl_utils
 
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
+from maze_transformer.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.config import ConfigHolder
-from maze_transformer.training.training import TRAIN_SAVE_FILES
+from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 
 # pylint: disable=protected-access
 
@@ -109,10 +119,10 @@ def predict_maze_paths(
 
     # check types
     assert isinstance(
-        tokens_batch, list
+        tokens_batch, (list, tuple)
     ), f"tokens_batch must be a list, got {type(tokens_batch)}"
     assert all(
-        isinstance(tokens, list) for tokens in tokens_batch
+        isinstance(tokens, (list, tuple)) for tokens in tokens_batch
     ), f"tokens_batch must be a list of lists, got {[type(tokens) for tokens in tokens_batch] = }"
     assert all(
         isinstance(x, str) for tokens in tokens_batch for x in tokens
@@ -131,6 +141,7 @@ def predict_maze_paths(
             max_new_tokens=max_new_tokens,
             verbose=verbose,
             temperature=temperature,
+            # use_past_kv_cache=False,
         )
         assert isinstance(
             prediction, str
@@ -154,27 +165,59 @@ def predict_maze_paths(
     return paths
 
 
+def evaluate_path_predictions(
+    solved_mazes: list[SolvedMaze],
+    predictions: list[list[tuple[int, int]]],
+    path_evals: dict[str, PathEvalFunction],
+) -> dict[str, StatCounter]:
+    path_scores: dict[str, StatCounter] = {
+        name: StatCounter() for name in path_evals.keys()
+    }
+    for name, func in path_evals.items():
+        path_scores[name].update(
+            func(
+                maze=solved_maze.maze,
+                solution=np.array(solved_maze.solution),
+                prediction=np.array(prediction),
+            )
+            for solved_maze, prediction in zip(solved_mazes, predictions)
+        )
+
+    return path_scores
+
+
 def evaluate_model(
     model: HookedTransformer,
     dataset: MazeDataset,
+    dataset_tokens: list[list[str]] | None = None,
     eval_functions: dict[str, PathEvalFunction] | None = None,
     max_new_tokens: int = 8,
     batch_size: int = 64,
     verbose: bool = False,
 ) -> dict[str, StatCounter]:
-    """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function."""
+    """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function.
+
+    if dataset_tokens is provided, we assume that the dataset has already been tokenized and we skip tokenization. MAKE SURE THERE IS NOT A MISMATCH BETWEEN THE DATASET AND DATASET_TOKENS
+    """
+
     if not eval_functions:
-        eval_functions = PathEvals.evals
+        # TODO: potentially model evals which aren't path evals?
+        eval_functions = PathEvals.EVALS
 
     score_counters: dict[str, StatCounter] = {
-        name: StatCounter() for name in eval_functions.keys()
+        name: StatCounter() for name in eval_functions
     }
 
-    for maze_batch in chunks(dataset, batch_size):
-        tokens_batch = [
-            maze.as_tokens(dataset.cfg.node_token_map) for maze in maze_batch
-        ]
-        predictions = predict_maze_paths(
+    if dataset_tokens is None:
+        dataset_tokens = dataset.as_tokens(join_tokens_individual_maze=False)
+    else:
+        assert len(dataset) == len(
+            dataset_tokens
+        ), f"dataset and dataset_tokens must be the same length and must be from corresponding mazes, got {len(dataset) = } and {len(dataset_tokens) = }"
+
+    for batch in chunks(zip(dataset, dataset_tokens), batch_size):
+        maze_batch, tokens_batch = zip(*batch)
+        predictions: list[str | list[tuple[int, int]]] = predict_maze_paths(
             tokens_batch=tokens_batch,
             data_cfg=dataset.cfg,
             model=model,
@@ -194,3 +237,45 @@ def evaluate_model(
             )
 
     return score_counters
+
+
+def evaluate_logits(
+    logits: Float[torch.Tensor, "batch pos d_vocab"],
+    batch: list[int],
+    config: ConfigHolder,
+    tokenizer: HuggingMazeTokenizer,
+    path_evals: dict[str, PathEvalFunction] | None = None,
+) -> dict[str, StatCounter]:
+    """Runs a set of eval functions on the provided logits. For path evals, an attempt will be made to extract a predicted path from the logits (it is assumed that the logits are an entire sequence output from training, so they contain the adj_list plus path)"""
+
+    raise NotImplementedError(
+        "evaluate_logits does not function correctly, and at the moment there are only path evals anyway"
+    )
+
+    scores: dict[str, StatCounter] = {}
+
+    if path_evals:
+        # TODO: this is pretty much wrong -- sampling from the logits over the sequence should not produce a valid path
+        sampled_logits = tl_utils.sample_logits(logits)
+        prediction_tokens = tokenizer.batch_decode(sampled_logits)
+        predicted_paths = []
+        for tokens in prediction_tokens:
+            # this returns first path_start to end of list. Early in training there may be multiple path_start tokens, so results should be treated with caution
+            path_tokens = get_path_tokens(tokens.split(" "))
+            path_coords = tokens_to_coords(
+                path_tokens, maze_data_cfg=config.dataset_cfg, when_noncoord="skip"
+            )
+            predicted_paths.append(cast(list[tuple[int, int]], path_coords))
+
+        maze_tokens = [
+            remove_padding_from_token_str(token_str)
+            for token_str in tokenizer.batch_decode(batch)
+        ]
+
+        solved_mazes = [
+            SolvedMaze.from_tokens(tokens.split(" "), config.dataset_cfg)
+            for tokens in maze_tokens
+        ]
+        scores |= evaluate_path_predictions(solved_mazes, predicted_paths, path_evals)
+
+    return scores

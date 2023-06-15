@@ -22,6 +22,7 @@ def test_serialize_custom_values():
 def test_load_custom_values():
     loaded = TrainConfig.load(_custom_serialized_config())
     assert loaded.optimizer == torch.optim.SGD
+    assert loaded.diff(_custom_train_config()) == {}
     assert loaded == _custom_train_config()
 
 
@@ -32,8 +33,14 @@ def _custom_train_config() -> TrainConfig:
         optimizer_kwargs=dict(lr=0.01, momentum=0.9),
         batch_size=64,
         dataloader_cfg=dict(num_workers=8, drop_last=False),
-        print_loss_interval=500,
-        checkpoint_interval=1000,
+        intervals=dict(
+            print_loss=100,
+            checkpoint=10,
+            eval_fast=20,
+            eval_slow=10,
+        ),
+        evals_max_new_tokens=16,
+        validation_dataset_cfg=100,
     )
 
 
@@ -44,8 +51,15 @@ def _custom_serialized_config() -> Dict[Any, Any]:
         "optimizer_kwargs": {"lr": 0.01, "momentum": 0.9},
         "batch_size": 64,
         "dataloader_cfg": {"num_workers": 8, "drop_last": False},
-        "print_loss_interval": 500,
-        "checkpoint_interval": 1000,
+        "intervals": {
+            "print_loss": 100,
+            "checkpoint": 10,
+            "eval_fast": 20,
+            "eval_slow": 10,
+        },
+        "intervals_count": None,
+        "evals_max_new_tokens": 16,
+        "validation_dataset_cfg": 100,
         "__format__": "TrainConfig(SerializableDataclass)",
     }
 
