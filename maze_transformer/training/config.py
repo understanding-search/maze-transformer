@@ -250,6 +250,12 @@ class TrainConfig(SerializableDataclass):
             dataloader_cfg=self.dataloader_cfg,
             intervals=self.intervals,
             intervals_count=self.intervals_count,
+            evals_max_new_tokens=self.evals_max_new_tokens,
+            validation_dataset_cfg=(
+                self.validation_dataset_cfg 
+                if isinstance(self.validation_dataset_cfg, (int, None))
+                else self.validation_dataset_cfg.summary()
+            ),
         )
 
 

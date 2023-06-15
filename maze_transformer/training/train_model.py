@@ -120,9 +120,11 @@ def train_model(
                 len(dataset) - cfg.train_cfg.validation_dataset_cfg,
                 cfg.train_cfg.validation_dataset_cfg,
             ]
-            dataset, val_dataset = random_split(
+            sub_dataset, sub_val_dataset = random_split(
                 dataset, split_dataset_sizes
             )
+            dataset = sub_dataset.dataset
+            val_dataset = sub_val_dataset.dataset
             dataset.update_self_config()
             val_dataset.update_self_config()
             logger.progress(

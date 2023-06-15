@@ -23,6 +23,7 @@ def test_train_model_without_evals(temp_dir: Path):
     logger = _create_logger(cfg)
     dataloader = get_dataloader(dataset, cfg, logger)
     device = get_device()
+    cfg.train_cfg.validation_dataset_cfg = None
 
     train(
         dataloader=dataloader,
