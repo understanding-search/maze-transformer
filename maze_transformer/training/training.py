@@ -4,14 +4,13 @@ from pathlib import Path
 import torch
 from jaxtyping import Float
 from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
-from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
 from zanj import ZANJ
 
-from maze_transformer.tokenizer import HuggingMazeTokenizer
 from maze_transformer.evaluation.eval_model import evaluate_logits
 from maze_transformer.evaluation.path_evals import PathEvals
+from maze_transformer.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbLogger
@@ -70,7 +69,8 @@ def train(
     logger.summary({"n_batches": n_batches})
 
     logger.progress(
-        f"will train for {n_batches} batches, {cfg.train_cfg.intervals_batches = }")
+        f"will train for {n_batches} batches, {cfg.train_cfg.intervals_batches = }"
+    )
 
     for iteration, batch in enumerate(dataloader):
         loss: SingleLoss

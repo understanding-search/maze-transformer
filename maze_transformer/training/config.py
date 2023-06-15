@@ -65,18 +65,21 @@ class BaseGPTConfig(SerializableDataclass):
 
 # ==================================================
 
-_DEFAULT_INTERVAL_COUNTS: typing.Callable[[], dict[str, int]] = lambda : dict(
+_DEFAULT_INTERVAL_COUNTS: typing.Callable[[], dict[str, int]] = lambda: dict(
     print_loss=100,
     checkpoint=10,
     eval_fast=20,
     eval_slow=10,
 )
 
+
 def _intervals_loading_fn(data: dict) -> dict[str, int]:
     if "intervals" in data:
         return data["intervals"]
     else:
-        warnings.warn("`intervals` not found in config (probably trying to load a legacy config), using None!")
+        warnings.warn(
+            "`intervals` not found in config (probably trying to load a legacy config), using None!"
+        )
         return None
 
 
@@ -95,7 +98,7 @@ class TrainConfig(SerializableDataclass):
     # Usage:
     - get the optimizer via calling `train_cfg.get_optimizer(model.parameters())`
     - get the intervals via `train_cfg.get_intervals()`
-    
+
     # Parameters
 
     - `name: str`: name of the training configuration
@@ -138,7 +141,7 @@ class TrainConfig(SerializableDataclass):
         )
     )
 
-    intervals: dict[str, int]|None = serializable_field(
+    intervals: dict[str, int] | None = serializable_field(
         default=None,
         loading_fn=_intervals_loading_fn,
     )
@@ -149,28 +152,34 @@ class TrainConfig(SerializableDataclass):
     )
 
     def get_intervals(
-            self, 
-            dataset_n_samples: int|None = None,
-            use_defaults_if_missing: bool = True,
-            mod_batch_size: bool = True,
-        ) -> dict[str, int]:
+        self,
+        dataset_n_samples: int | None = None,
+        use_defaults_if_missing: bool = True,
+        mod_batch_size: bool = True,
+    ) -> dict[str, int]:
         """get the intervals"""
-        
+
         # handle the case where both are missing
         if (self.intervals is None) and (self.intervals_count is None):
             if use_defaults_if_missing:
                 self.intervals_count = _DEFAULT_INTERVAL_COUNTS()
             else:
-                raise ValueError("both `intervals` and `intervals_count` are missing, and `use_defaults_if_missing` is False. Don't know what intervals to use!")
+                raise ValueError(
+                    "both `intervals` and `intervals_count` are missing, and `use_defaults_if_missing` is False. Don't know what intervals to use!"
+                )
 
         # checks
         intervals_new: dict[str, int]
         try:
             match (self.intervals is not None, self.intervals_count is not None):
                 case (False, False):
-                    raise ValueError("both `intervals` and `intervals_count` are None! this state should be inaccessible")
+                    raise ValueError(
+                        "both `intervals` and `intervals_count` are None! this state should be inaccessible"
+                    )
                 case (True, True):
-                    raise ValueError("both `intervals` and `intervals_count` are specified, this is not allowed!")
+                    raise ValueError(
+                        "both `intervals` and `intervals_count` are specified, this is not allowed!"
+                    )
                 case (True, False):
                     intervals_new = self.intervals
                 case (False, True):
@@ -178,29 +187,27 @@ class TrainConfig(SerializableDataclass):
                         intervals_new = {
                             k: (
                                 int(dataset_n_samples / v)
-                                if v > 0 
-                                else dataset_n_samples + 1 # setting a count to 0 means "dont do it"
+                                if v > 0
+                                else dataset_n_samples
+                                + 1  # setting a count to 0 means "dont do it"
                             )
                             for k, v in self.intervals_count.items()
                         }
                     else:
-                        raise ValueError(f"dataset_n_samples is {dataset_n_samples}, but we need it to compute the intervals")
-                    
+                        raise ValueError(
+                            f"dataset_n_samples is {dataset_n_samples}, but we need it to compute the intervals"
+                        )
+
         except ValueError as e:
             _debug_vals: str = f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=},\n{self.intervals=},\n{self.intervals_count=}"
             raise ValueError(f"{_debug_vals}\ntriggered error") from e
 
         # actually return the intervals
         if mod_batch_size:
-            return {
-                k: max(1, v // self.batch_size) 
-                for k, v in intervals_new.items()
-            }
+            return {k: max(1, v // self.batch_size) for k, v in intervals_new.items()}
         else:
             return intervals_new
 
-
-    
     def summary(self) -> dict:
         """return a human-readable summary of the config"""
         return dict(
