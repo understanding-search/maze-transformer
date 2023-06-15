@@ -6,6 +6,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Union
 
+from muutils.statcounter import StatCounter
+
 import wandb
 from wandb.sdk.wandb_run import Artifact, Run
 
@@ -58,6 +60,20 @@ class WandbLogger:
 
     def log_metric(self, data: Dict[str, Any]) -> None:
         self._run.log(data)
+    
+    def log_metric_hist(self, data: dict[str, float|int|StatCounter]) -> None:
+        # TODO: store the statcounters themselves somehow
+        data_processed: dict[str, int|float] = dict()
+        for key, value in data.items():
+            if isinstance(value, StatCounter):
+                # we use the mean, since then smoothing a whole bunch of evals gives us an idea of the distribution
+                # data_processed[key + "-median"] = value.median()
+                data_processed[key + "-mean"] = value.mean()
+                # data_processed[key + "-std"] = value.std()
+            else:
+                data_processed[key] = value
+        self._run.log(data_processed)
+        
 
     def summary(self, data: Dict[str, Any]) -> None:
         self._run.summary.update(data)

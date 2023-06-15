@@ -130,7 +130,7 @@ def train(
 
         # log metrics
         # ------------------------------
-        metrics: dict[str, dict[str, float | int] | float] = {"loss": float(loss)}
+        metrics: dict[str, int | float | StatCounter] = {"loss": float(loss)}
 
         if evals_enabled:
             for interval_key, evals_dict in PathEvals.PATH_EVALS_MAP.items():
@@ -144,10 +144,8 @@ def train(
                         batch_size=cfg.train_cfg.batch_size,
                         max_new_tokens=cfg.train_cfg.evals_max_new_tokens,
                     )
-                    metrics.update(
-                        {eval: stats.summary() for eval, stats in scores.items()}
-                    )
-        logger.log_metric(metrics)
+                    metrics.update(scores)
+        logger.log_metric_hist(metrics)
 
         if iteration % intervals["print_loss"] == 0:
             logger.progress(

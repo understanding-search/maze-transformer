@@ -253,7 +253,10 @@ class TrainConfig(SerializableDataclass):
             evals_max_new_tokens=self.evals_max_new_tokens,
             validation_dataset_cfg=(
                 self.validation_dataset_cfg 
-                if isinstance(self.validation_dataset_cfg, (int, None))
+                if (
+                    isinstance(self.validation_dataset_cfg, int) 
+                    or self.validation_dataset_cfg is None
+                )
                 else self.validation_dataset_cfg.summary()
             ),
         )
