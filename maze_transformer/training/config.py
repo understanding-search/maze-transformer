@@ -87,10 +87,6 @@ def _optimizer_save_fn(optim: Type[torch.optim.Optimizer]) -> str:
     assert TORCH_OPTIMIZERS_MAP[optim_name] == optim
     return optim_name
 
-class ValueWarning(ValueError):
-    """raised when a value is not found, but not a fatal error"""
-    pass
-
 
 @serializable_dataclass(kw_only=True)
 class TrainConfig(SerializableDataclass):
@@ -98,7 +94,7 @@ class TrainConfig(SerializableDataclass):
 
     # Usage:
     - get the optimizer via calling `train_cfg.get_optimizer(model.parameters())`
-    - get the intervals in terms of batches via `train_cfg.intervals_batches`
+    - get the intervals via `train_cfg.get_intervals()`
     
     # Parameters
 
@@ -167,56 +163,41 @@ class TrainConfig(SerializableDataclass):
             else:
                 raise ValueError("both `intervals` and `intervals_count` are missing, and `use_defaults_if_missing` is False. Don't know what intervals to use!")
 
-        
-        # handle the case where we compute the intervals from counts
-        if (self.intervals_count is not None) and (dataset_n_samples is not None):
-            intervals_new: dict[str, int] = {
-                k: (
-                    dataset_n_samples // v
-                    if v > 0 
-                    else dataset_n_samples + 1 # setting a count to 0 means "dont do it"
-                )
-                for k, v in self.intervals_count.items()
-            }
-            
-            if self.intervals is not None:
-                self.intervals.update(intervals_new)
-            else:
-                self.intervals = intervals_new
-
         # checks
+        intervals_new: dict[str, int]
         try:
-            match (self.intervals is None, self.intervals_count is None, dataset_n_samples is None):
-                case (True, True, True):
-                    raise ValueError("need some intervals or use defaults")
-                case (True, True, False):
-                    raise ValueError(f"need some intervals or use defaults")
-                case (True, False, True):
-                    raise ValueError(f"can't compute intervals from counts without knowing the dataset size!")
-                case (True, False, False):
-                    raise ValueError(f"this should be inaccessible, since we should have computed the intervals from counts")
-                case (False, True, True):
-                    # this is fine, we just use the intervals that are already there
-                    pass
-                case (False, True, False):
-                    raise ValueWarning(f"We can't compute the intervals from the counts without knowing the dataset size! However, intervals aren't None so we'll just use that")
-                case (False, False, True):
-                    raise ValueWarning(f"You gave a dataset size, but no counts. We'll just use the intervals that are already there")
-        except (ValueError,ValueWarning) as e:
-            _debug_vals: str = f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=}, {self.intervals=}, {self.intervals_count=}"
-            if isinstance(e, ValueWarning):
-                warnings.warn(f"{_debug_vals}\ntriggered warning:\n{e}")
-            else:
-                raise ValueError(f"{_debug_vals}\ntriggered error") from e
+            match (self.intervals is not None, self.intervals_count is not None):
+                case (False, False):
+                    raise ValueError("both `intervals` and `intervals_count` are None! this state should be inaccessible")
+                case (True, True):
+                    raise ValueError("both `intervals` and `intervals_count` are specified, this is not allowed!")
+                case (True, False):
+                    intervals_new = self.intervals
+                case (False, True):
+                    if isinstance(dataset_n_samples, int):
+                        intervals_new = {
+                            k: (
+                                int(dataset_n_samples / v)
+                                if v > 0 
+                                else dataset_n_samples + 1 # setting a count to 0 means "dont do it"
+                            )
+                            for k, v in self.intervals_count.items()
+                        }
+                    else:
+                        raise ValueError(f"dataset_n_samples is {dataset_n_samples}, but we need it to compute the intervals")
+                    
+        except ValueError as e:
+            _debug_vals: str = f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=},\n{self.intervals=},\n{self.intervals_count=}"
+            raise ValueError(f"{_debug_vals}\ntriggered error") from e
 
         # actually return the intervals
         if mod_batch_size:
             return {
                 k: max(1, v // self.batch_size) 
-                for k, v in self.intervals.items()
+                for k, v in intervals_new.items()
             }
         else:
-            return self.intervals
+            return intervals_new
 
 
     
