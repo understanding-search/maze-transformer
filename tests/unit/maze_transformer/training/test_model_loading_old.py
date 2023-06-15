@@ -5,8 +5,8 @@ import json
 
 import pytest
 import torch
+from maze_dataset import MazeDatasetConfig
 
-from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 from maze_transformer.training.config import BaseGPTConfig, ConfigHolder, TrainConfig
 
 

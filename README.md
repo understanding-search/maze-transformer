@@ -1,3 +1,11 @@
+<!-- [![PyPI](https://img.shields.io/pypi/v/muutils)](https://pypi.org/project/muutils/)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/muutils) -->
+[![Checks](https://github.com/mivanit/muutils/actions/workflows/checks.yml/badge.svg)](https://github.com/mivanit/muutils/actions/workflows/checks.yml)
+[![Coverage](examples/coverage/coverage.svg)](docs/coverage/coverage.txt)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/t/mivanit/muutils)
+![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/mivanit/muutils)
+![code size, bytes](https://img.shields.io/github/languages/code-size/mivanit/muutils)
+
 # Maze Transformer
 
 This repo is built to facilitate the training and analysis of autoregressive transformers on maze-solving tasks.

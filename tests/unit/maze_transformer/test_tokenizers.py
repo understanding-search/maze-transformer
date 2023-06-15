@@ -5,12 +5,11 @@ as the original tokenizer (i.e. just using the token map in cfg)
 We may want a separate set of tests for different tokenization schemes
 """
 import torch
+from maze_dataset import MazeDatasetConfig, SolvedMaze
+from maze_dataset.generation import get_maze_with_solution
 from pytest import mark, param
 from transformer_lens import HookedTransformer
 
-from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
-from maze_transformer.generation.generators import get_maze_with_solution
-from maze_transformer.generation.lattice_maze import SolvedMaze
 from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
 
 

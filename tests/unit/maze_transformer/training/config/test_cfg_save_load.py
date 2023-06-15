@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
+from maze_dataset import MazeDatasetConfig
 from zanj import ZANJ
 
-from maze_transformer.dataset.maze_dataset import MazeDatasetConfig
 from maze_transformer.training.config import BaseGPTConfig, ConfigHolder, TrainConfig
 
 

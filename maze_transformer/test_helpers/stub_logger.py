@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from maze_transformer.training.wandb_logger import WandbLogger
 
 
@@ -13,7 +11,7 @@ class StubLogger(WandbLogger):
         self.logs.append(logs)
 
     @classmethod
-    def create(cls, *args, **kwargs) -> StubLogger:
+    def create(cls, *args, **kwargs) -> "StubLogger":
         logger = StubLogger()
         logger._log("StubLogger created", args, kwargs)
         return logger

@@ -1,8 +1,7 @@
-HELPERS_DIR := maze_transformer/utils/test_helpers
 NOTEBOOKS_DIR := notebooks
 CONVERTED_NOTEBOOKS_TEMP_DIR := tests/_temp/notebooks
 POETRY_RUN_PYTHON := poetry run python
-
+COVERAGE_REPORTS_DIR := examples/coverage
 
 .PHONY: default
 default: help
@@ -46,19 +45,27 @@ integration:
 .PHONY: convert_notebooks
 convert_notebooks:
 	@echo "convert notebooks in $(NOTEBOOKS_DIR) using $(HELPERS_DIR)/convert_ipynb_to_script.py"
-	python $(HELPERS_DIR)/convert_ipynb_to_script.py notebooks/ --output_dir $(CONVERTED_NOTEBOOKS_TEMP_DIR) --disable_plots
+	$(POETRY_RUN_PYTHON) -m muutils.nbutils.convert_ipynb_to_script $(NOTEBOOKS_DIR) --output_dir $(CONVERTED_NOTEBOOKS_TEMP_DIR) --disable_plots
 
 
 .PHONY: test_notebooks
 test_notebooks: convert_notebooks
 	@echo "run tests on converted notebooks in $(CONVERTED_NOTEBOOKS_TEMP_DIR) using $(HELPERS_DIR)/run_notebook_tests.py"
-	python $(HELPERS_DIR)/run_notebook_tests.py --notebooks-dir=$(NOTEBOOKS_DIR) --converted-notebooks-temp-dir=$(CONVERTED_NOTEBOOKS_TEMP_DIR)
+	$(POETRY_RUN_PYTHON) -m muutils.nbutils.run_notebook_tests --notebooks-dir=$(NOTEBOOKS_DIR) --converted-notebooks-temp-dir=$(CONVERTED_NOTEBOOKS_TEMP_DIR)
 
 
 .PHONY: test
 test: clean unit integration test_notebooks
 	@echo "ran all tests: unit, integration, and notebooks"
 
+
+.PHONY: cov
+cov:
+	@echo "run tests and generate coverage reports"
+	$(POETRY_RUN_PYTHON) -m pytest --cov=. -s tests/
+	$(POETRY_RUN_PYTHON) -m coverage report -m > $(COVERAGE_REPORTS_DIR)/coverage.txt
+	$(POETRY_RUN_PYTHON) -m coverage_badge -f -o $(COVERAGE_REPORTS_DIR)/coverage.svg
+	$(POETRY_RUN_PYTHON) -m coverage html
 
 .PHONY: clean
 clean:

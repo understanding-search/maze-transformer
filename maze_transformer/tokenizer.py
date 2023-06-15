@@ -2,14 +2,12 @@
 from typing import TYPE_CHECKING, Union  # need Union as "a" | "b" doesn't work
 
 import torch
+from maze_dataset import SPECIAL_TOKENS, LatticeMaze
+from maze_dataset.dataset.dataset import GPTDatasetConfig
+from maze_dataset.plotting import MazePlot
 from muutils.tensor_utils import ATensor, NDArray
 from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
-
-from maze_transformer.dataset.dataset import GPTDatasetConfig
-from maze_transformer.evaluation.plot_maze import MazePlot
-from maze_transformer.generation.constants import SPECIAL_TOKENS
-from maze_transformer.generation.lattice_maze import LatticeMaze
 
 if TYPE_CHECKING:
     from maze_transformer.training.config import ConfigHolder
