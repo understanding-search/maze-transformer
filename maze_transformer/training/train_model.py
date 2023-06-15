@@ -116,13 +116,11 @@ def train_model(
     if cfg.train_cfg.validation_dataset_cfg is not None:
         if isinstance(cfg.train_cfg.validation_dataset_cfg, int):
             # split the training dataset
-            split_dataset_sizes: tuple[int,int] = [
+            split_dataset_sizes: tuple[int, int] = [
                 len(dataset) - cfg.train_cfg.validation_dataset_cfg,
                 cfg.train_cfg.validation_dataset_cfg,
             ]
-            sub_dataset, sub_val_dataset = random_split(
-                dataset, split_dataset_sizes
-            )
+            sub_dataset, sub_val_dataset = random_split(dataset, split_dataset_sizes)
             dataset = sub_dataset.dataset
             val_dataset = sub_val_dataset.dataset
             dataset.update_self_config()
@@ -140,7 +138,6 @@ def train_model(
             logger.progress(
                 f"got custom validation dataset with {len(val_dataset)} samples"
             )
-
 
     # get dataloader and then train
     dataloader: DataLoader = get_dataloader(dataset, cfg, logger)

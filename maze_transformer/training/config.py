@@ -123,7 +123,7 @@ class TrainConfig(SerializableDataclass):
         default=8,
         loading_fn=lambda data: data.get("evals_max_new_tokens", 8),
     )
-    validation_dataset_cfg: None|int|GPTDatasetConfig = serializable_field(
+    validation_dataset_cfg: None | int | GPTDatasetConfig = serializable_field(
         default=None,
         loading_fn=lambda data: data.get("validation_dataset_cfg", None),
     )
@@ -200,7 +200,7 @@ class TrainConfig(SerializableDataclass):
                     if isinstance(dataset_n_samples, int):
                         intervals_new = {
                             k: (
-                                int(dataset_n_samples / v) 
+                                int(dataset_n_samples / v)
                                 if v > 0
                                 else float("inf")
                                 # setting a count to < 0 means "dont do it"
@@ -219,9 +219,10 @@ class TrainConfig(SerializableDataclass):
         # disable if set to 0 or negative
         intervals_new = {
             k: (
-                v if v > 0
-                else float("inf") # mod by infinity is always the number itself     
-            ) 
+                v
+                if v > 0
+                else float("inf")  # mod by infinity is always the number itself
+            )
             for k, v in intervals_new.items()
         }
 
@@ -233,8 +234,9 @@ class TrainConfig(SerializableDataclass):
         # actually return the intervals
         if mod_batch_size:
             return {
-                k: max(1, v // self.batch_size) 
-                if isinstance(v, int) else v # if float, leave it as is since its float("inf")
+                k: max(1, v // self.batch_size)
+                if isinstance(v, int)
+                else v  # if float, leave it as is since its float("inf")
                 for k, v in intervals_new.items()
             }
         else:
@@ -252,9 +254,9 @@ class TrainConfig(SerializableDataclass):
             intervals_count=self.intervals_count,
             evals_max_new_tokens=self.evals_max_new_tokens,
             validation_dataset_cfg=(
-                self.validation_dataset_cfg 
+                self.validation_dataset_cfg
                 if (
-                    isinstance(self.validation_dataset_cfg, int) 
+                    isinstance(self.validation_dataset_cfg, int)
                     or self.validation_dataset_cfg is None
                 )
                 else self.validation_dataset_cfg.summary()

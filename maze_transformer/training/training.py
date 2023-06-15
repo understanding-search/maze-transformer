@@ -1,6 +1,6 @@
+import warnings
 from functools import partial
 from pathlib import Path
-import warnings
 
 import torch
 from jaxtyping import Float
@@ -43,7 +43,7 @@ def train(
     logger: WandbLogger,
     output_dir: Path,
     device: torch.device,
-    val_dataset: MazeDataset|None = None,
+    val_dataset: MazeDataset | None = None,
     zanj: ZANJ | None = None,
     model: ZanjHookedTransformer | None = None,
 ) -> ZanjHookedTransformer:
@@ -77,7 +77,9 @@ def train(
     # figure out whether to run evals, and validation dataset
     evals_enabled: bool = cfg.train_cfg.validation_dataset_cfg is not None
     if evals_enabled:
-        assert val_dataset is not None, "val_dataset must be provided if evals are enabled"
+        assert (
+            val_dataset is not None
+        ), "val_dataset must be provided if evals are enabled"
 
         # Only the HuggingMazeTokenizer has token decoding implemented, which is required for evals
         if not type(model.tokenizer) == HuggingMazeTokenizer:
@@ -85,8 +87,10 @@ def train(
                 "Using a tokenizer that cannot decode. Disabling evals for this run even though TrainConfig says to enable them"
             )
             evals_enabled = False
-        
-        val_dataset_tokens: list[list[str]] = val_dataset.as_tokens(join_tokens_individual_maze=False)
+
+        val_dataset_tokens: list[list[str]] = val_dataset.as_tokens(
+            join_tokens_individual_maze=False
+        )
 
     # compute intervals
     n_samples: int = len(dataloader.dataset)
@@ -97,15 +101,15 @@ def train(
     )
     if not evals_enabled:
         intervals = {
-            key: value
-            if not key.startswith("eval")
-            else float("inf")
+            key: value if not key.startswith("eval") else float("inf")
             for key, value in intervals.items()
         }
     logger.summary(
         {"n_batches": n_batches, "n_samples": n_samples, "intervals": intervals}
     )
-    logger.progress(f"will train for {n_batches} batches, {evals_enabled=}, with intervals: {intervals}")
+    logger.progress(
+        f"will train for {n_batches} batches, {evals_enabled=}, with intervals: {intervals}"
+    )
 
     # start up training
     # ==============================

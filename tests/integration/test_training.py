@@ -1,17 +1,17 @@
-from copy import deepcopy
 import re
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
-
 from maze_dataset import MazeDataset, MazeDatasetConfig
+from muutils.mlutils import get_device
+
 from maze_transformer.evaluation.path_evals import PathEvals
-from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder, _DEFAULT_INTERVAL_COUNTS
+from maze_transformer.test_helpers.stub_logger import StubLogger
+from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.training import get_dataloader, train
 from maze_transformer.training.wandb_logger import WandbJobType, WandbProject
-from maze_transformer.test_helpers.stub_logger import StubLogger
-from muutils.mlutils import get_device
 
 
 @pytest.mark.usefixtures("temp_dir")

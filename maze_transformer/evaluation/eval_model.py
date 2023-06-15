@@ -118,7 +118,9 @@ def predict_maze_paths(
     """given the model and a batch of context tokens, make predictions for the path"""
 
     # check types
-    assert isinstance(tokens_batch, (list, tuple)), f"tokens_batch must be a list, got {type(tokens_batch)}"
+    assert isinstance(
+        tokens_batch, (list, tuple)
+    ), f"tokens_batch must be a list, got {type(tokens_batch)}"
     assert all(
         isinstance(tokens, (list, tuple)) for tokens in tokens_batch
     ), f"tokens_batch must be a list of lists, got {[type(tokens) for tokens in tokens_batch] = }"
@@ -187,14 +189,14 @@ def evaluate_path_predictions(
 def evaluate_model(
     model: HookedTransformer,
     dataset: MazeDataset,
-    dataset_tokens: list[list[str]]|None = None,
+    dataset_tokens: list[list[str]] | None = None,
     eval_functions: dict[str, PathEvalFunction] | None = None,
     max_new_tokens: int = 8,
     batch_size: int = 64,
     verbose: bool = False,
 ) -> dict[str, StatCounter]:
     """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function.
-    
+
     if dataset_tokens is provided, we assume that the dataset has already been tokenized and we skip tokenization. MAKE SURE THERE IS NOT A MISMATCH BETWEEN THE DATASET AND DATASET_TOKENS
     """
 
@@ -209,9 +211,9 @@ def evaluate_model(
     if dataset_tokens is None:
         dataset_tokens = dataset.as_tokens(join_tokens_individual_maze=False)
     else:
-        assert len(dataset) == len(dataset_tokens), (
-            f"dataset and dataset_tokens must be the same length and must be from corresponding mazes, got {len(dataset) = } and {len(dataset_tokens) = }"
-        )
+        assert len(dataset) == len(
+            dataset_tokens
+        ), f"dataset and dataset_tokens must be the same length and must be from corresponding mazes, got {len(dataset) = } and {len(dataset_tokens) = }"
 
     for batch in chunks(zip(dataset, dataset_tokens), batch_size):
         maze_batch, tokens_batch = zip(*batch)
@@ -246,7 +248,9 @@ def evaluate_logits(
 ) -> dict[str, StatCounter]:
     """Runs a set of eval functions on the provided logits. For path evals, an attempt will be made to extract a predicted path from the logits (it is assumed that the logits are an entire sequence output from training, so they contain the adj_list plus path)"""
 
-    raise NotImplementedError("evaluate_logits does not function correctly, and at the moment there are only path evals anyway")
+    raise NotImplementedError(
+        "evaluate_logits does not function correctly, and at the moment there are only path evals anyway"
+    )
 
     scores: dict[str, StatCounter] = {}
 

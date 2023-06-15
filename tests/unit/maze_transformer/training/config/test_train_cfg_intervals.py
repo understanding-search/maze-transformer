@@ -109,14 +109,18 @@ def test_get_intervals_with_custom_counts():
         assert calculated_intervals_batched == intervals_expected_batched
 
 
-def _plus_minus_proportion(value: float, proportion: float = 0.1) -> tuple[float, float]:
+def _plus_minus_proportion(
+    value: float, proportion: float = 0.1
+) -> tuple[float, float]:
     return (
         value * (1 - proportion),
         value * (1 + proportion),
     )
 
+
 def _in_interval(value: float, interval: tuple[float, float]) -> bool:
     return interval[0] <= value <= interval[1]
+
 
 def test_get_intervals_with_custom_counts_approx():
     # inputs
@@ -166,6 +170,7 @@ def test_get_intervals_with_custom_counts_approx():
         assert isinstance(calculated_intervals_batched, dict)
         for k, v in calculated_intervals_batched.items():
             assert _in_interval(v, intervals_expected_batched[k])
+
 
 def test_get_intervals_raises_with_missing_values():
     config = TrainConfig(
