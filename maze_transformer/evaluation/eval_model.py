@@ -188,24 +188,34 @@ def evaluate_path_predictions(
 def evaluate_model(
     model: HookedTransformer,
     dataset: MazeDataset,
+    dataset_tokens: list[list[str]]|None = None,
     eval_functions: dict[str, PathEvalFunction] | None = None,
     max_new_tokens: int = 8,
     batch_size: int = 64,
     verbose: bool = False,
 ) -> dict[str, StatCounter]:
-    """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function."""
+    """Run a set of eval functions on a model for a given dataset. Returns a seperate StatCounter for each eval function.
+    
+    if dataset_tokens is provided, we assume that the dataset has already been tokenized and we skip tokenization. MAKE SURE THERE IS NOT A MISMATCH BETWEEN THE DATASET AND DATASET_TOKENS
+    """
+
+    assert len(dataset) == len(dataset_tokens), (
+        f"dataset and dataset_tokens must be the same length and must be from corresponding mazes, got {len(dataset) = } and {len(dataset_tokens) = }"
+    )
+
     if not eval_functions:
+        # TODO: potentially model evals which aren't path evals?
         eval_functions = PathEvals.EVALS
 
     score_counters: dict[str, StatCounter] = {
         name: StatCounter() for name in eval_functions
     }
 
-    for maze_batch in chunks(dataset, batch_size):
-        tokens_batch = [
-            maze.as_tokens(dataset.cfg.node_token_map) for maze in maze_batch
-        ]
-        predictions = predict_maze_paths(
+    if dataset_tokens is None:
+        dataset_tokens = dataset.as_tokens(join_tokens_individual_maze=False)
+
+    for maze_batch, tokens_batch in chunks(zip(dataset, dataset_tokens), batch_size):
+        predictions: list[str | list[tuple[int, int]]] = predict_maze_paths(
             tokens_batch=tokens_batch,
             data_cfg=dataset.cfg,
             model=model,
@@ -236,10 +246,12 @@ def evaluate_logits(
 ) -> dict[str, StatCounter]:
     """Runs a set of eval functions on the provided logits. For path evals, an attempt will be made to extract a predicted path from the logits (it is assumed that the logits are an entire sequence output from training, so they contain the adj_list plus path)"""
 
+    raise NotImplementedError("evaluate_logits does not function correctly, and at the moment there are only path evals anyway")
+
     scores: dict[str, StatCounter] = {}
 
     if path_evals:
-        # this is pretty much wrong -- sampling from the logits over the sequence should not produce a valid path
+        # TODO: this is pretty much wrong -- sampling from the logits over the sequence should not produce a valid path
         sampled_logits = tl_utils.sample_logits(logits)
         prediction_tokens = tokenizer.batch_decode(sampled_logits)
         predicted_paths = []

@@ -37,7 +37,9 @@ def _custom_train_config() -> TrainConfig:
             checkpoint=10,
             eval_fast=20,
             eval_slow=10,
-        )
+        ),
+        evals_max_new_tokens=16,
+        validation_dataset_cfg=100,
     )
 
 
@@ -55,6 +57,8 @@ def _custom_serialized_config() -> Dict[Any, Any]:
             "eval_slow": 10,
         },
         "intervals_count": None,
+        "evals_max_new_tokens": 16,
+        "validation_dataset_cfg": 100,
         "__format__": "TrainConfig(SerializableDataclass)",
     }
 

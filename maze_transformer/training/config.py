@@ -109,10 +109,24 @@ class TrainConfig(SerializableDataclass):
     - `intervals: dict[str, int]`: intervals at which to perform certain actions:
         "print_loss", "checkpoint", "eval_fast", "eval_slow"
     - `intervals_count: dict[str, int]`: how many of each action to do over the course of the training run
+    - `evals_max_new_tokens: int`: how many new tokens to generate during evaluation
+    - `validation_dataset_cfg: None|int|GPTDatasetConfig`: validation dataset
+        - if `None`, evals are disabled
+        - if `int`, a dataset of that size is created by sampling from the training dataset using `torch.utils.data.random_split`
+        - if `GPTDatasetConfig`, a dataset is created from the specified config TODO: this is not implemented yet
 
     """
 
     name: str
+    # TODO: loaders specified here only because of legacy models, remove this after some time and models are updated
+    evals_max_new_tokens: int = serializable_field(
+        default=8,
+        loading_fn=lambda data: data.get("evals_max_new_tokens", 8),
+    )
+    validation_dataset_cfg: None|int|GPTDatasetConfig = serializable_field(
+        default=100,
+        loading_fn=lambda data: data.get("validation_dataset_size", 100),
+    )
 
     optimizer: Type[torch.optim.Optimizer] = serializable_field(  # type: ignore
         default_factory=lambda: torch.optim.RMSprop,

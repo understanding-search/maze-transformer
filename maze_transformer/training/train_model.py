@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Union
 
 import torch
-from maze_dataset import MazeDataset
+from maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
 from muutils.mlutils import get_device
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 
 from maze_transformer.training.config import (
     GPT_CONFIGS,
@@ -110,7 +110,35 @@ def train_model(
         local_base_path=base_path,
         verbose=dataset_verbose,
     )
-    logger.progress("finished getting dataset")
+    logger.progress(f"finished getting training dataset with {len(dataset)} samples")
+    # validation dataset, if applicable
+    val_dataset: MazeDataset | None = None
+    if cfg.train_cfg.validation_dataset_cfg is not None:
+        if isinstance(cfg.train_cfg.validation_dataset_cfg, int):
+            # split the training dataset
+            split_dataset_sizes: tuple[int,int] = [
+                len(dataset) - cfg.train_cfg.validation_dataset_cfg,
+                cfg.train_cfg.validation_dataset_cfg,
+            ]
+            dataset, val_dataset = random_split(
+                dataset, split_dataset_sizes
+            )
+            dataset.update_self_config()
+            val_dataset.update_self_config()
+            logger.progress(
+                f"got validation dataset by splitting training dataset into {len(dataset)} train and {len(val_dataset)} validation samples"
+            )
+        elif isinstance(cfg.train_cfg.validation_dataset_cfg, MazeDatasetConfig):
+            val_dataset = MazeDataset.from_config(
+                cfg=cfg.train_cfg.validation_dataset_cfg,
+                do_generate=do_generate_dataset,
+                local_base_path=base_path,
+                verbose=dataset_verbose,
+            )
+            logger.progress(
+                f"got custom validation dataset with {len(val_dataset)} samples"
+            )
+
 
     # get dataloader and then train
     dataloader: DataLoader = get_dataloader(dataset, cfg, logger)
@@ -122,6 +150,7 @@ def train_model(
         logger=logger,
         output_dir=output_path,
         device=device,
+        val_dataset=val_dataset,
     )
 
     return TrainingResult(

@@ -1,5 +1,6 @@
 from functools import partial
 from pathlib import Path
+import warnings
 
 import torch
 from jaxtyping import Float
@@ -9,7 +10,7 @@ from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
 from zanj import ZANJ
 
-from maze_transformer.evaluation.eval_model import evaluate_logits
+from maze_transformer.evaluation.eval_model import evaluate_model
 from maze_transformer.evaluation.path_evals import PathEvals
 from maze_transformer.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
@@ -42,6 +43,7 @@ def train(
     logger: WandbLogger,
     output_dir: Path,
     device: torch.device,
+    val_dataset: MazeDataset|None = None,
     zanj: ZANJ | None = None,
     model: ZanjHookedTransformer | None = None,
 ) -> ZanjHookedTransformer:
@@ -72,13 +74,19 @@ def train(
         "wandb_url": logger.url,
     }
 
-    # figure out whether to run evals
-    # Only the HuggingMazeTokenizer has token decoding implemented, which is required for evals
-    evals_enabled: bool = type(model.tokenizer) == HuggingMazeTokenizer
-    if not evals_enabled:
-        logger.progress(
-            "Using a tokenizer that cannot decode. Disabling evals for this run"
-        )
+    # figure out whether to run evals, and validation dataset
+    evals_enabled: bool = cfg.train_cfg.validation_dataset_cfg is not None
+    if evals_enabled:
+        assert val_dataset is not None, "val_dataset must be provided if evals are enabled"
+
+        # Only the HuggingMazeTokenizer has token decoding implemented, which is required for evals
+        if not type(model.tokenizer) == HuggingMazeTokenizer:
+            warnings.warn(
+                "Using a tokenizer that cannot decode. Disabling evals for this run even though TrainConfig says to enable them"
+            )
+            evals_enabled = False
+        
+        val_dataset_tokens: list[list[str]] = val_dataset.as_tokens(join_tokens_individual_maze=False)
 
     # compute intervals
     n_samples: int = len(dataloader.dataset)
@@ -120,12 +128,13 @@ def train(
         if evals_enabled:
             for interval_key, evals_dict in PathEvals.PATH_EVALS_MAP.items():
                 if iteration % intervals[interval_key] == 0:
-                    scores: dict[str, StatCounter] = evaluate_logits(
-                        logits=logits,
-                        batch=batch,
-                        config=cfg,
-                        tokenizer=model.tokenizer,
-                        path_evals=evals_dict,
+                    scores: dict[str, StatCounter] = evaluate_model(
+                        model=model,
+                        dataset=val_dataset,
+                        dataset_tokens=val_dataset_tokens,
+                        eval_functions=evals_dict,
+                        batch_size=cfg.train_cfg.batch_size,
+                        max_new_tokens=cfg.train_cfg.evals_max_new_tokens,
                     )
                     metrics.update(
                         {eval: stats.summary() for eval, stats in scores.items()}
