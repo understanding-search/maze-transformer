@@ -8,7 +8,7 @@ from maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
 from muutils.mlutils import get_device
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 
 from maze_transformer.training.config import (
     GPT_CONFIGS,
@@ -119,13 +119,13 @@ def train_model(
             split_dataset_sizes: tuple[int, int] = [
                 len(dataset) - cfg.train_cfg.validation_dataset_cfg,
                 cfg.train_cfg.validation_dataset_cfg,
-            ]            
+            ]
             val_dataset = MazeDataset(
-                cfg.dataset_cfg, 
-                mazes=dataset.mazes[-split_dataset_sizes[1]:],
+                cfg.dataset_cfg,
+                mazes=dataset.mazes[-split_dataset_sizes[1] :],
                 generation_metadata_collected=dataset.generation_metadata_collected,
             )
-            dataset.mazes = dataset.mazes[:split_dataset_sizes[0]]
+            dataset.mazes = dataset.mazes[: split_dataset_sizes[0]]
             dataset.update_self_config()
             val_dataset.update_self_config()
             logger.progress(
