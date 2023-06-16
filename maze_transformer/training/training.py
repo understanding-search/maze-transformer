@@ -25,14 +25,25 @@ def collate_batch(batch: list[SolvedMaze], config: MazeDatasetConfig) -> list[st
 def get_dataloader(
     dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
 ) -> DataLoader:
+    if len(dataset) == 0:
+        raise ValueError(f"Dataset is empty: {len(dataset) = }")
     logger.progress(f"Loaded {len(dataset)} sequences")
     logger.progress("Creating dataloader")
-    dataloader: DataLoader = DataLoader(
-        dataset,
-        collate_fn=partial(collate_batch, config=cfg.dataset_cfg),
-        batch_size=cfg.train_cfg.batch_size,
-        **cfg.train_cfg.dataloader_cfg,
-    )
+    try:
+        dataloader: DataLoader = DataLoader(
+            dataset,
+            collate_fn=partial(collate_batch, config=cfg.dataset_cfg),
+            batch_size=cfg.train_cfg.batch_size,
+            **cfg.train_cfg.dataloader_cfg,
+        )
+    except ValueError as e:
+        raise ValueError(
+            "Error creating dataloader with:",
+            f"{len(dataset) = }",
+            f"{cfg.train_cfg.batch_size = }",
+            f"{cfg.train_cfg.dataloader_cfg = }",
+            f"error: {e}",
+        ) from e
 
     return dataloader
 

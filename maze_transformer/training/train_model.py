@@ -8,7 +8,7 @@ from maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
 from muutils.mlutils import get_device
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 
 from maze_transformer.training.config import (
     GPT_CONFIGS,
@@ -116,13 +116,20 @@ def train_model(
     if cfg.train_cfg.validation_dataset_cfg is not None:
         if isinstance(cfg.train_cfg.validation_dataset_cfg, int):
             # split the training dataset
+            assert len(dataset) > cfg.train_cfg.validation_dataset_cfg, (
+                f"{cfg.train_cfg.validation_dataset_cfg = } "
+                + f"is greater than the length of the training dataset: {len(dataset) = }"
+            )
             split_dataset_sizes: tuple[int, int] = [
                 len(dataset) - cfg.train_cfg.validation_dataset_cfg,
                 cfg.train_cfg.validation_dataset_cfg,
             ]
-            sub_dataset, sub_val_dataset = random_split(dataset, split_dataset_sizes)
-            dataset = sub_dataset.dataset
-            val_dataset = sub_val_dataset.dataset
+            val_dataset = MazeDataset(
+                cfg.dataset_cfg,
+                mazes=dataset.mazes[-split_dataset_sizes[1] :],
+                generation_metadata_collected=dataset.generation_metadata_collected,
+            )
+            dataset.mazes = dataset.mazes[: split_dataset_sizes[0]]
             dataset.update_self_config()
             val_dataset.update_self_config()
             logger.progress(

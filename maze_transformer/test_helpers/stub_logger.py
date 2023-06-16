@@ -32,7 +32,9 @@ class StubLogger(WandbLogger):
         self._log("Summary logged.", args, kwargs)
 
     def progress(self, message: str) -> None:
-        self._log(f"[INFO] - {message}")
+        msg: str = f"[INFO] - {message}"
+        print(msg)
+        self._log(msg)
 
     @property
     def url(self) -> str:
