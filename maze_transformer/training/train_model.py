@@ -116,6 +116,10 @@ def train_model(
     if cfg.train_cfg.validation_dataset_cfg is not None:
         if isinstance(cfg.train_cfg.validation_dataset_cfg, int):
             # split the training dataset
+            assert len(dataset) > cfg.train_cfg.validation_dataset_cfg, (
+                f"{cfg.train_cfg.validation_dataset_cfg = } "
+                + f"is greater than the length of the training dataset: {len(dataset) = }"
+            )
             split_dataset_sizes: tuple[int, int] = [
                 len(dataset) - cfg.train_cfg.validation_dataset_cfg,
                 cfg.train_cfg.validation_dataset_cfg,

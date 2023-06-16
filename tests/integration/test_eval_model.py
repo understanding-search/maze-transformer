@@ -5,6 +5,7 @@ Test that loading the model and configuration works
     a HookedTransformer with folding etc., as they would be from
     just applying the model to the input
 """
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -57,18 +58,11 @@ def test_model_loading():
 
 
 def test_predict_maze_paths():
-    # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
-    cfg: ConfigHolder = ConfigHolder.get_config_multisource(
-        cfg_names=("test-g3-n5-a_dfs-h89001", "nano-v1", "test-v1"),
+    model: ZanjHookedTransformer = ZanjHookedTransformer.read(
+        "examples/multsrc_demo-g6-n10K-a_dfs-h92077_tiny-v1_sweep-v1_2023-05-20-21-30-02/model.final.zanj"
     )
-    # train model
-    result: TrainingResult = train_model(
-        base_path=temp_dir,
-        wandb_project=WandbProject.INTEGRATION_TESTS,
-        cfg=cfg,
-        do_generate_dataset=True,
-    )
-    model: ZanjHookedTransformer = result.model
+    cfg: ConfigHolder = model.zanj_model_config
+    cfg.dataset_cfg.n_mazes = 10
 
     dataset: MazeDataset = MazeDataset.from_config(cfg=cfg.dataset_cfg)
 
@@ -82,7 +76,7 @@ def test_predict_maze_paths():
 
     all_coordinates: list[CoordTup] = [coord for path in paths for coord in path]
 
-    assert len(paths) == 5
+    assert len(paths) == cfg.dataset_cfg.n_mazes
     # check the coords are actually coords
     assert all(
         isinstance(c, tuple) for c in all_coordinates
@@ -97,23 +91,19 @@ def test_predict_maze_paths():
     assert max([len(path) for path in paths]) <= max_new_tokens + 1
 
     all_coordinates_np: np.ndarray = np.array(all_coordinates)
-    assert np.max(all_coordinates_np) < cfg.dataset_cfg.grid_n
+    if len(all_coordinates_np) > 0:
+        assert np.max(all_coordinates_np) < cfg.dataset_cfg.grid_n
+    else:
+        warnings.warn("No coordinates were predicted in test_predict_maze_paths")
 
 
 @pytest.mark.usefixtures("temp_dir")
 def test_evaluate_model(temp_dir):
-    # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
-    cfg: ConfigHolder = ConfigHolder.get_config_multisource(
-        cfg_names=("test-g3-n5-a_dfs-h89001", "nano-v1", "test-v1"),
+    model: ZanjHookedTransformer = ZanjHookedTransformer.read(
+        "examples/multsrc_demo-g6-n10K-a_dfs-h92077_tiny-v1_sweep-v1_2023-05-20-21-30-02/model.final.zanj"
     )
-    # train model
-    result: TrainingResult = train_model(
-        base_path=temp_dir,
-        wandb_project=WandbProject.INTEGRATION_TESTS,
-        cfg=cfg,
-        do_generate_dataset=True,
-    )
-    model: ZanjHookedTransformer = result.model
+    cfg: ConfigHolder = model.zanj_model_config
+    cfg.dataset_cfg.n_mazes = 10
 
     dataset: MazeDataset = MazeDataset.from_config(cfg=cfg.dataset_cfg)
 

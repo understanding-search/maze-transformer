@@ -318,7 +318,7 @@ _TRAINING_CONFIG_LIST: list[TrainConfig] = [
             eval_fast=4,
             eval_slow=2,
         ),
-        validation_dataset_cfg=10,
+        validation_dataset_cfg=1,
     ),
     TrainConfig(
         name="tiny-v1",
