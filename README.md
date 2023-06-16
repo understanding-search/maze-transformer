@@ -1,10 +1,11 @@
-<!-- [![PyPI](https://img.shields.io/pypi/v/muutils)](https://pypi.org/project/muutils/)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/muutils) -->
-[![Checks](https://github.com/mivanit/muutils/actions/workflows/checks.yml/badge.svg)](https://github.com/mivanit/muutils/actions/workflows/checks.yml)
+<!-- [![PyPI](https://img.shields.io/pypi/v/TODO)](https://pypi.org/project/TODO/)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/TODO) -->
+[![Checks](https://github.com/AISC-understanding-search/maze-transformer/actions/workflows/checks.yml/badge.svg)](https://github.com/AISC-understanding-search/maze-transformer/actions/workflows/checks.yml)
 [![Coverage](examples/coverage/coverage.svg)](docs/coverage/coverage.txt)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/t/mivanit/muutils)
-![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/mivanit/muutils)
-![code size, bytes](https://img.shields.io/github/languages/code-size/mivanit/muutils)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/t/AISC-understanding-search/maze-transformer)
+![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/AISC-understanding-search/maze-transformer)
+![GitHub closed issues](https://img.shields.io/github/issues-closed-raw/AISC-understanding-search/maze-transformer)
+![code size, bytes](https://img.shields.io/github/languages/code-size/AISC-understanding-search/maze-transformer)
 
 # Maze Transformer
 
