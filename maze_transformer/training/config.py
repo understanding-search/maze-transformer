@@ -568,6 +568,10 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
             tokenizer=cfg_holder.tokenizer,
         )
 
+    @property
+    def config(self) -> ConfigHolder:
+        return self.zanj_model_config
+
     def _load_state_dict_wrapper(
         self,
         state_dict: dict[str, Any],
