@@ -630,7 +630,7 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
             center_writing_weights=not recover_exact,
             center_unembed=not recover_exact,
             refactor_factored_attn_matrices=False,
-            move_state_dict_to_device=not recover_exact,
+            # move_state_dict_to_device=not recover_exact, # this no longer works as of TransformerLens 1.4.0 but seemed to work previously?
         )
         self.setup()  # Re-attach layernorm hooks by calling setup
         self.eval()
