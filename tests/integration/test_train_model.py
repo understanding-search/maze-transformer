@@ -5,7 +5,7 @@ from maze_transformer.training.wandb_logger import WandbProject
 
 def test_train_model():
     cfg: ConfigHolder = ConfigHolder.get_config_multisource(
-        cfg_names=("test-g3-n5-a_dfs-h89001", "nano-v1", "test-v1"),
+        cfg_names=("test-g3-n5-a_dfs-h81250", "nano-v1", "test-v1"),
     )
     cfg.dataset_cfg.n_mazes = 10
     result: TrainingResult = train_model(
