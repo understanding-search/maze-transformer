@@ -1,11 +1,11 @@
 import pytest
-
 from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
 from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
 
 from maze_transformer.test_helpers.stub_logger import StubLogger
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
 from maze_transformer.training.training import get_dataloader
+
 
 @pytest.mark.parametrize(
     "tok_mode",
@@ -32,7 +32,8 @@ def test_get_dataloader(tok_mode: TokenizationMode):
 
     other_batch1 = next(iter(dataloader))
     dataloader_mazes = [
-        SolvedMaze.from_tokens(tokens, config_holder.maze_tokenizer) for tokens in batch1
+        SolvedMaze.from_tokens(tokens, config_holder.maze_tokenizer)
+        for tokens in batch1
     ]
 
     assert len(batch1) == 5

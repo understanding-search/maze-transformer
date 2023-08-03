@@ -4,8 +4,8 @@ from pathlib import Path
 
 import torch
 from jaxtyping import Float
-from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+from maze_dataset import MazeDataset, SolvedMaze
+from maze_dataset.tokenization import MazeTokenizer
 from muutils.statcounter import StatCounter
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss

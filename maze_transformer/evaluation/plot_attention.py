@@ -52,7 +52,9 @@ class ProcessedMazeAttention(SerializableDataclass):
         for i in range(n_mazes):
             # get the maze from the dataset and process into tokens
             solved_maze: SolvedMaze = dataset[i]
-            tokens: list[str] = solved_maze.as_tokens(model.zanj_model_config.maze_tokenizer)
+            tokens: list[str] = solved_maze.as_tokens(
+                model.zanj_model_config.maze_tokenizer
+            )
             tokens_context: list[str]
 
             if context_maze_only:

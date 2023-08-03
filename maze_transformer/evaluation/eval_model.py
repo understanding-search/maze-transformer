@@ -261,9 +261,7 @@ def evaluate_logits(
         for tokens in prediction_tokens:
             # this returns first path_start to end of list. Early in training there may be multiple path_start tokens, so results should be treated with caution
             path_tokens = get_path_tokens(tokens.split(" "))
-            path_coords = strings_to_coords(
-                path_tokens, when_noncoord="skip"
-            )
+            path_coords = strings_to_coords(path_tokens, when_noncoord="skip")
             predicted_paths.append(cast(list[tuple[int, int]], path_coords))
 
         maze_tokens = [

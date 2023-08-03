@@ -12,11 +12,10 @@ from maze_dataset import (
     SolvedMaze,
 )
 from maze_dataset.tokenization.token_utils import (
-    strings_to_coords,
-    coords_to_strings,
     get_origin_tokens,
     get_path_tokens,
     get_target_tokens,
+    strings_to_coords,
 )
 from transformer_lens import HookedTransformer
 
@@ -105,7 +104,9 @@ class RandomBaseline(HookedTransformer):
         steps_to_predict: int,
     ) -> list[str]:
         # assemble the maze from the tokens
-        maze: LatticeMaze = LatticeMaze.from_tokens(tokens, self.tokenizer._maze_tokenizer)
+        maze: LatticeMaze = LatticeMaze.from_tokens(
+            tokens, self.tokenizer._maze_tokenizer
+        )
         origin_coord: CoordTup = strings_to_coords(get_origin_tokens(tokens))[0]
         target_coord: CoordTup = strings_to_coords(get_target_tokens(tokens))[0]
         solution: CoordArray = maze.find_shortest_path(origin_coord, target_coord)

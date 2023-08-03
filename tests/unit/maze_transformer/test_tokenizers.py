@@ -4,33 +4,40 @@ as the original tokenizer (i.e. just using the token map in cfg)
 
 We may want a separate set of tests for different tokenization schemes
 """
-import sys
 from itertools import product
 
 import torch
 from maze_dataset import MazeDatasetConfig, SolvedMaze
 from maze_dataset.generation import get_maze_with_solution
-import pytest
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
 from pytest import mark, param
 from transformer_lens import HookedTransformer
 
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
 from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
 
 
 @mark.parametrize(
-    "tok_mode,grid_size,grid_size_max", 
+    "tok_mode,grid_size,grid_size_max",
     [
-        param(tok_mode, grid_size, grid_size_max, id=f"{tok_mode.name.split('_')[-1]},g{grid_size},m{grid_size_max}")
+        param(
+            tok_mode,
+            grid_size,
+            grid_size_max,
+            id=f"{tok_mode.name.split('_')[-1]},g{grid_size},m{grid_size_max}",
+        )
         for tok_mode, grid_size, grid_size_max in product(
             TokenizationMode, [3, 4], [3, 4, 5, 6, 10, 50]
         )
     ],
 )
-def test_tokenization_encoding(tok_mode: TokenizationMode, grid_size: int, grid_size_max: int):
+def test_tokenization_encoding(
+    tok_mode: TokenizationMode, grid_size: int, grid_size_max: int
+):
     # create maze and tokenizer
     solved_maze: SolvedMaze = get_maze_with_solution("gen_dfs", (3, 3))
-    tok: MazeTokenizer = MazeTokenizer(tokenization_mode=tok_mode, max_grid_size=grid_size)
+    tok: MazeTokenizer = MazeTokenizer(
+        tokenization_mode=tok_mode, max_grid_size=grid_size
+    )
 
     # convert to strings
     maze_str_tokens: list[str] = solved_maze.as_tokens(tok)
@@ -66,12 +73,17 @@ def test_tokenization_encoding(tok_mode: TokenizationMode, grid_size: int, grid_
     "tok_mode",
     [
         param(tok_mode, id=tok_mode.name)
-        for tok_mode in [TokenizationMode.AOTP_UT_uniform, TokenizationMode.AOTP_UT_rasterized]
+        for tok_mode in [
+            TokenizationMode.AOTP_UT_uniform,
+            TokenizationMode.AOTP_UT_rasterized,
+        ]
     ],
 )
 def test_to_ascii(tok_mode):
     # Check that the ascii encoding works for multiple different inputs
-    maze_str_tokens: list[str] = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
+    maze_str_tokens: list[
+        str
+    ] = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
     (2,2) <--> (2,1) ; (2,0) <--> (2,1) ; (0,2) <--> (1,2) ; (0,0) <--> (1,0) ; (0,2) <--> (0,1) ;
     <ADJLIST_END> <ORIGIN_START> (0,0) <ORIGIN_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
 
@@ -106,7 +118,7 @@ def test_to_ascii(tok_mode):
 
 
 @mark.parametrize(
-    "tok_mode", 
+    "tok_mode",
     [
         param(TokenizationMode.AOTP_UT_uniform, id="AOTP_UT_uniform"),
         param(TokenizationMode.AOTP_UT_rasterized, id="AOTP_UT_rasterized"),
@@ -181,15 +193,46 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
 # Padding Tests
 PAD_PLACEHOLDER = -1
 
+
 @mark.parametrize(
-    "inp,expected,tok_mode", 
+    "inp,expected,tok_mode",
     [
-        param([1, 2, 3], [PAD_PLACEHOLDER, PAD_PLACEHOLDER, 1, 2, 3], TokenizationMode.AOTP_UT_uniform, id="short+uniform"),
-        param([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], TokenizationMode.AOTP_UT_uniform, id="max_length+uniform"),
-        param([1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6], TokenizationMode.AOTP_UT_uniform, id="too_long+uniform"),
-        param([1, 2, 3], [PAD_PLACEHOLDER, PAD_PLACEHOLDER, 1, 2, 3], TokenizationMode.AOTP_UT_rasterized, id="short+rasterized"),
-        param([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], TokenizationMode.AOTP_UT_rasterized, id="max_length+rasterized"),
-        param([1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6], TokenizationMode.AOTP_UT_rasterized, id="too_long+rasterized"),
+        param(
+            [1, 2, 3],
+            [PAD_PLACEHOLDER, PAD_PLACEHOLDER, 1, 2, 3],
+            TokenizationMode.AOTP_UT_uniform,
+            id="short+uniform",
+        ),
+        param(
+            [1, 2, 3, 4, 5],
+            [1, 2, 3, 4, 5],
+            TokenizationMode.AOTP_UT_uniform,
+            id="max_length+uniform",
+        ),
+        param(
+            [1, 2, 3, 4, 5, 6],
+            [2, 3, 4, 5, 6],
+            TokenizationMode.AOTP_UT_uniform,
+            id="too_long+uniform",
+        ),
+        param(
+            [1, 2, 3],
+            [PAD_PLACEHOLDER, PAD_PLACEHOLDER, 1, 2, 3],
+            TokenizationMode.AOTP_UT_rasterized,
+            id="short+rasterized",
+        ),
+        param(
+            [1, 2, 3, 4, 5],
+            [1, 2, 3, 4, 5],
+            TokenizationMode.AOTP_UT_rasterized,
+            id="max_length+rasterized",
+        ),
+        param(
+            [1, 2, 3, 4, 5, 6],
+            [2, 3, 4, 5, 6],
+            TokenizationMode.AOTP_UT_rasterized,
+            id="too_long+rasterized",
+        ),
     ],
 )
 def test_pad_sequence_param(inp, expected, tok_mode):

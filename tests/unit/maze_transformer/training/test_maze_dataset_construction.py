@@ -1,7 +1,7 @@
 import pytest
-
 from maze_dataset import SPECIAL_TOKENS, MazeDataset, MazeDatasetConfig
 from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+
 
 @pytest.mark.parametrize(
     "tok_mode",

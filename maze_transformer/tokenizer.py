@@ -1,18 +1,16 @@
 # Avoid circular import from training/config.py
-from typing import TYPE_CHECKING, Sequence, Union  # need Union as "a" | "b" doesn't work
+from typing import TYPE_CHECKING, Sequence  # need Union as "a" | "b" doesn't work
 
 import torch
 from maze_dataset import SPECIAL_TOKENS, LatticeMaze
-from maze_dataset.dataset.dataset import GPTDatasetConfig
 from maze_dataset.plotting import MazePlot
+from maze_dataset.tokenization import MazeTokenizer
 from muutils.tensor_utils import ATensor, NDArray
 from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
-from maze_dataset.tokenization import MazeTokenizer
-
 if TYPE_CHECKING:
-    from maze_transformer.training.config import ConfigHolder
+    pass
 
 # pylint: disable=unused-import, abstract-method
 
@@ -53,9 +51,15 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         self.vocab_size = self._vocab_size
         self._tokenizer_map = maze_tokenizer.tokenizer_map
 
-        assert isinstance(seq_len_max, int), f"seq_len_max must be an int, got {seq_len_max = } {type(seq_len_max) = }"
-        assert isinstance(token_arr, Sequence), f"token_arr must be a Sequence, got {token_arr = } {type(token_arr) = }"
-        assert isinstance(len(token_arr), int), f"token_arr must be a Sequence, got {token_arr = } {type(token_arr) = }"
+        assert isinstance(
+            seq_len_max, int
+        ), f"seq_len_max must be an int, got {seq_len_max = } {type(seq_len_max) = }"
+        assert isinstance(
+            token_arr, Sequence
+        ), f"token_arr must be a Sequence, got {token_arr = } {type(token_arr) = }"
+        assert isinstance(
+            len(token_arr), int
+        ), f"token_arr must be a Sequence, got {token_arr = } {type(token_arr) = }"
 
         # We are having to do evil things here
         vocab: dict[str, int] = {token: i for i, token in enumerate(token_arr)}

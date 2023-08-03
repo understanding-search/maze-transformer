@@ -7,7 +7,6 @@ TEMP_DIR: Path = Path("tests/_temp/test_dataset")
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 
-
 class TestGPTDataset:
     class TestFromConfig:
         cfg = MazeDatasetConfig(name="test", grid_n=3, n_mazes=1)

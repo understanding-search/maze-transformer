@@ -1,16 +1,18 @@
 import numpy as np
 import pytest
-
+from maze_dataset import SPECIAL_TOKENS, SolvedMaze, utils
+from maze_dataset.generation import get_maze_with_solution
 from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
 
-from maze_dataset import SPECIAL_TOKENS, MazeDatasetConfig, SolvedMaze, utils
-from maze_dataset.generation import get_maze_with_solution
 
 @pytest.mark.parametrize(
     "tok_mode",
     [
         pytest.param(tok_mode, id=tok_mode.name)
-        for tok_mode in (TokenizationMode.AOTP_UT_rasterized, TokenizationMode.AOTP_UT_uniform)
+        for tok_mode in (
+            TokenizationMode.AOTP_UT_rasterized,
+            TokenizationMode.AOTP_UT_uniform,
+        )
     ],
 )
 def test_coordinate_system(tok_mode: TokenizationMode):
@@ -28,7 +30,9 @@ def test_coordinate_system(tok_mode: TokenizationMode):
         [f"({c[0]},{c[1]})" for c in conn] for conn in maze_adj_list
     ]
 
-    tok: MazeTokenizer = MazeTokenizer(tokenization_mode=tok_mode, max_grid_size=maze_size)
+    tok: MazeTokenizer = MazeTokenizer(
+        tokenization_mode=tok_mode, max_grid_size=maze_size
+    )
     tokenized_maze: list[str] = solved_maze.as_tokens(tok)
 
     tokenizer_adj_list = tokenized_maze[
