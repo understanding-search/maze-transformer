@@ -68,7 +68,7 @@ def test_predict_maze_paths():
 
     max_new_tokens = 3
     paths = predict_maze_paths(
-        tokens_batch=dataset.as_tokens(),
+        tokens_batch=dataset.as_tokens(cfg.maze_tokenizer),
         data_cfg=cfg.dataset_cfg,
         model=model,
         max_new_tokens=max_new_tokens,
