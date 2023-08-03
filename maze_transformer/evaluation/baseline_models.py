@@ -59,10 +59,10 @@ class RandomBaseline(HookedTransformer):
         current_position: CoordTup = path[-1]
         # pad with eos up to max_new_tokens to avoid ragged tensors
         if pad_eos:
-            if current_position in [target, SPECIAL_TOKENS["path_end"]]:
-                return SPECIAL_TOKENS["path_end"]
+            if current_position in [target, SPECIAL_TOKENS.PATH_END]:
+                return SPECIAL_TOKENS.PATH_END
         if current_position == target:
-            return SPECIAL_TOKENS["path_end"]
+            return SPECIAL_TOKENS.PATH_END
 
         neighbors: list[CoordTup] = self._get_coord_neighbors(
             solved_maze, current_position
@@ -80,7 +80,7 @@ class RandomBaseline(HookedTransformer):
 
         if len(unvisited_neighbors) == 0:
             # break out if dead end
-            return SPECIAL_TOKENS["path_end"]
+            return SPECIAL_TOKENS.PATH_END
         else:
             if correct_step not in unvisited_neighbors:
                 return random.choice(unvisited_neighbors)
@@ -134,7 +134,7 @@ class RandomBaseline(HookedTransformer):
                     path=path,
                 )
             )
-            if predictions[-1] == SPECIAL_TOKENS["path_end"]:
+            if predictions[-1] == SPECIAL_TOKENS.PATH_END:
                 break
 
         return strings_to_coords(

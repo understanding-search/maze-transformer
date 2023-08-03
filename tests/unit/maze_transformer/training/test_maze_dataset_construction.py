@@ -15,12 +15,12 @@ def test_dataset_construction():
     # the adj_list always gets shuffled, so easier to check the paths
     # this will be much simpler once token utils are merged
     test_tokenization_paths = [
-        tokens[tokens.index(SPECIAL_TOKENS["path_start"]) :]
+        tokens[tokens.index(SPECIAL_TOKENS.PATH_START) :]
         for tokens in test_tokenizations
     ]
 
     dataset_tokenization_paths = [
-        tokens[tokens.index(SPECIAL_TOKENS["path_start"]) :]
+        tokens[tokens.index(SPECIAL_TOKENS.PATH_START) :]
         for tokens in dataset.as_tokens()
     ]
 

@@ -25,8 +25,8 @@ def test_coordinate_system():
     tokenized_maze = solved_maze.as_tokens(node_token_map)
 
     tokenizer_adj_list = tokenized_maze[
-        tokenized_maze.index(SPECIAL_TOKENS["adj_list_start"])
-        + 1 : tokenized_maze.index(SPECIAL_TOKENS["adj_list_end"])
+        tokenized_maze.index(SPECIAL_TOKENS.ADJLIST_START)
+        + 1 : tokenized_maze.index(SPECIAL_TOKENS.ADJLIST_END)
     ]
 
     # remove special tokens

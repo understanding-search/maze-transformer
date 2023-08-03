@@ -20,14 +20,14 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     vocab: dict[str, int]  # map of token_ids to strings
 
-    bos_token: str = SPECIAL_TOKENS["adj_list_start"]
-    eos_token: str = SPECIAL_TOKENS["path_end"]
-    pad_token: str = SPECIAL_TOKENS["padding"]
+    bos_token: str = SPECIAL_TOKENS.ADJLIST_START
+    eos_token: str = SPECIAL_TOKENS.PATH_END
+    pad_token: str = SPECIAL_TOKENS.PADDING
     unk_token: str = "<UNK>"
 
     vocab_size: int = 0
     additional_special_tokens: list[str] = [
-        x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS["padding"]]
+        x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS.PADDING]
     ]
 
     # Overwrite class attributes

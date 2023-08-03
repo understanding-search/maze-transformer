@@ -57,7 +57,7 @@ class ProcessedMazeAttention(SerializableDataclass):
 
             if context_maze_only:
                 assert context_maze_fn is None
-                path_start_index: int = tokens.index(SPECIAL_TOKENS["path_start"])
+                path_start_index: int = tokens.index(SPECIAL_TOKENS.PATH_END)
                 tokens_context = tokens[: path_start_index + 1]
             else:
                 assert context_maze_fn is not None
