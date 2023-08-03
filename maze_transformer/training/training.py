@@ -5,6 +5,7 @@ from pathlib import Path
 import torch
 from jaxtyping import Float
 from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
 from muutils.statcounter import StatCounter
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
@@ -18,8 +19,8 @@ from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbLogger
 
 
-def collate_batch(batch: list[SolvedMaze], config: MazeDatasetConfig) -> list[str]:
-    return [" ".join(maze.as_tokens(config.node_token_map)) for maze in batch]
+def collate_batch(batch: list[SolvedMaze], maze_tokenizer: MazeTokenizer) -> list[str]:
+    return [" ".join(maze.as_tokens(maze_tokenizer)) for maze in batch]
 
 
 def get_dataloader(
@@ -32,7 +33,7 @@ def get_dataloader(
     try:
         dataloader: DataLoader = DataLoader(
             dataset,
-            collate_fn=partial(collate_batch, config=cfg.dataset_cfg),
+            collate_fn=partial(collate_batch, maze_tokenizer=cfg.maze_tokenizer),
             batch_size=cfg.train_cfg.batch_size,
             **cfg.train_cfg.dataloader_cfg,
         )

@@ -82,7 +82,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             raise NotImplementedError(
                 f"Caught an error during tokenization - probably because you are trying to encode a token not present in the tokenizer's vocabulary",
                 f"text: '{text}'",
-            )
+            ) from e
 
     def _tokenize(self, text: str, **kwargs) -> list[str]:
         assert len(kwargs) == 0, f"kwargs not supported: {kwargs}"

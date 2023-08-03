@@ -5,10 +5,12 @@ as the original tokenizer (i.e. just using the token map in cfg)
 We may want a separate set of tests for different tokenization schemes
 """
 import sys
+from itertools import product
 
 import torch
 from maze_dataset import MazeDatasetConfig, SolvedMaze
 from maze_dataset.generation import get_maze_with_solution
+import pytest
 from pytest import mark, param
 from transformer_lens import HookedTransformer
 
@@ -17,39 +19,41 @@ from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
 
 
 @mark.parametrize(
-    "tok_mode,grid_size", 
+    "tok_mode,grid_size,grid_size_max", 
     [
-        param(TokenizationMode.AOTP_UT_uniform, 3, id="uniform+g3"),
-        param(TokenizationMode.AOTP_UT_uniform, 4, id="uniform+g4"),
-        param(TokenizationMode.AOTP_UT_uniform, 5, id="uniform+g5"),
-        param(TokenizationMode.AOTP_UT_uniform, 50, id="uniform+g50"),
-        param(TokenizationMode.AOTP_UT_rasterized, 3, id="rasterized+g3"),
-        param(TokenizationMode.AOTP_UT_rasterized, 4, id="rasterized+g4"),
-        param(TokenizationMode.AOTP_UT_rasterized, 5, id="rasterized+g5"),
-        param(TokenizationMode.AOTP_UT_rasterized, 50, id="rasterized+g50"),
+        param(tok_mode, grid_size, grid_size_max, id=f"{tok_mode.name.split('_')[-1]},g{grid_size},m{grid_size_max}")
+        for tok_mode, grid_size, grid_size_max in product(
+            TokenizationMode, [3, 4], [3, 4, 5, 6, 10, 50]
+        )
     ],
 )
-def test_tokenization_encoding(tok_mode: TokenizationMode, grid_size: int):
-    # Check that wrapped tokenizer __call__ returns the same as original tokenizer
+def test_tokenization_encoding(tok_mode: TokenizationMode, grid_size: int, grid_size_max: int):
+    # create maze and tokenizer
     solved_maze: SolvedMaze = get_maze_with_solution("gen_dfs", (3, 3))
+    tok: MazeTokenizer = MazeTokenizer(tokenization_mode=tok_mode, max_grid_size=grid_size)
 
-    cfg = MazeTokenizer(tokenization_mode=tok_mode, max_grid_size=gridsize)
+    # convert to strings
+    maze_str_tokens: list[str] = solved_maze.as_tokens(tok)
 
-    # Adjacency List Tokenization
-    maze_str_tokens = solved_maze.as_tokens(cfg)
+    # cant tokenize if grid size is too big
+    if grid_size > grid_size_max:
+        tok.encode(maze_str_tokens)
+        return
 
-    # Manual Tokenization
-    token_to_index = {token: i for i, token in enumerate(cfg.token_arr)}
-    assert token_to_index == cfg.tokenizer_map, "Tokenization mismatch"
-    maze_tokens = [cfg.tokenizer_map[token] for token in maze_str_tokens]
+    # check that tokenizer map is as expected
+    token_to_index: dict[str, int] = {token: i for i, token in enumerate(tok.token_arr)}
+    assert token_to_index == tok.tokenizer_map, "Tokenization mismatch"
 
-    # WrappedTokenizer
-    # Initialized with a configholder - tokenizer will eventually be a string
-    cfg_holder = ConfigHolder(
+    # round trip tokenize
+    maze_tokens: list[int] = tok.encode(maze_str_tokens)
+    assert maze_str_tokens == tok.decode(maze_tokens), "Tokenization mismatch"
+
+    # create and test actual HuggingMazeTokenizer
+    cfg_holder: ConfigHolder = ConfigHolder(
         train_cfg=None,
         model_cfg=None,
         dataset_cfg=MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1),
-        maze_tokenizer=cfg,
+        maze_tokenizer=tok,
     )
 
     tokenizer_out = cfg_holder.tokenizer(maze_str_tokens)["input_ids"]
@@ -58,13 +62,20 @@ def test_tokenization_encoding(tok_mode: TokenizationMode, grid_size: int):
     ), "Tokenization mismatch"
 
 
-def test_to_ascii():
+@mark.parametrize(
+    "tok_mode",
+    [
+        param(tok_mode, id=tok_mode.name)
+        for tok_mode in [TokenizationMode.AOTP_UT_uniform, TokenizationMode.AOTP_UT_rasterized, TokenizationMode.AOTP_indexed]
+    ],
+)
+def test_to_ascii(tok_mode):
     # Check that the ascii encoding works for multiple different inputs
-    maze_str_tokens = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
+    maze_str_tokens: list[str] = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
     (2,2) <--> (2,1) ; (2,0) <--> (2,1) ; (0,2) <--> (1,2) ; (0,0) <--> (1,0) ; (0,2) <--> (0,1) ;
-    <ADJLIST_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
+    <ADJLIST_END> <ORIGIN_START> (0,0) <ORIGIN_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
 
-    target = [
+    target: list[str] = [
         "#######",
         "#     #",
         "# ### #",
@@ -75,25 +86,23 @@ def test_to_ascii():
     ]
 
     # Need to generate a config to extract the token map >.<
-    for tok_mode in (TokenizationMode.AOTP_UT_uniform, TokenizationMode.AOTP_UT_rasterized, TokenizationMode.AOTP_indexed):
-        print(tok_mode, file=sys.stderr)
-        maze_tok_cfg = MazeTokenizer(tokenization_mode=tok_mode)
-        cfg_holder = ConfigHolder(
-            train_cfg=None,
-            dataset_cfg=MazeDatasetConfig(name="testing_maze", grid_n=5, n_mazes=1),
-            model_cfg=None,
-            maze_tokenizer=maze_tok_cfg,
-        )
+    maze_tok_cfg = MazeTokenizer(tokenization_mode=tok_mode)
+    cfg_holder = ConfigHolder(
+        train_cfg=None,
+        dataset_cfg=MazeDatasetConfig(name="testing_maze", grid_n=5, n_mazes=1),
+        model_cfg=None,
+        maze_tokenizer=maze_tok_cfg,
+    )
 
-        # Try with string tokens
-        assert (
-            cfg_holder.tokenizer.to_ascii(maze_str_tokens).splitlines() == target
-        ), "ASCII encoding from string tokens failed"
-        # And with token ids
-        token_ids = cfg_holder.tokenizer.encode(maze_str_tokens)
-        assert (
-            cfg_holder.tokenizer.to_ascii(token_ids).splitlines() == target
-        ), "ASCII encoding from token ids failed"
+    # Try with string tokens
+    assert (
+        cfg_holder.tokenizer.to_ascii(maze_str_tokens).splitlines() == target
+    ), "ASCII encoding from string tokens failed"
+    # And with token ids
+    token_ids = cfg_holder.tokenizer.encode(maze_str_tokens)
+    assert (
+        cfg_holder.tokenizer.to_ascii(token_ids).splitlines() == target
+    ), "ASCII encoding from token ids failed"
 
 
 @mark.parametrize(
@@ -125,12 +134,17 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
 
     hktransformer: HookedTransformer = cfg_holder.create_model()
 
-    token_ids = hktransformer.to_tokens("".join(maze_str_tokens), prepend_bos=False)
+    token_ids = hktransformer.to_tokens(" ".join(maze_str_tokens), prepend_bos=False)
+    token_ids_sep = hktransformer.to_tokens(maze_str_tokens, prepend_bos=False)
+    token_ids_sep = torch.tensor(token_ids_sep).flatten()
+    assert torch.allclose(token_ids, token_ids_sep), "Tokenization mismatch"
 
     # -- Test Simple Tokenization --
     # Manual Tokenization
     vocab_map = {k: v for v, k in enumerate(maze_tok_cfg.token_arr)}
-    maze_tokens = [vocab_map[token] for token in maze_str_tokens]
+    maze_tokens_manual = [vocab_map[token] for token in maze_str_tokens]
+    maze_tokens = maze_tok_cfg.encode(maze_str_tokens)
+    assert maze_tokens == maze_tokens_manual, "Manual tokenization failed"
 
     assert torch.all(
         token_ids.flatten().cpu() == torch.tensor(maze_tokens)
