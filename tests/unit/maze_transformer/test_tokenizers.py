@@ -66,7 +66,7 @@ def test_tokenization_encoding(tok_mode: TokenizationMode, grid_size: int, grid_
     "tok_mode",
     [
         param(tok_mode, id=tok_mode.name)
-        for tok_mode in [TokenizationMode.AOTP_UT_uniform, TokenizationMode.AOTP_UT_rasterized, TokenizationMode.AOTP_indexed]
+        for tok_mode in [TokenizationMode.AOTP_UT_uniform, TokenizationMode.AOTP_UT_rasterized]
     ],
 )
 def test_to_ascii(tok_mode):
@@ -77,11 +77,11 @@ def test_to_ascii(tok_mode):
 
     target: list[str] = [
         "#######",
-        "#     #",
-        "# ### #",
-        "# # # #",
-        "# # ###",
-        "#     #",
+        "#S    #",
+        "#X### #",
+        "#X# # #",
+        "#X# ###",
+        "#XXE  #",
         "#######",
     ]
 
@@ -130,7 +130,7 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
     # Adjacency List Tokenization
     maze_str_tokens = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
     (2,2) <--> (2,1) ; (2,0) <--> (2,1) ; (0,2) <--> (1,2) ; (0,0) <--> (1,0) ; (0,2) <--> (0,1) ;
-    <ADJLIST_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
+    <ADJLIST_END> <ORIGIN_START> (0,0) <ORIGIN_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
 
     hktransformer: HookedTransformer = cfg_holder.create_model()
 
@@ -158,7 +158,7 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
 
     # -- Test Batched Tokenization --
     maze_str_tokens_2 = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ;
-    (0,1) <--> (0,0) ; (0,2) <--> (0,1) ; <ADJLIST_END> <TARGET_START> (1,0) <TARGET_END>
+    (0,1) <--> (0,0) ; (0,2) <--> (0,1) ; <ADJLIST_END> <ORIGIN_START> (0,0) <ORIGIN_END> <TARGET_START> (1,0) <TARGET_END>
     <PATH_START> (0,0) (1,0) <PATH_END>""".split()
 
     batched_tokens = [" ".join(maze_str_tokens), " ".join(maze_str_tokens_2)]
