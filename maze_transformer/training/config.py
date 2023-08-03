@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import typing
 import warnings
 from functools import cached_property
@@ -24,6 +25,8 @@ from transformers import PreTrainedTokenizer
 from zanj.loading import load_item_recursive
 from zanj.torchutil import ConfiguredModel, set_config_class
 
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+from maze_dataset.constants import SPECIAL_TOKENS
 from maze_transformer.tokenizer import HuggingMazeTokenizer
 
 
@@ -366,6 +369,21 @@ TRAINING_CONFIGS: dict[str, TrainConfig] = {
     cfg.name: cfg for cfg in _TRAINING_CONFIG_LIST
 }
 
+def _load_maze_tokenizer(data: dict) -> MazeTokenizer:
+    """load the maze tokenizer, including vocab size from a legacy config"""
+    if "maze_tokenizer" in data:
+        # new style tokenizer
+        return load_item_recursive(data["maze_tokenizer"], path=tuple("maze_tokenizer"))
+    else:
+        if "token_arr" in data["dataset_cfg"]:
+            output: MazeTokenizer = MazeTokenizer(
+                tokenization_mode=TokenizationMode.AOTP_UT_rasterized,
+                max_grid_size=None,
+            )
+        else:
+            raise ValueError(
+                "Could not find vocab size in legacy config"
+            )
 
 @serializable_dataclass(kw_only=True)
 class ConfigHolder(SerializableDataclass):
@@ -387,6 +405,19 @@ class ConfigHolder(SerializableDataclass):
     pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
         default=None
     )
+    maze_tokenizer: MazeTokenizer|None = serializable_field(
+        default_factory=lambda : MazeTokenizer(tokenization_mode=TokenizationMode.AOTP_UT_uniform, max_grid_size=None),
+        loading_fn=_load_maze_tokenizer,
+    )
+
+    def _set_tok_gridsize_from_dataset(self):
+        self.maze_tokenizer.max_grid_size = self.dataset_cfg.max_grid_n
+        self.maze_tokenizer.clear_cache()
+
+    def __post_init__(self):
+        if self.maze_tokenizer is not None:
+            if self.maze_tokenizer.max_grid_size is None:
+                self._set_tok_gridsize_from_dataset()
 
     def summary(self) -> str:
         return {
@@ -395,6 +426,7 @@ class ConfigHolder(SerializableDataclass):
             "model_cfg": self.model_cfg.summary(),
             "train_cfg": self.train_cfg.summary(),
             "pretrainedtokenizer_kwargs": self.pretrainedtokenizer_kwargs,
+            "maze_tokenizer": self.maze_tokenizer.summary() if self.maze_tokenizer is not None else None,
         }
 
     @property
@@ -403,11 +435,16 @@ class ConfigHolder(SerializableDataclass):
 
     @cached_property
     def tokenizer(self) -> PreTrainedTokenizer:
-        """if pretrained tokenizer kwargs are provided, use those, otherwise use the HuggingMazeTokenizer derived from the dataset_cfg"""
+        """get a tokenizer via a pretrainedtokenizer_kwargs, or a hugging maze tokenizer"""
         if self.pretrainedtokenizer_kwargs is not None:
             return PreTrainedTokenizer(**self.pretrainedtokenizer_kwargs)
+        elif self.maze_tokenizer is not None:
+            return HuggingMazeTokenizer(
+                seq_len_max=self.dataset_cfg.seq_len_max,
+                token_arr=self.maze_tokenizer.token_arr,
+            )
         else:
-            return HuggingMazeTokenizer(self.dataset_cfg)
+            raise ValueError("no tokenizer specified")
 
     @cached_property
     def hooked_transformer_cfg(self) -> HookedTransformerConfig:
@@ -417,7 +454,7 @@ class ConfigHolder(SerializableDataclass):
             d_head=self.model_cfg.d_head,
             n_layers=self.model_cfg.n_layers,
             n_ctx=self.dataset_cfg.seq_len_max,
-            d_vocab=len(self.dataset_cfg.token_arr),  # TODO: get this from tokenizer
+            d_vocab=self.maze_tokenizer.vocab_size,
         )
 
     def transformer_config(self) -> HookedTransformerConfig:

@@ -17,7 +17,7 @@ from maze_dataset.tokenization.token_utils import (
     get_context_tokens,
     get_path_tokens,
     remove_padding_from_token_str,
-    tokens_to_coords,
+    strings_to_coords,
 )
 from muutils.mlutils import chunks
 from muutils.statcounter import StatCounter
@@ -153,9 +153,8 @@ def predict_maze_paths(
     paths: list[list[tuple[int, int]]] = []
     for pred_tokens in prediction_batch:
         path_tokens: list[str] = get_path_tokens(pred_tokens, trim_end=True)
-        path_coords: list[str | CoordTup] = tokens_to_coords(
+        path_coords: list[str | CoordTup] = strings_to_coords(
             path_tokens,
-            maze_data_cfg=data_cfg,
             when_noncoord=when_noncoord,
         )
         # This is the correct type when using "skip"
@@ -262,8 +261,8 @@ def evaluate_logits(
         for tokens in prediction_tokens:
             # this returns first path_start to end of list. Early in training there may be multiple path_start tokens, so results should be treated with caution
             path_tokens = get_path_tokens(tokens.split(" "))
-            path_coords = tokens_to_coords(
-                path_tokens, maze_data_cfg=config.dataset_cfg, when_noncoord="skip"
+            path_coords = strings_to_coords(
+                path_tokens, when_noncoord="skip"
             )
             predicted_paths.append(cast(list[tuple[int, int]], path_coords))
 

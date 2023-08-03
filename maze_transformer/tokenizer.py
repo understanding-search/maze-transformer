@@ -1,5 +1,5 @@
 # Avoid circular import from training/config.py
-from typing import TYPE_CHECKING, Union  # need Union as "a" | "b" doesn't work
+from typing import TYPE_CHECKING, Sequence, Union  # need Union as "a" | "b" doesn't work
 
 import torch
 from maze_dataset import SPECIAL_TOKENS, LatticeMaze
@@ -34,32 +34,21 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     padding_side = "left"
     truncation_side = "left"  #! strange choice, but it's what we did in pad_sequence
 
-    name_or_path = "maze_tokenizer"
+    name_or_path = "hugging_maze_tokenizer"
 
-    # TODO: this should just take seq_len_max and max grid n
     def __init__(
         self,
-        cfg: Union["ConfigHolder", "GPTDatasetConfig", None] = None,
-        token_arr: list[str] | None = None,
-        seq_len_max: int | None = None,
+        seq_len_max: int,
+        token_arr: list[str],
         **kwargs,
     ) -> None:
-        """takes either a cfg, or a token_arr and seq_len_max. also, kwargs are passed to super `PreTrainedTokenizer`"""
-
-        if cfg is None:
-            assert token_arr is not None
-            assert seq_len_max is not None
-        else:
-            assert token_arr is None
-            assert seq_len_max is None
-            # Avoid isinstance() because of circular import
-            if type(cfg).__name__ == "ConfigHolder":
-                cfg = cfg.dataset_cfg
-
-            seq_len_max = cfg.seq_len_max
-            token_arr = cfg.token_arr
-
+        """takes maximum sequence length and token array. also, kwargs are passed to super `PreTrainedTokenizer`"""
         super().__init__(max_len=seq_len_max, **kwargs)
+
+        assert isinstance(seq_len_max, int), f"seq_len_max must be an int, got {seq_len_max = } {type(seq_len_max) = }"
+        assert isinstance(token_arr, Sequence), f"token_arr must be a Sequence, got {token_arr = } {type(token_arr) = }"
+        assert isinstance(len(token_arr), int), f"token_arr must be a Sequence, got {token_arr = } {type(token_arr) = }"
+
         # We are having to do evil things here
         vocab: dict[str, int] = {token: i for i, token in enumerate(token_arr)}
         vocab[self.unk_token] = len(vocab)
