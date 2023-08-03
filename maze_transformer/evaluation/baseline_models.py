@@ -56,6 +56,7 @@ class RandomBaseline(HookedTransformer):
         path: list[CoordTup],
         pad_eos: bool = False,
     ) -> CoordTup | str:
+        """returns a tuple coordinate or a special token"""
         current_position: CoordTup = path[-1]
         # pad with eos up to max_new_tokens to avoid ragged tensors
         if pad_eos:
@@ -104,7 +105,7 @@ class RandomBaseline(HookedTransformer):
         steps_to_predict: int,
     ) -> list[str]:
         # assemble the maze from the tokens
-        maze: LatticeMaze = LatticeMaze.from_tokens(tokens)
+        maze: LatticeMaze = LatticeMaze.from_tokens(tokens, self.tokenizer._maze_tokenizer)
         origin_coord: CoordTup = strings_to_coords(get_origin_tokens(tokens))[0]
         target_coord: CoordTup = strings_to_coords(get_target_tokens(tokens))[0]
         solution: CoordArray = maze.find_shortest_path(origin_coord, target_coord)
@@ -137,7 +138,7 @@ class RandomBaseline(HookedTransformer):
             if predictions[-1] == SPECIAL_TOKENS.PATH_END:
                 break
 
-        return strings_to_coords(
+        return self.tokenizer._maze_tokenizer.coords_to_strings(
             predictions, when_noncoord="include"
         )
 

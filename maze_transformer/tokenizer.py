@@ -47,6 +47,11 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
         self._maze_tokenizer: MazeTokenizer = maze_tokenizer
         token_arr: list[str] = maze_tokenizer.token_arr
+        self._token_arr: list[str] = token_arr
+        self._seq_len_max: int = seq_len_max
+        self._vocab_size: int = maze_tokenizer.vocab_size
+        self.vocab_size = self._vocab_size
+        self._tokenizer_map = maze_tokenizer.tokenizer_map
 
         assert isinstance(seq_len_max, int), f"seq_len_max must be an int, got {seq_len_max = } {type(seq_len_max) = }"
         assert isinstance(token_arr, Sequence), f"token_arr must be a Sequence, got {token_arr = } {type(token_arr) = }"

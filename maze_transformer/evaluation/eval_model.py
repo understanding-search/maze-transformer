@@ -136,7 +136,7 @@ def predict_maze_paths(
         # predict tokens
         prediction: str = model.generate(
             context,
-            eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS.PATH_END],
+            eos_token_id=model.tokenizer._tokenizer_map[SPECIAL_TOKENS.PATH_END],
             stop_at_eos=True,
             max_new_tokens=max_new_tokens,
             verbose=verbose,
