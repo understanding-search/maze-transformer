@@ -9,6 +9,8 @@ from muutils.tensor_utils import ATensor, NDArray
 from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
+from maze_dataset.tokenization import MazeTokenizer
+
 if TYPE_CHECKING:
     from maze_transformer.training.config import ConfigHolder
 
@@ -16,8 +18,6 @@ if TYPE_CHECKING:
 
 
 class HuggingMazeTokenizer(PreTrainedTokenizer):
-    """extension of PreTrainedTokenizer for mazes"""
-
     vocab: dict[str, int]  # map of token_ids to strings
 
     bos_token: str = SPECIAL_TOKENS.ADJLIST_START
@@ -39,11 +39,14 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     def __init__(
         self,
         seq_len_max: int,
-        token_arr: list[str],
+        maze_tokenizer: MazeTokenizer,
         **kwargs,
     ) -> None:
-        """takes maximum sequence length and token array. also, kwargs are passed to super `PreTrainedTokenizer`"""
+        """extension of PreTrainedTokenizer for mazes. takes maximum sequence length and maze_tokenizer. also, kwargs are passed to super `PreTrainedTokenizer`"""
         super().__init__(max_len=seq_len_max, **kwargs)
+
+        self._maze_tokenizer: MazeTokenizer = maze_tokenizer
+        token_arr: list[str] = maze_tokenizer.token_arr
 
         assert isinstance(seq_len_max, int), f"seq_len_max must be an int, got {seq_len_max = } {type(seq_len_max) = }"
         assert isinstance(token_arr, Sequence), f"token_arr must be a Sequence, got {token_arr = } {type(token_arr) = }"
@@ -119,5 +122,5 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             sequence = sequence[sequence != self.pad_token_id]
             str_sequence = self.batch_decode(sequence)
 
-        lattice_maze = LatticeMaze.from_tokens(str_sequence)
+        lattice_maze = LatticeMaze.from_tokens(str_sequence, self._maze_tokenizer)
         return MazePlot(lattice_maze).to_ascii()

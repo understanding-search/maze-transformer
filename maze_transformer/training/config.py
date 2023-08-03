@@ -406,7 +406,7 @@ class ConfigHolder(SerializableDataclass):
         default=None
     )
     maze_tokenizer: MazeTokenizer|None = serializable_field(
-        default_factory=lambda : MazeTokenizer(tokenization_mode=TokenizationMode.AOTP_UT_uniform, max_grid_size=None),
+        default_factory=lambda : None,
         loading_fn=_load_maze_tokenizer,
     )
 
@@ -415,6 +415,16 @@ class ConfigHolder(SerializableDataclass):
         self.maze_tokenizer.clear_cache()
 
     def __post_init__(self):
+        # fallback to default maze tokenizer if no kwargs are provided
+        if self.pretrainedtokenizer_kwargs is None:
+            if self.maze_tokenizer is None:
+                self.maze_tokenizer = MazeTokenizer(
+                    tokenization_mode=TokenizationMode.AOTP_UT_uniform, 
+                    max_grid_size=None,
+                )
+
+        # update the config of the maze tokenizer if there is no grid size
+        # since we need the token array for the vocab size of the model
         if self.maze_tokenizer is not None:
             if self.maze_tokenizer.max_grid_size is None:
                 self._set_tok_gridsize_from_dataset()
@@ -441,7 +451,7 @@ class ConfigHolder(SerializableDataclass):
         elif self.maze_tokenizer is not None:
             return HuggingMazeTokenizer(
                 seq_len_max=self.dataset_cfg.seq_len_max,
-                token_arr=self.maze_tokenizer.token_arr,
+                maze_tokenizer=self.maze_tokenizer,
             )
         else:
             raise ValueError("no tokenizer specified")
