@@ -1,65 +1,66 @@
 # Avoid circular import from training/config.py
-from typing import TYPE_CHECKING, Union  # need Union as "a" | "b" doesn't work
+from typing import TYPE_CHECKING, Sequence  # need Union as "a" | "b" doesn't work
 
 import torch
 from maze_dataset import SPECIAL_TOKENS, LatticeMaze
-from maze_dataset.dataset.dataset import GPTDatasetConfig
 from maze_dataset.plotting import MazePlot
+from maze_dataset.tokenization import MazeTokenizer
 from muutils.tensor_utils import ATensor, NDArray
 from transformers import PreTrainedTokenizer
 from transformers.tokenization_utils import BatchEncoding
 
 if TYPE_CHECKING:
-    from maze_transformer.training.config import ConfigHolder
+    pass
 
 # pylint: disable=unused-import, abstract-method
 
 
 class HuggingMazeTokenizer(PreTrainedTokenizer):
-    """extension of PreTrainedTokenizer for mazes"""
-
     vocab: dict[str, int]  # map of token_ids to strings
 
-    bos_token: str = SPECIAL_TOKENS["adj_list_start"]
-    eos_token: str = SPECIAL_TOKENS["path_end"]
-    pad_token: str = SPECIAL_TOKENS["padding"]
+    bos_token: str = SPECIAL_TOKENS.ADJLIST_START
+    eos_token: str = SPECIAL_TOKENS.PATH_END
+    pad_token: str = SPECIAL_TOKENS.PADDING
     unk_token: str = "<UNK>"
 
     vocab_size: int = 0
     additional_special_tokens: list[str] = [
-        x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS["padding"]]
+        x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS.PADDING]
     ]
 
     # Overwrite class attributes
     padding_side = "left"
     truncation_side = "left"  #! strange choice, but it's what we did in pad_sequence
 
-    name_or_path = "maze_tokenizer"
+    name_or_path = "hugging_maze_tokenizer"
 
-    # TODO: this should just take seq_len_max and max grid n
     def __init__(
         self,
-        cfg: Union["ConfigHolder", "GPTDatasetConfig", None] = None,
-        token_arr: list[str] | None = None,
-        seq_len_max: int | None = None,
+        seq_len_max: int,
+        maze_tokenizer: MazeTokenizer,
         **kwargs,
     ) -> None:
-        """takes either a cfg, or a token_arr and seq_len_max. also, kwargs are passed to super `PreTrainedTokenizer`"""
-
-        if cfg is None:
-            assert token_arr is not None
-            assert seq_len_max is not None
-        else:
-            assert token_arr is None
-            assert seq_len_max is None
-            # Avoid isinstance() because of circular import
-            if type(cfg).__name__ == "ConfigHolder":
-                cfg = cfg.dataset_cfg
-
-            seq_len_max = cfg.seq_len_max
-            token_arr = cfg.token_arr
-
+        """extension of PreTrainedTokenizer for mazes. takes maximum sequence length and maze_tokenizer. also, kwargs are passed to super `PreTrainedTokenizer`"""
         super().__init__(max_len=seq_len_max, **kwargs)
+
+        self._maze_tokenizer: MazeTokenizer = maze_tokenizer
+        token_arr: list[str] = maze_tokenizer.token_arr
+        self._token_arr: list[str] = token_arr
+        self._seq_len_max: int = seq_len_max
+        self._vocab_size: int = maze_tokenizer.vocab_size
+        self.vocab_size = self._vocab_size
+        self._tokenizer_map = maze_tokenizer.tokenizer_map
+
+        assert isinstance(
+            seq_len_max, int
+        ), f"seq_len_max must be an int, got {seq_len_max = } {type(seq_len_max) = }"
+        assert isinstance(
+            token_arr, Sequence
+        ), f"token_arr must be a Sequence, got {token_arr = } {type(token_arr) = }"
+        assert isinstance(
+            len(token_arr), int
+        ), f"token_arr must be a Sequence, got {token_arr = } {type(token_arr) = }"
+
         # We are having to do evil things here
         vocab: dict[str, int] = {token: i for i, token in enumerate(token_arr)}
         vocab[self.unk_token] = len(vocab)
@@ -90,7 +91,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             raise NotImplementedError(
                 f"Caught an error during tokenization - probably because you are trying to encode a token not present in the tokenizer's vocabulary",
                 f"text: '{text}'",
-            )
+            ) from e
 
     def _tokenize(self, text: str, **kwargs) -> list[str]:
         assert len(kwargs) == 0, f"kwargs not supported: {kwargs}"
@@ -130,5 +131,5 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             sequence = sequence[sequence != self.pad_token_id]
             str_sequence = self.batch_decode(sequence)
 
-        lattice_maze = LatticeMaze.from_tokens(str_sequence)
+        lattice_maze = LatticeMaze.from_tokens(str_sequence, self._maze_tokenizer)
         return MazePlot(lattice_maze).to_ascii()

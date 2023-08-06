@@ -12,11 +12,10 @@ from maze_dataset import (
     SolvedMaze,
 )
 from maze_dataset.tokenization.token_utils import (
-    coords_to_tokens,
-    get_origin_token,
+    get_origin_tokens,
     get_path_tokens,
-    get_target_token,
-    tokens_to_coords,
+    get_target_tokens,
+    strings_to_coords,
 )
 from transformer_lens import HookedTransformer
 
@@ -56,13 +55,14 @@ class RandomBaseline(HookedTransformer):
         path: list[CoordTup],
         pad_eos: bool = False,
     ) -> CoordTup | str:
+        """returns a tuple coordinate or a special token"""
         current_position: CoordTup = path[-1]
         # pad with eos up to max_new_tokens to avoid ragged tensors
         if pad_eos:
-            if current_position in [target, SPECIAL_TOKENS["path_end"]]:
-                return SPECIAL_TOKENS["path_end"]
+            if current_position in [target, SPECIAL_TOKENS.PATH_END]:
+                return SPECIAL_TOKENS.PATH_END
         if current_position == target:
-            return SPECIAL_TOKENS["path_end"]
+            return SPECIAL_TOKENS.PATH_END
 
         neighbors: list[CoordTup] = self._get_coord_neighbors(
             solved_maze, current_position
@@ -80,7 +80,7 @@ class RandomBaseline(HookedTransformer):
 
         if len(unvisited_neighbors) == 0:
             # break out if dead end
-            return SPECIAL_TOKENS["path_end"]
+            return SPECIAL_TOKENS.PATH_END
         else:
             if correct_step not in unvisited_neighbors:
                 return random.choice(unvisited_neighbors)
@@ -104,22 +104,19 @@ class RandomBaseline(HookedTransformer):
         steps_to_predict: int,
     ) -> list[str]:
         # assemble the maze from the tokens
-        maze: LatticeMaze = LatticeMaze.from_tokens(tokens)
-        origin_coord: CoordTup = self.config.dataset_cfg.token_node_map[
-            get_origin_token(tokens)
-        ]
-        target_coord: CoordTup = self.config.dataset_cfg.token_node_map[
-            get_target_token(tokens)
-        ]
+        maze: LatticeMaze = LatticeMaze.from_tokens(
+            tokens, self.tokenizer._maze_tokenizer
+        )
+        origin_coord: CoordTup = strings_to_coords(get_origin_tokens(tokens))[0]
+        target_coord: CoordTup = strings_to_coords(get_target_tokens(tokens))[0]
         solution: CoordArray = maze.find_shortest_path(origin_coord, target_coord)
         solved_maze: SolvedMaze = SolvedMaze.from_lattice_maze(maze, solution)
         assert (solved_maze.start_pos == np.array(origin_coord)).all()
         assert (solved_maze.end_pos == np.array(target_coord)).all()
 
         # get the path so far
-        context_existing_path: list[Coord] = tokens_to_coords(
-            tokens=get_path_tokens(tokens, trim_end=True),
-            maze_data_cfg=self.config.dataset_cfg,
+        context_existing_path: list[Coord] = strings_to_coords(
+            get_path_tokens(tokens, trim_end=True),
             when_noncoord="except",
         )
 
@@ -139,11 +136,11 @@ class RandomBaseline(HookedTransformer):
                     path=path,
                 )
             )
-            if predictions[-1] == SPECIAL_TOKENS["path_end"]:
+            if predictions[-1] == SPECIAL_TOKENS.PATH_END:
                 break
 
-        return coords_to_tokens(
-            predictions, self.config.dataset_cfg, when_noncoord="include"
+        return self.tokenizer._maze_tokenizer.coords_to_strings(
+            predictions, when_noncoord="include"
         )
 
     def generate(

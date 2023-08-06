@@ -17,7 +17,7 @@ from maze_dataset.tokenization.token_utils import (
     get_context_tokens,
     get_path_tokens,
     remove_padding_from_token_str,
-    tokens_to_coords,
+    strings_to_coords,
 )
 from muutils.mlutils import chunks
 from muutils.statcounter import StatCounter
@@ -136,7 +136,7 @@ def predict_maze_paths(
         # predict tokens
         prediction: str = model.generate(
             context,
-            eos_token_id=data_cfg.tokenizer_map[SPECIAL_TOKENS["path_end"]],
+            eos_token_id=model.tokenizer._tokenizer_map[SPECIAL_TOKENS.PATH_END],
             stop_at_eos=True,
             max_new_tokens=max_new_tokens,
             verbose=verbose,
@@ -153,9 +153,8 @@ def predict_maze_paths(
     paths: list[list[tuple[int, int]]] = []
     for pred_tokens in prediction_batch:
         path_tokens: list[str] = get_path_tokens(pred_tokens, trim_end=True)
-        path_coords: list[str | CoordTup] = tokens_to_coords(
+        path_coords: list[str | CoordTup] = strings_to_coords(
             path_tokens,
-            maze_data_cfg=data_cfg,
             when_noncoord=when_noncoord,
         )
         # This is the correct type when using "skip"
@@ -209,7 +208,9 @@ def evaluate_model(
     }
 
     if dataset_tokens is None:
-        dataset_tokens = dataset.as_tokens(join_tokens_individual_maze=False)
+        dataset_tokens = dataset.as_tokens(
+            model.zanj_model_config.maze_tokenizer, join_tokens_individual_maze=False
+        )
     else:
         assert len(dataset) == len(
             dataset_tokens
@@ -262,9 +263,7 @@ def evaluate_logits(
         for tokens in prediction_tokens:
             # this returns first path_start to end of list. Early in training there may be multiple path_start tokens, so results should be treated with caution
             path_tokens = get_path_tokens(tokens.split(" "))
-            path_coords = tokens_to_coords(
-                path_tokens, maze_data_cfg=config.dataset_cfg, when_noncoord="skip"
-            )
+            path_coords = strings_to_coords(path_tokens, when_noncoord="skip")
             predicted_paths.append(cast(list[tuple[int, int]], path_coords))
 
         maze_tokens = [

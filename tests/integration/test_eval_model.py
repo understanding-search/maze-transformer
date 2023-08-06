@@ -33,7 +33,7 @@ def test_model_loading():
     )
     # get config
     cfg: ConfigHolder = ConfigHolder.get_config_multisource(
-        cfg_names=("test-g3-n5-a_dfs-h89001", "nano-v1", "test-v1"),
+        cfg_names=("test-g3-n5-a_dfs-h81250", "nano-v1", "test-v1"),
     )
     # train model
     result: TrainingResult = train_model(
@@ -68,7 +68,7 @@ def test_predict_maze_paths():
 
     max_new_tokens = 3
     paths = predict_maze_paths(
-        tokens_batch=dataset.as_tokens(),
+        tokens_batch=dataset.as_tokens(cfg.maze_tokenizer),
         data_cfg=cfg.dataset_cfg,
         model=model,
         max_new_tokens=max_new_tokens,

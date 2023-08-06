@@ -7,12 +7,6 @@ TEMP_DIR: Path = Path("tests/_temp/test_dataset")
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 
-class TestGPTDatasetConfig:
-    def test_tokenizer_map(self):
-        cfg = MazeDatasetConfig(name="test", grid_n=3, n_mazes=1)
-        assert list(cfg.tokenizer_map.keys()) == cfg.token_arr
-
-
 class TestGPTDataset:
     class TestFromConfig:
         cfg = MazeDatasetConfig(name="test", grid_n=3, n_mazes=1)

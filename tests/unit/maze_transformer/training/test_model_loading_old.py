@@ -39,8 +39,8 @@ def test_model_loading_notrain(temp_dir):
     # Random input tokens
     input_sequence = torch.randint(
         low=0,
-        high=len(cfgholder.dataset_cfg.token_arr),
-        size=(1, min(cfgholder.dataset_cfg.seq_len_max, 10)),
+        high=len(cfgholder.tokenizer._token_arr),
+        size=(1, min(cfgholder.tokenizer._seq_len_max, 10)),
     )
 
     # Check for equality in argsort (absolute values won't be equal due to centering the unembedding weight matrix)

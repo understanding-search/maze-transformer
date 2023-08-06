@@ -2,40 +2,41 @@ Name                                                                      Stmts 
 -------------------------------------------------------------------------------------------------------
 maze_transformer\__init__.py                                                  0      0   100%
 maze_transformer\evaluation\__init__.py                                       0      0   100%
-maze_transformer\evaluation\baseline_models.py                               69      7    90%   62-63, 158, 160-163, 169
-maze_transformer\evaluation\eval_model.py                                    78     28    64%   46-55, 70-105, 173-186, 251
+maze_transformer\evaluation\baseline_models.py                               69      7    90%   62-63, 155, 157-160, 166
+maze_transformer\evaluation\eval_model.py                                    78     28    64%   46-55, 70-105, 172-185, 252
 maze_transformer\evaluation\maze_complexity_evals.py                          8      0   100%
-maze_transformer\evaluation\path_evals.py                                   106      9    92%   19, 64-68, 88, 91-95, 167, 177, 190
-maze_transformer\evaluation\plot_attention.py                                89     89     0%   2-261
+maze_transformer\evaluation\path_evals.py                                   106      4    96%   19, 64-68, 88
+maze_transformer\evaluation\plot_attention.py                                89     89     0%   2-263
 maze_transformer\test_helpers\assertions.py                                  22      1    95%   44
-maze_transformer\test_helpers\stub_logger.py                                 26      2    92%   23, 26
-maze_transformer\tokenizer.py                                                67     11    84%   13, 50-51, 57, 89-90, 96-98, 101-104
+maze_transformer\test_helpers\stub_logger.py                                 28      2    93%   23, 26
+maze_transformer\tokenizer.py                                                68      8    88%   13, 90-91, 97-99, 102-105
 maze_transformer\training\__init__.py                                         0      0   100%
-maze_transformer\training\config.py                                         156     17    89%   80-83, 143, 190, 194, 232, 402, 424-428, 470-471, 484, 493, 499-502, 548, 553
-maze_transformer\training\train_model.py                                     59      6    90%   34, 61-62, 131-138
+maze_transformer\training\config.py                                         179     22    88%   81-84, 144, 191, 195, 233, 377-383, 444, 457, 471-475, 517-518, 531, 540, 546-549, 573, 599, 604
+maze_transformer\training\train_model.py                                     59      6    90%   34, 61-62, 138-145
 maze_transformer\training\train_save_files.py                                16      0   100%
-maze_transformer\training\training.py                                        80      3    96%   61, 86-89
+maze_transformer\training\training.py                                        86      6    93%   30, 40-41, 73, 98-101
 maze_transformer\training\wandb_logger.py                                    51      4    92%   56-58, 61
 setup.py                                                                      3      3     0%   3-6
 tests\conftest.py                                                             8      0   100%
 tests\integration\test_create_dataset.py                                     27      0   100%
-tests\integration\test_eval_model.py                                         49      0   100%
-tests\integration\test_train_model.py                                         8      0   100%
+tests\integration\test_eval_model.py                                         52      1    98%   95
+tests\integration\test_train_model.py                                         9      0   100%
 tests\integration\test_training.py                                           62      0   100%
-tests\unit\maze_transformer\evaluation\test_baseline_models.py               23      0   100%
+tests\unit\maze_transformer\evaluation\test_baseline_models.py               24      0   100%
 tests\unit\maze_transformer\evaluation\test_maze_complexity_evals.py         15      0   100%
 tests\unit\maze_transformer\evaluation\test_path_evals.py                    48      2    96%   30-32
-tests\unit\maze_transformer\test_tokenizers.py                               58      0   100%
+tests\unit\maze_transformer\test_tokenizers.py                               71      0   100%
 tests\unit\maze_transformer\training\config\test_base_gpt_config.py          29      0   100%
+tests\unit\maze_transformer\training\config\test_cfg_post_init.py             9      0   100%
 tests\unit\maze_transformer\training\config\test_cfg_save_load.py            67      0   100%
 tests\unit\maze_transformer\training\config\test_config_holder.py            38      5    87%   44-50
 tests\unit\maze_transformer\training\config\test_train_cfg_intervals.py      89      0   100%
 tests\unit\maze_transformer\training\config\test_train_config.py             33      0   100%
-tests\unit\maze_transformer\training\test_dataset.py                         53      7    87%   44-59
-tests\unit\maze_transformer\training\test_get_dataloader.py                  18      0   100%
-tests\unit\maze_transformer\training\test_maze_dataset_construction.py        8      0   100%
+tests\unit\maze_transformer\training\test_dataset.py                         49      7    86%   38-53
+tests\unit\maze_transformer\training\test_get_dataloader.py                  21      0   100%
+tests\unit\maze_transformer\training\test_maze_dataset_construction.py       12      0   100%
 tests\unit\maze_transformer\training\test_model_loading_old.py               19      0   100%
-tests\unit\maze_transformer\training\test_tokenizer.py                       13      0   100%
+tests\unit\maze_transformer\training\test_tokenizer.py                       17      0   100%
 tests\unit\maze_transformer\training\zanj\test_zanj_ht_save_load.py          37      0   100%
 -------------------------------------------------------------------------------------------------------
-TOTAL                                                                      1532    194    87%
+TOTAL                                                                      1598    195    88%
