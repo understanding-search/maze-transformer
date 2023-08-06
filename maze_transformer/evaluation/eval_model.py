@@ -208,7 +208,9 @@ def evaluate_model(
     }
 
     if dataset_tokens is None:
-        dataset_tokens = dataset.as_tokens(model.zanj_model_config.maze_tokenizer, join_tokens_individual_maze=False)
+        dataset_tokens = dataset.as_tokens(
+            model.zanj_model_config.maze_tokenizer, join_tokens_individual_maze=False
+        )
     else:
         assert len(dataset) == len(
             dataset_tokens

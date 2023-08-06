@@ -15,8 +15,8 @@ from circuitsvis.attention import attention_heads
 from circuitsvis.tokens import colored_tokens_multi
 from jaxtyping import Float
 from maze_dataset import CoordTup, MazeDataset, MazeDatasetConfig, SolvedMaze
-from maze_dataset.tokenization.token_utils import coord_str_to_tuple_noneable
 from maze_dataset.plotting import MazePlot
+from maze_dataset.tokenization.token_utils import coord_str_to_tuple_noneable
 
 # Utilities
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass

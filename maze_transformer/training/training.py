@@ -101,8 +101,7 @@ def train(
             evals_enabled = False
 
         val_dataset_tokens: list[list[str]] = val_dataset.as_tokens(
-            model.zanj_model_config.maze_tokenizer,
-            join_tokens_individual_maze=False
+            model.zanj_model_config.maze_tokenizer, join_tokens_individual_maze=False
         )
 
     # compute intervals
