@@ -9,7 +9,7 @@ def test_create_model_forward():
     cfg = _create_top_level_config()
     model = cfg.create_model()
 
-    d_vocab = cfg.dataset_cfg.n_tokens
+    d_vocab = cfg.tokenizer._vocab_size
 
     tokens = torch.randint(0, d_vocab, (5,))
     logits = model(tokens)

@@ -4,7 +4,7 @@ import torch
 from jaxtyping import Int
 from zanj.torchutil import ConfigMismatchException, assert_model_cfg_equality
 
-from maze_transformer.training.config import BaseGPTConfig, ZanjHookedTransformer
+from maze_transformer.training.config import ZanjHookedTransformer
 
 
 def _check_except_config_equality_modulo_weight_processing(
@@ -44,11 +44,11 @@ def assert_model_output_equality(
             raise e
 
     # Random input tokens
-    dataset_cfg: BaseGPTConfig = model_a.zanj_model_config.dataset_cfg
+    tokenizer = model_a.zanj_model_config.tokenizer
     input_sequence: Int[torch.Tensor, "1 test_sequence_length"] = torch.randint(
         low=0,
-        high=len(dataset_cfg.token_arr),
-        size=(1, min(dataset_cfg.seq_len_max, test_sequence_length)),
+        high=len(tokenizer._token_arr),
+        size=(1, min(tokenizer._seq_len_max, test_sequence_length)),
     )
 
     # (copied from `test_eval_model.py`)

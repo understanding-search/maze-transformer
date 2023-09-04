@@ -15,8 +15,8 @@ from circuitsvis.attention import attention_heads
 from circuitsvis.tokens import colored_tokens_multi
 from jaxtyping import Float
 from maze_dataset import CoordTup, MazeDataset, MazeDatasetConfig, SolvedMaze
-from maze_dataset.maze.lattice_maze import coord_str_to_tuple_noneable
 from maze_dataset.plotting import MazePlot
+from maze_dataset.tokenization.token_utils import coord_str_to_tuple_noneable
 
 # Utilities
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
@@ -52,12 +52,14 @@ class ProcessedMazeAttention(SerializableDataclass):
         for i in range(n_mazes):
             # get the maze from the dataset and process into tokens
             solved_maze: SolvedMaze = dataset[i]
-            tokens: list[str] = solved_maze.as_tokens(dataset.cfg.node_token_map)
+            tokens: list[str] = solved_maze.as_tokens(
+                model.zanj_model_config.maze_tokenizer
+            )
             tokens_context: list[str]
 
             if context_maze_only:
                 assert context_maze_fn is None
-                path_start_index: int = tokens.index(SPECIAL_TOKENS["path_start"])
+                path_start_index: int = tokens.index(SPECIAL_TOKENS.PATH_END)
                 tokens_context = tokens[: path_start_index + 1]
             else:
                 assert context_maze_fn is not None

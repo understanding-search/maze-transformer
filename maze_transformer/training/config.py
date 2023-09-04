@@ -10,6 +10,7 @@ from typing import Any, Type
 import torch
 from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
 from maze_dataset.dataset.dataset import GPTDatasetConfig
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
 from muutils.dictmagic import kwargs_to_nested_dict
 from muutils.json_serialize import (
     JSONitem,
@@ -367,6 +368,21 @@ TRAINING_CONFIGS: dict[str, TrainConfig] = {
 }
 
 
+def _load_maze_tokenizer(data: dict) -> MazeTokenizer:
+    """load the maze tokenizer, including vocab size from a legacy config"""
+    if "maze_tokenizer" in data:
+        # new style tokenizer
+        return load_item_recursive(data["maze_tokenizer"], path=tuple("maze_tokenizer"))
+    else:
+        if "token_arr" in data["dataset_cfg"]:
+            output: MazeTokenizer = MazeTokenizer(
+                tokenization_mode=TokenizationMode.AOTP_UT_rasterized,
+                max_grid_size=None,
+            )
+        else:
+            raise ValueError("Could not find vocab size in legacy config")
+
+
 @serializable_dataclass(kw_only=True)
 class ConfigHolder(SerializableDataclass):
     """
@@ -387,6 +403,29 @@ class ConfigHolder(SerializableDataclass):
     pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
         default=None
     )
+    maze_tokenizer: MazeTokenizer | None = serializable_field(
+        default_factory=lambda: None,
+        loading_fn=_load_maze_tokenizer,
+    )
+
+    def _set_tok_gridsize_from_dataset(self):
+        self.maze_tokenizer.max_grid_size = self.dataset_cfg.max_grid_n
+        self.maze_tokenizer.clear_cache()
+
+    def __post_init__(self):
+        # fallback to default maze tokenizer if no kwargs are provided
+        if self.pretrainedtokenizer_kwargs is None:
+            if self.maze_tokenizer is None:
+                self.maze_tokenizer = MazeTokenizer(
+                    tokenization_mode=TokenizationMode.AOTP_UT_uniform,
+                    max_grid_size=None,
+                )
+
+        # update the config of the maze tokenizer if there is no grid size
+        # since we need the token array for the vocab size of the model
+        if self.maze_tokenizer is not None:
+            if self.maze_tokenizer.max_grid_size is None:
+                self._set_tok_gridsize_from_dataset()
 
     def summary(self) -> str:
         return {
@@ -395,6 +434,9 @@ class ConfigHolder(SerializableDataclass):
             "model_cfg": self.model_cfg.summary(),
             "train_cfg": self.train_cfg.summary(),
             "pretrainedtokenizer_kwargs": self.pretrainedtokenizer_kwargs,
+            "maze_tokenizer": self.maze_tokenizer.summary()
+            if self.maze_tokenizer is not None
+            else None,
         }
 
     @property
@@ -403,11 +445,16 @@ class ConfigHolder(SerializableDataclass):
 
     @cached_property
     def tokenizer(self) -> PreTrainedTokenizer:
-        """if pretrained tokenizer kwargs are provided, use those, otherwise use the HuggingMazeTokenizer derived from the dataset_cfg"""
+        """get a tokenizer via a pretrainedtokenizer_kwargs, or a hugging maze tokenizer"""
         if self.pretrainedtokenizer_kwargs is not None:
             return PreTrainedTokenizer(**self.pretrainedtokenizer_kwargs)
+        elif self.maze_tokenizer is not None:
+            return HuggingMazeTokenizer(
+                seq_len_max=self.dataset_cfg.seq_len_max,
+                maze_tokenizer=self.maze_tokenizer,
+            )
         else:
-            return HuggingMazeTokenizer(self.dataset_cfg)
+            raise ValueError("no tokenizer specified")
 
     @cached_property
     def hooked_transformer_cfg(self) -> HookedTransformerConfig:
@@ -417,7 +464,7 @@ class ConfigHolder(SerializableDataclass):
             d_head=self.model_cfg.d_head,
             n_layers=self.model_cfg.n_layers,
             n_ctx=self.dataset_cfg.seq_len_max,
-            d_vocab=len(self.dataset_cfg.token_arr),  # TODO: get this from tokenizer
+            d_vocab=self.maze_tokenizer.vocab_size,
         )
 
     def transformer_config(self) -> HookedTransformerConfig:
@@ -521,6 +568,10 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
             tokenizer=cfg_holder.tokenizer,
         )
 
+    @property
+    def config(self) -> ConfigHolder:
+        return self.zanj_model_config
+
     def _load_state_dict_wrapper(
         self,
         state_dict: dict[str, Any],
@@ -583,7 +634,7 @@ class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
             center_writing_weights=not recover_exact,
             center_unembed=not recover_exact,
             refactor_factored_attn_matrices=False,
-            move_state_dict_to_device=not recover_exact,
+            # move_state_dict_to_device=not recover_exact, # this no longer works as of TransformerLens 1.4.0 but seemed to work previously?
         )
         self.setup()  # Re-attach layernorm hooks by calling setup
         self.eval()
