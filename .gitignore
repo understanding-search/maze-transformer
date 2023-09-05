@@ -4,6 +4,7 @@ models/
 wandb
 tests/_temp/**
 tests/**/_temp/**
+notebooks/data/**
 
 .coverage
 htmlcov/
