@@ -1,5 +1,5 @@
-import typing
 import functools
+import typing
 
 from maze_dataset import SPECIAL_TOKENS
 
@@ -71,8 +71,16 @@ def token_after_fixed_start_token(
 
 
 LOGIT_ATTRIB_TASKS: dict[str, DLAProtocolFixed] = {
-    "path_start": functools.partial(token_after_fixed_start_token, start_token=SPECIAL_TOKENS.PATH_START, offset=0),
-    "origin_after_path_start": functools.partial(token_after_fixed_start_token, start_token=SPECIAL_TOKENS.PATH_START, offset=1),
-    "path_end": functools.partial(token_after_fixed_start_token, start_token=SPECIAL_TOKENS.PATH_END, offset=0),
-    "final_before_path_end": functools.partial(token_after_fixed_start_token, start_token=SPECIAL_TOKENS.PATH_END, offset=-1),
+    "path_start": functools.partial(
+        token_after_fixed_start_token, start_token=SPECIAL_TOKENS.PATH_START, offset=0
+    ),
+    "origin_after_path_start": functools.partial(
+        token_after_fixed_start_token, start_token=SPECIAL_TOKENS.PATH_START, offset=1
+    ),
+    "path_end": functools.partial(
+        token_after_fixed_start_token, start_token=SPECIAL_TOKENS.PATH_END, offset=0
+    ),
+    "final_before_path_end": functools.partial(
+        token_after_fixed_start_token, start_token=SPECIAL_TOKENS.PATH_END, offset=-1
+    ),
 }

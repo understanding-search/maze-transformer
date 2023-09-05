@@ -1,17 +1,13 @@
 # Generic
-from collections import defaultdict
-import json
 import typing
+from collections import defaultdict
 
 # plotting
-import IPython
-import matplotlib
 import matplotlib.pyplot as plt
 
 # Numerical Computing
 import numpy as np
 import torch
-from jaxtyping import Float
 
 # Transformers
 from circuitsvis.attention import attention_heads
@@ -19,12 +15,12 @@ from circuitsvis.tokens import colored_tokens_multi
 from jaxtyping import Float
 from maze_dataset import CoordTup, MazeDataset, MazeDatasetConfig, SolvedMaze
 from maze_dataset.plotting import MazePlot
+from maze_dataset.plotting.print_tokens import color_tokens_cmap
+from maze_dataset.tokenization import MazeTokenizer
 from maze_dataset.tokenization.token_utils import coord_str_to_tuple_noneable
 
 # Utilities
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
-from maze_dataset.tokenization import MazeTokenizer
-from maze_dataset.plotting.print_tokens import color_tokens_cmap
 
 from maze_transformer.evaluation.eval_model import predict_maze_paths
 from maze_transformer.tokenizer import SPECIAL_TOKENS
@@ -243,13 +239,16 @@ def mazeplot_attention(
     maze: SolvedMaze,
     tokens_context: str,
     attention: Float[np.ndarray, "n_tokens"],
-    mazeplot: MazePlot|None = None,
-    color_maps: tuple[str, str] = ("plasma", "RdBu"), # all positive, positive and negative
+    mazeplot: MazePlot | None = None,
+    color_maps: tuple[str, str] = (
+        "plasma",
+        "RdBu",
+    ),  # all positive, positive and negative
     min_for_positive: float = 0.0,
 ) -> MazePlot:
     if mazeplot is None:
         mazeplot = MazePlot(maze)
-    
+
     if attention.min() >= min_for_positive:
         cmap = color_maps[0]
     else:
@@ -274,16 +273,18 @@ def mazeplot_attention(
         node_values=node_values,
         color_map=cmap,
     )
-    total_logits_str: str = "\n".join([f"'{k}' : {v:.1f}" for k, v in total_logits_nonpos.items()])
+    total_logits_str: str = "\n".join(
+        [f"'{k}' : {v:.1f}" for k, v in total_logits_nonpos.items()]
+    )
     # json.dumps(total_logits_nonpos)
     mazeplot.plot(title=f"Totals:\n{total_logits_str}")
-    
+
     return mazeplot
 
 
 def plot_attention_final_token(
     important_heads_scores: dict[
-        str, 
+        str,
         tuple[float, Float[np.ndarray, "n_mazes n_tokens n_tokens"]],
     ],
     prompts: list[list[str]],
@@ -293,10 +294,9 @@ def plot_attention_final_token(
     last_n_tokens: int = 20,
     exponentiate_scores: bool = False,
 ):
-
     for k, (c, v) in important_heads_scores.items():
         print(f"{k = }, {c = } {v.shape = }")
-        
+
         # set up scores across tokens figure
         scores_fig, scores_ax = plt.subplots(n_mazes, 1)
         scores_fig.set_size_inches(30, 4 * n_mazes)
@@ -305,26 +305,33 @@ def plot_attention_final_token(
             # process tokens and attention scores
             n_tokens_prompt = len(prompts[i])
             n_tokens_view = min(n_tokens_prompt, last_n_tokens)
-            v_final = v[i][-1] # -1 for last token
+            v_final = v[i][-1]  # -1 for last token
             if exponentiate_scores:
                 v_final = np.exp(v_final)
 
             # print token scores
-            print(color_tokens_cmap(prompts[i][-n_tokens_view:], v_final[-n_tokens_view:], fmt="terminal", labels=True))
-            
+            print(
+                color_tokens_cmap(
+                    prompts[i][-n_tokens_view:],
+                    v_final[-n_tokens_view:],
+                    fmt="terminal",
+                    labels=True,
+                )
+            )
+
             # plot across tokens
             scores_ax[i].plot(
                 v_final[-n_tokens_prompt:],
                 "o",
             )
-            scores_ax[i].grid(axis='x', which='major', color='black', alpha=0.1)
+            scores_ax[i].grid(axis="x", which="major", color="black", alpha=0.1)
             scores_ax[i].set_xticks(range(n_tokens_prompt), prompts[i], rotation=90)
-        
+
             # plot attention across maze
             mazeplot: MazePlot = mazeplot_attention(
                 maze=mazes[i],
                 tokens_context=prompts[i][-n_tokens_view:],
                 attention=v_final[-n_tokens_view:],
             )
-        
+
         plt.show()
