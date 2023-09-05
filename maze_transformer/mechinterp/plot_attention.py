@@ -1,4 +1,6 @@
 # Generic
+from collections import defaultdict
+import json
 import typing
 
 # plotting
@@ -9,6 +11,7 @@ import matplotlib.pyplot as plt
 # Numerical Computing
 import numpy as np
 import torch
+from jaxtyping import Float
 
 # Transformers
 from circuitsvis.attention import attention_heads
@@ -20,6 +23,8 @@ from maze_dataset.tokenization.token_utils import coord_str_to_tuple_noneable
 
 # Utilities
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
+from maze_dataset.tokenization import MazeTokenizer
+from maze_dataset.plotting.print_tokens import color_tokens_cmap
 
 from maze_transformer.evaluation.eval_model import predict_maze_paths
 from maze_transformer.tokenizer import SPECIAL_TOKENS
@@ -197,6 +202,7 @@ class ProcessedMazeAttention(SerializableDataclass):
         for idx_attn, (name, attn) in enumerate(
             zip(self.attention_names, self.attention_tensored)
         ):
+            # --------------------------
             # empty node values
             node_values: Float[np.ndarray, "grid_n grid_n"] = np.zeros(
                 self.input_maze.grid_shape
@@ -216,6 +222,7 @@ class ProcessedMazeAttention(SerializableDataclass):
                     node_values=node_values,
                     color_map=color_map,
                 )
+            # --------------------------
 
         # create a shared figure
         fig, axs = plt.subplots(
@@ -232,32 +239,92 @@ class ProcessedMazeAttention(SerializableDataclass):
         return fig, axs
 
 
-def colorize(
-    tokens: list[str],
-    weights: list[float],
-    cmap: matplotlib.colors.Colormap | str = "Blues",
-    template: str = '<span class="barcode"; style="color: black; background-color: {clr}">&nbsp{tok}&nbsp</span>',
-) -> str:
-    """given a sequence of tokens and their weights, colorize the tokens according to the weights (output is html)
+def mazeplot_attention(
+    maze: SolvedMaze,
+    tokens_context: str,
+    attention: Float[np.ndarray, "n_tokens"],
+    mazeplot: MazePlot|None = None,
+    color_maps: tuple[str, str] = ("plasma", "RdBu"), # all positive, positive and negative
+    min_for_positive: float = 0.0,
+) -> MazePlot:
+    if mazeplot is None:
+        mazeplot = MazePlot(maze)
+    
+    if attention.min() >= min_for_positive:
+        cmap = color_maps[0]
+    else:
+        cmap = color_maps[1]
 
-    originally from https://stackoverflow.com/questions/59220488/to-visualize-attention-color-tokens-using-attention-weights
-    """
+    print(f"{attention.min() = }, {attention.max() = }, {cmap = }")
 
-    if isinstance(cmap, str):
-        cmap = matplotlib.cm.get_cmap(cmap)
+    node_values: Float[np.ndarray, "grid_n grid_n"] = np.zeros(maze.grid_shape)
 
-    colored_string: str = ""
+    total_logits_nonpos = defaultdict(float)
 
-    for word, color in zip(tokens, weights):
-        color_hex: str = matplotlib.colors.rgb2hex(cmap(color)[:3])
-        colored_string += template.format(clr=color_hex, tok=word)
+    # get node values for each token
+    for idx_token, token in enumerate(tokens_context):
+        coord: CoordTup | None = coord_str_to_tuple_noneable(token)
+        if coord is not None:
+            node_values[coord[0], coord[1]] += np.sum(attention[idx_token])
+        else:
+            total_logits_nonpos[token] += attention[idx_token]
 
-    return colored_string
+    # update MazePlot objects
+    mazeplot.add_node_values(
+        node_values=node_values,
+        color_map=cmap,
+    )
+    total_logits_str: str = "\n".join([f"'{k}' : {v:.1f}" for k, v in total_logits_nonpos.items()])
+    # json.dumps(total_logits_nonpos)
+    mazeplot.plot(title=f"Totals:\n{total_logits_str}")
+    
+    return mazeplot
 
 
-def _test():
-    mystr: str = "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum"
-    tokens: list[str] = mystr.split()
-    weights: list[float] = np.random.rand(len(tokens)).tolist()
-    colored: str = colorize(tokens, weights)
-    IPython.display.display(IPython.display.HTML(colored))
+def plot_attention_final_token(
+    important_heads_scores: dict[
+        str, 
+        tuple[float, Float[np.ndarray, "n_mazes n_tokens n_tokens"]],
+    ],
+    prompts: list[list[str]],
+    mazes: list[SolvedMaze],
+    tokenizer: MazeTokenizer,
+    n_mazes: int = 5,
+    last_n_tokens: int = 20,
+    exponentiate_scores: bool = False,
+):
+
+    for k, (c, v) in important_heads_scores.items():
+        print(f"{k = }, {c = } {v.shape = }")
+        
+        # set up scores across tokens figure
+        scores_fig, scores_ax = plt.subplots(n_mazes, 1)
+        scores_fig.set_size_inches(30, 4 * n_mazes)
+        # for each maze
+        for i in range(n_mazes):
+            # process tokens and attention scores
+            n_tokens_prompt = len(prompts[i])
+            n_tokens_view = min(n_tokens_prompt, last_n_tokens)
+            v_final = v[i][-1] # -1 for last token
+            if exponentiate_scores:
+                v_final = np.exp(v_final)
+
+            # print token scores
+            print(color_tokens_cmap(prompts[i][-n_tokens_view:], v_final[-n_tokens_view:], fmt="terminal", labels=True))
+            
+            # plot across tokens
+            scores_ax[i].plot(
+                v_final[-n_tokens_prompt:],
+                "o",
+            )
+            scores_ax[i].grid(axis='x', which='major', color='black', alpha=0.1)
+            scores_ax[i].set_xticks(range(n_tokens_prompt), prompts[i], rotation=90)
+        
+            # plot attention across maze
+            mazeplot: MazePlot = mazeplot_attention(
+                maze=mazes[i],
+                tokens_context=prompts[i][-n_tokens_view:],
+                attention=v_final[-n_tokens_view:],
+            )
+        
+        plt.show()
