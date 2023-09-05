@@ -66,8 +66,9 @@ def compute_direct_logit_attribution(
 def plot_direct_logit_attribution(
     model: ZanjHookedTransformer,
     cache: ActivationCache,
-    answer_tokens: Int[torch.Tensor, "n_mazes"],   
-):
+    answer_tokens: Int[torch.Tensor, "n_mazes"],
+    show: bool = True,
+) -> tuple[plt.Figure, plt.Axes, Float[np.ndarray, "layer head"]]:
     data = compute_direct_logit_attribution(
         model=model,
         cache=cache,
@@ -76,7 +77,16 @@ def plot_direct_logit_attribution(
         
     data_extreme: float = np.max(np.abs(data))
     # colormap centeres on zero
-    plt.imshow(data, cmap = "RdBu", vmin=-data_extreme, vmax=data_extreme)
-    plt.colorbar()
-    plt.title("Logit Difference from each head")
-    plt.show()
+    fig, ax = plt.subplots()
+    ax.imshow(data, cmap = "RdBu", vmin=-data_extreme, vmax=data_extreme)
+    ax.set_xlabel("Head")
+    ax.set_ylabel("Layer")
+    plt.colorbar(ax.get_images()[0], ax=ax)
+    ax.set_title(f"Logit Difference from each head\n{model.zanj_model_config.name}")
+    
+    if show:
+        plt.show()
+
+    return fig, ax, data
+
+    
