@@ -16,6 +16,7 @@ from jaxtyping import Float
 from maze_dataset import CoordTup, MazeDataset, MazeDatasetConfig, SolvedMaze
 from maze_dataset.plotting import MazePlot
 from maze_dataset.plotting.print_tokens import color_tokens_cmap
+from maze_dataset.plotting.plot_tokens import plot_colored_text
 from maze_dataset.tokenization import MazeTokenizer
 from maze_dataset.tokenization.token_utils import coord_str_to_tuple_noneable
 
@@ -245,19 +246,17 @@ def mazeplot_attention(
         "RdBu",
     ),  # all positive, positive and negative
     min_for_positive: float = 0.0,
-) -> MazePlot:
-    if mazeplot is None:
-        mazeplot = MazePlot(maze)
-
+    show_other_tokens: bool = True,
+) -> tuple[MazePlot, plt.Figure, plt.Axes]:
+    
+    # set up color map
     if attention.min() >= min_for_positive:
         cmap = color_maps[0]
     else:
         cmap = color_maps[1]
 
-    print(f"{attention.min() = }, {attention.max() = }, {cmap = }")
-
+    # storing attention
     node_values: Float[np.ndarray, "grid_n grid_n"] = np.zeros(maze.grid_shape)
-
     total_logits_nonpos = defaultdict(float)
 
     # get node values for each token
@@ -268,18 +267,47 @@ def mazeplot_attention(
         else:
             total_logits_nonpos[token] += attention[idx_token]
 
-    # update MazePlot objects
+    # MazePlot attentions
+    if mazeplot is None:
+        mazeplot = MazePlot(maze)
+
     mazeplot.add_node_values(
         node_values=node_values,
         color_map=cmap,
     )
-    total_logits_str: str = "\n".join(
-        [f"'{k}' : {v:.1f}" for k, v in total_logits_nonpos.items()]
-    )
-    # json.dumps(total_logits_nonpos)
-    mazeplot.plot(title=f"Totals:\n{total_logits_str}")
 
-    return mazeplot
+    # set up combined figure
+    fig, (ax_maze, ax_other) = plt.subplots(
+        2, 1, 
+        figsize=(7, 11.5),
+        height_ratios=[7, 1],
+    )
+    # set height ratio
+    mazeplot.plot(
+        title=f"{attention.min() = }\n{attention.max() = }",
+        fig_ax=(fig, ax_maze),
+    )
+
+    # non-pos tokens attention
+    total_logits_nonpos_processed: tuple[list[str], list[float]] = tuple(zip(*
+        sorted(
+            total_logits_nonpos.items(), key=lambda x: x[0]
+        )
+    ))
+
+    plot_colored_text(
+        total_logits_nonpos_processed[0],
+        total_logits_nonpos_processed[1],
+        cmap=cmap,
+        ax=ax_other,
+        fontsize=5,
+        width_scale=0.01,
+        char_min=5,
+    )
+
+    ax_other.set_title("Non-Positional Tokens Attention")
+
+    return mazeplot, fig, (ax_maze, ax_other)
 
 
 def plot_attention_final_token(
@@ -328,7 +356,7 @@ def plot_attention_final_token(
             scores_ax[i].set_xticks(range(n_tokens_prompt), prompts[i], rotation=90)
 
             # plot attention across maze
-            mazeplot: MazePlot = mazeplot_attention(
+            mazeplot_attention(
                 maze=mazes[i],
                 tokens_context=prompts[i][-n_tokens_view:],
                 attention=v_final[-n_tokens_view:],
