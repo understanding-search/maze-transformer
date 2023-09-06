@@ -72,7 +72,7 @@ def plot_logit_lens(
     cache: ActivationCache,
     answer_tokens: Int[torch.Tensor, "n_mazes"],
 ) -> tuple[
-    tuple[plt.Figure, plt.Axes],  # figure and axes
+    tuple[plt.Figure, plt.Axes, plt.Axes],  # figure and axes
     tuple[
         torch.Tensor,
         torch.Tensor,  # x/y for diff
@@ -80,9 +80,6 @@ def plot_logit_lens(
         torch.Tensor,  # x/y for attr
     ],
 ]:
-    # set up figure
-    fig, ax = plt.subplots(2, 1, figsize=(10, 10))
-    ax_diff, ax_attr = ax
 
     diff_x, diff_y, attr_x, attr_y = compute_logit_lens(
         model=model,
@@ -90,16 +87,23 @@ def plot_logit_lens(
         answer_tokens=answer_tokens,
     )
 
-    ax_diff.plot(diff_x, diff_y)
-    ax_diff.set_title("Logit Difference from Accumulated Residual Stream")
-    ax_diff.set_xlabel("Layer")
-    ax_diff.set_ylabel("Logit Difference")
+    fig, ax1 = plt.subplots(figsize=(10, 5))
 
-    ax_attr.plot(attr_x, attr_y)
-    ax_attr.set_title("Logit Attribution from Residual Stream")
-    ax_attr.set_xlabel("Layer")
-    ax_attr.set_ylabel("Logit Attribution")
+    ax1.set_xlabel("Layer")
+    ax1.set_ylabel("Logit Difference", color='tab:blue')
+    ax1.set_title("Logit Lens")
+    ax1.plot(diff_x, diff_y, label="Logit Difference", color='tab:blue')
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+    ax1.legend(loc='upper left')
+
+    # create a second y-axis sharing the same x-axis
+    ax2 = ax1.twinx()
+
+    ax2.set_ylabel("Logit Attribution", color='tab:red')
+    ax2.plot(attr_x, attr_y, label="Logit Attribution", color='tab:red')
+    ax2.tick_params(axis='y', labelcolor='tab:red')
+    ax2.legend(loc='lower right')
 
     plt.show()
 
-    return (fig, ax), (diff_x, diff_y, attr_x, attr_y)
+    return (fig, ax1, ax2), (diff_x, diff_y, attr_x, attr_y)

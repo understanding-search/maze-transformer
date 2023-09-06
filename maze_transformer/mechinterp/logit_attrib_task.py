@@ -87,11 +87,11 @@ def rand_token_in_range(
     positions_p: Float[np.ndarray, "n_samples"] = np.random.uniform(size=(n_samples,))
 
     for i, sample_tokens in enumerate(dataset_tokens):
-        start_idx: int = get_token_first_index(start_token, dataset_tokens) + start_offset
-        end_idx: int = get_token_first_index(end_token, dataset_tokens) + end_offset
+        start_idx: int = get_token_first_index(start_token, sample_tokens) + start_offset
+        end_idx: int = get_token_first_index(end_token, sample_tokens) + end_offset
 
         selected_token_idx: int
-        if start_idx > end_idx:
+        if start_idx < end_idx:
             selected_token_idx = int(positions_p[i] * (end_idx - start_idx) + start_idx)
         else:
             selected_token_idx = start_idx

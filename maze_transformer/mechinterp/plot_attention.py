@@ -239,21 +239,15 @@ class ProcessedMazeAttention(SerializableDataclass):
 def mazeplot_attention(
     maze: SolvedMaze,
     tokens_context: str,
+    target: str,
     attention: Float[np.ndarray, "n_tokens"],
     mazeplot: MazePlot | None = None,
-    color_maps: tuple[str, str] = (
-        "plasma",
-        "RdBu",
-    ),  # all positive, positive and negative
+    cmap: str = "RdBu",
     min_for_positive: float = 0.0,
     show_other_tokens: bool = True,
+    fig_ax: tuple[plt.Figure, plt.Axes] | None = None,
+    colormap_center: None|float|typing.Literal["median", "mean"] = None,
 ) -> tuple[MazePlot, plt.Figure, plt.Axes]:
-    
-    # set up color map
-    if attention.min() >= min_for_positive:
-        cmap = color_maps[0]
-    else:
-        cmap = color_maps[1]
 
     # storing attention
     node_values: Float[np.ndarray, "grid_n grid_n"] = np.zeros(maze.grid_shape)
@@ -271,17 +265,39 @@ def mazeplot_attention(
     if mazeplot is None:
         mazeplot = MazePlot(maze)
 
+    final_prompt_coord: CoordTup | None = coord_str_to_tuple_noneable(
+        tokens_context[-1]
+    )
+    target_coord: CoordTup | None = coord_str_to_tuple_noneable(target)
+    
+    colormap_center_val: float|None
+    if colormap_center is None:
+        colormap_center_val = None
+    elif colormap_center == "median":
+        colormap_center_val = np.median(attention)
+    elif colormap_center == "mean":
+        colormap_center_val = np.mean(attention)
+    else:
+        colormap_center_val = colormap_center
+
     mazeplot.add_node_values(
         node_values=node_values,
         color_map=cmap,
+        target_token_coord=target_coord,
+        preceeding_tokens_coords=[final_prompt_coord] if final_prompt_coord is not None else None,
+        colormap_center=colormap_center_val,
     )
 
+
     # set up combined figure
-    fig, (ax_maze, ax_other) = plt.subplots(
-        2, 1, 
-        figsize=(7, 11.5),
-        height_ratios=[7, 1],
-    )
+    if fig_ax is None:
+        fig, (ax_maze, ax_other) = plt.subplots(
+            2, 1, 
+            figsize=(7, 7),
+            height_ratios=[7, 1],
+        )
+    else:
+        fig, (ax_maze, ax_other) = fig_ax
     # set height ratio
     mazeplot.plot(
         title=f"{attention.min() = }\n{attention.max() = }",
@@ -316,18 +332,34 @@ def plot_attention_final_token(
         tuple[float, Float[np.ndarray, "n_mazes n_tokens n_tokens"]],
     ],
     prompts: list[list[str]],
+    targets: list[str],
     mazes: list[SolvedMaze],
     tokenizer: MazeTokenizer,
     n_mazes: int = 5,
     last_n_tokens: int = 20,
     exponentiate_scores: bool = False,
+    show_colored_tokens: bool = True,
+    show_scores_plot: bool = True,
+    show_attn_maze: bool = True,
+    maze_colormap_center: None|float|typing.Literal["median", "mean"] = None,
 ):
     for k, (c, v) in important_heads_scores.items():
-        print(f"{k = }, {c = } {v.shape = }")
+        print("-"*80)
+        print(f"head: {k}, score: {c = }, {v.shape = }")
 
         # set up scores across tokens figure
-        scores_fig, scores_ax = plt.subplots(n_mazes, 1)
-        scores_fig.set_size_inches(30, 4 * n_mazes)
+        if show_scores_plot:
+            scores_fig, scores_ax = plt.subplots(n_mazes, 1)
+            scores_fig.set_size_inches(30, 4 * n_mazes)
+
+        # set up attention across maze figure
+        if show_attn_maze:
+            mazes_fig, mazes_ax = plt.subplots(
+                2, n_mazes,
+                figsize=(7 * n_mazes, 7),
+                height_ratios=[7, 1],
+            )
+
         # for each maze
         for i in range(n_mazes):
             # process tokens and attention scores
@@ -338,28 +370,34 @@ def plot_attention_final_token(
                 v_final = np.exp(v_final)
 
             # print token scores
-            print(
-                color_tokens_cmap(
-                    prompts[i][-n_tokens_view:],
-                    v_final[-n_tokens_view:],
-                    fmt="terminal",
-                    labels=True,
+            if show_colored_tokens:
+                print(
+                    color_tokens_cmap(
+                        prompts[i][-n_tokens_view:],
+                        v_final[-n_tokens_view:],
+                        fmt="terminal",
+                        labels=True,
+                    )
                 )
-            )
 
             # plot across tokens
-            scores_ax[i].plot(
-                v_final[-n_tokens_prompt:],
-                "o",
-            )
-            scores_ax[i].grid(axis="x", which="major", color="black", alpha=0.1)
-            scores_ax[i].set_xticks(range(n_tokens_prompt), prompts[i], rotation=90)
+            if show_scores_plot:
+                scores_ax[i].plot(
+                    v_final[-n_tokens_prompt:],
+                    "o",
+                )
+                scores_ax[i].grid(axis="x", which="major", color="black", alpha=0.1)
+                scores_ax[i].set_xticks(range(n_tokens_prompt), prompts[i], rotation=90)
 
             # plot attention across maze
-            mazeplot_attention(
-                maze=mazes[i],
-                tokens_context=prompts[i][-n_tokens_view:],
-                attention=v_final[-n_tokens_view:],
-            )
+            if show_attn_maze:
+                mazeplot_attention(
+                    maze=mazes[i],
+                    tokens_context=prompts[i][-n_tokens_view:],
+                    target=targets[i],
+                    attention=v_final[-n_tokens_view:],
+                    fig_ax=(mazes_fig, mazes_ax[:, i]),
+                    colormap_center=maze_colormap_center,
+                )
 
         plt.show()
