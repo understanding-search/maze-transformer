@@ -71,6 +71,7 @@ def plot_logit_lens(
     model: ZanjHookedTransformer,
     cache: ActivationCache,
     answer_tokens: Int[torch.Tensor, "n_mazes"],
+    show: bool = True,
 ) -> tuple[
     tuple[plt.Figure, plt.Axes, plt.Axes],  # figure and axes
     tuple[

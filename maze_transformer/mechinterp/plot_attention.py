@@ -338,22 +338,43 @@ def plot_attention_final_token(
     n_mazes: int = 5,
     last_n_tokens: int = 20,
     exponentiate_scores: bool = False,
-    show_colored_tokens: bool = True,
-    show_scores_plot: bool = True,
-    show_attn_maze: bool = True,
+    plot_colored_tokens: bool = True,
+    plot_scores: bool = True,
+    plot_attn_maze: bool = True,
     maze_colormap_center: None|float|typing.Literal["median", "mean"] = None,
-):
+    show_all: bool = False,
+    print_fmt: str = "terminal",
+) -> list[dict]:
+
+    # str, # head info
+    # str|None, # colored tokens text
+    # tuple[plt.Figure, plt.Axes]|None, # scores plot
+    # tuple[plt.Figure, plt.Axes]|None, # attn maze plot
+    output: list[dict[str, str|None|tuple[plt.Figure, plt.Axes]]] = list()
+
     for k, (c, v) in important_heads_scores.items():
-        print("-"*80)
-        print(f"head: {k}, score: {c = }, {v.shape = }")
+
+        head_info: str = f"head: {k}, score: {c = }, {v.shape = }"
+        if show_all:
+            print("-"*80)
+            print(head_info)
+
+        head_output: dict[str, str|None|tuple[plt.Figure, plt.Axes]] = dict(
+            head_info_str=head_info,
+            head_info=dict(
+                head=k,
+                score=c,
+                shape=v.shape,
+            ),
+        )
 
         # set up scores across tokens figure
-        if show_scores_plot:
+        if plot_scores:
             scores_fig, scores_ax = plt.subplots(n_mazes, 1)
             scores_fig.set_size_inches(30, 4 * n_mazes)
 
         # set up attention across maze figure
-        if show_attn_maze:
+        if plot_attn_maze:
             mazes_fig, mazes_ax = plt.subplots(
                 2, n_mazes,
                 figsize=(7 * n_mazes, 7),
@@ -370,18 +391,20 @@ def plot_attention_final_token(
                 v_final = np.exp(v_final)
 
             # print token scores
-            if show_colored_tokens:
-                print(
-                    color_tokens_cmap(
-                        prompts[i][-n_tokens_view:],
-                        v_final[-n_tokens_view:],
-                        fmt="terminal",
-                        labels=True,
-                    )
+            if plot_colored_tokens:
+                color_tokens_text: str = color_tokens_cmap(
+                    prompts[i][-n_tokens_view:],
+                    v_final[-n_tokens_view:],
+                    fmt=print_fmt,
+                    labels=(print_fmt == "terminal"),
                 )
+                if show_all:
+                    print(color_tokens_text)
+
+                head_output["colored_tokens"] = color_tokens_text
 
             # plot across tokens
-            if show_scores_plot:
+            if plot_scores:
                 scores_ax[i].plot(
                     v_final[-n_tokens_prompt:],
                     "o",
@@ -389,9 +412,11 @@ def plot_attention_final_token(
                 scores_ax[i].grid(axis="x", which="major", color="black", alpha=0.1)
                 scores_ax[i].set_xticks(range(n_tokens_prompt), prompts[i], rotation=90)
 
+                head_output["scores"] = (scores_fig, scores_ax)
+
             # plot attention across maze
-            if show_attn_maze:
-                mazeplot_attention(
+            if plot_attn_maze:
+                mazeplot, fig, ax = mazeplot_attention(
                     maze=mazes[i],
                     tokens_context=prompts[i][-n_tokens_view:],
                     target=targets[i],
@@ -400,4 +425,11 @@ def plot_attention_final_token(
                     colormap_center=maze_colormap_center,
                 )
 
-        plt.show()
+                head_output["attn_maze"] = (mazes_fig, mazes_ax)
+    
+        if show_all:
+            plt.show()
+        else:
+            output.append(head_output)
+
+    return output
