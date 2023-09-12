@@ -256,6 +256,7 @@ def mazeplot_attention(
     # get node values for each token
     for idx_token, token in enumerate(tokens_context):
         coord: CoordTup | None = coord_str_to_tuple_noneable(token)
+        # TODO: mean/median instead of just sum?
         if coord is not None:
             node_values[coord[0], coord[1]] += np.sum(attention[idx_token])
         else:
@@ -311,15 +312,19 @@ def mazeplot_attention(
         )
     ))
 
-    plot_colored_text(
-        total_logits_nonpos_processed[0],
-        total_logits_nonpos_processed[1],
-        cmap=cmap,
-        ax=ax_other,
-        fontsize=5,
-        width_scale=0.01,
-        char_min=5,
-    )
+    if len(total_logits_nonpos_processed) == 2:
+        plot_colored_text(
+            total_logits_nonpos_processed[0],
+            total_logits_nonpos_processed[1],
+            cmap=cmap,
+            ax=ax_other,
+            fontsize=5,
+            width_scale=0.01,
+            char_min=5,
+        )
+    else:
+        print(f"No non-pos tokens found!\n{total_logits_nonpos_processed = }")
+
 
     ax_other.set_title("Non-Positional Tokens Attention")
 
@@ -342,7 +347,7 @@ def plot_attention_final_token(
     plot_scores: bool = True,
     plot_attn_maze: bool = True,
     maze_colormap_center: None|float|typing.Literal["median", "mean"] = None,
-    show_all: bool = False,
+    show_all: bool = True,
     print_fmt: str = "terminal",
 ) -> list[dict]:
 
@@ -418,9 +423,9 @@ def plot_attention_final_token(
             if plot_attn_maze:
                 mazeplot, fig, ax = mazeplot_attention(
                     maze=mazes[i],
-                    tokens_context=prompts[i][-n_tokens_view:],
+                    tokens_context=prompts[i][-n_tokens_prompt:],
                     target=targets[i],
-                    attention=v_final[-n_tokens_view:],
+                    attention=v_final[-n_tokens_prompt:],
                     fig_ax=(mazes_fig, mazes_ax[:, i]),
                     colormap_center=maze_colormap_center,
                 )

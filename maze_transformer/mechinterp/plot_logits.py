@@ -22,6 +22,8 @@ def plot_logits(
     mark_correct: bool = False,
     subplots_kwargs: dict | None = None,
     show: bool = True,
+    density: bool = True,
+    logy: bool = False,
 ) -> None:
     # set up figure
     # --------------------------------------------------
@@ -72,7 +74,7 @@ def plot_logits(
 
     # histogram of logits for correct and incorrect tokens
     # --------------------------------------------------
-    ax_sum.set_ylabel("probability density")
+    ax_sum.set_ylabel("probability density" if density else "frequency")
     ax_sum.set_xlabel("logit value")
 
     # get correct token logits
@@ -91,17 +93,21 @@ def plot_logits(
     )
     ax_sum.hist(
         correct_token_logits.numpy(),
-        density=True,
+        density=density,
         bins=bins,
         label="correct token",
+        alpha=0.5,
     )
     ax_sum.hist(
         other_token_logits.numpy().flatten(),
-        density=True,
+        density=density,
         bins=bins,
         label="other token",
+        alpha=0.5,
     )
     ax_sum.legend()
+    if logy:
+        ax_sum.set_yscale("log")
 
     if show:
         plt.show()
