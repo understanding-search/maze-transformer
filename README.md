@@ -1,11 +1,11 @@
 <!-- [![PyPI](https://img.shields.io/pypi/v/TODO)](https://pypi.org/project/TODO/)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/TODO) -->
-[![Checks](https://github.com/AISC-understanding-search/maze-transformer/actions/workflows/checks.yml/badge.svg)](https://github.com/AISC-understanding-search/maze-transformer/actions/workflows/checks.yml)
+[![Checks](https://github.com/understanding-search/maze-transformer/actions/workflows/checks.yml/badge.svg)](https://github.com/understanding-search/maze-transformer/actions/workflows/checks.yml)
 [![Coverage](examples/coverage/coverage.svg)](docs/coverage/coverage.txt)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/t/AISC-understanding-search/maze-transformer)
-![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/AISC-understanding-search/maze-transformer)
-![GitHub closed issues](https://img.shields.io/github/issues-closed-raw/AISC-understanding-search/maze-transformer)
-![code size, bytes](https://img.shields.io/github/languages/code-size/AISC-understanding-search/maze-transformer)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/t/understanding-search/maze-transformer)
+![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/understanding-search/maze-transformer)
+![GitHub closed issues](https://img.shields.io/github/issues-closed-raw/understanding-search/maze-transformer)
+![code size, bytes](https://img.shields.io/github/languages/code-size/understanding-search/maze-transformer)
 
 # Maze Transformer
 
@@ -21,7 +21,7 @@ This repo is built to facilitate the training and analysis of autoregressive tra
 
 # Installation
 ```
-pip install git+ssh://git@github.com/aisc-understanding-search/maze-transformer.git
+pip install git+ssh://git@github.com/understanding-search/maze-transformer.git
 ```
 
 Note: if you want to install the library in colab, follow the steps in this [Colab notebook](https://colab.research.google.com/drive/1b8E1rkqcKRdC4bs9133aBPEvqEaH5dqD#scrollTo=8VbjoPRgXlqs).

@@ -74,7 +74,7 @@ def load_model_with_configs(
         config_path is not None
     ), f"Couldn't find configs in run containing {model_path}"
 
-    # TODO Make this part of the ConfigHolder - https://github.com/AISC-understanding-search/maze-transformer/issues/31
+    # TODO Make this part of the ConfigHolder - https://github.com/understanding-search/maze-transformer/issues/31
 
     # load the configs
     with open(config_path, "r") as f:

@@ -45,7 +45,7 @@ class RandomBaseline(HookedTransformer):
         self, maze: LatticeMaze, current_position: CoordTup
     ) -> list[CoordTup]:
         neighbors = maze.get_coord_neighbors(np.array(current_position, dtype=np.int32))
-        # This conversion won't be needed after https://github.com/AISC-understanding-search/maze-transformer/issues/154
+        # This conversion won't be needed after https://github.com/understanding-search/maze-transformer/issues/154
         return [tuple(arr.tolist()) for arr in neighbors]
 
     def _predict_next_step(
