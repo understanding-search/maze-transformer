@@ -42,6 +42,8 @@ def logit_diff_orig(
     """
     LArr = Float[torch.Tensor, "n_mazes"]
 
+    # TODO: rewrite this and use better variable names
+
     # logit on the answer token for each sample
     answer_logits: LArr = torch.gather(
         final_logits, 1, answer_tokens.unsqueeze(1)
@@ -81,6 +83,7 @@ def logit_diff_residual_stream(
     vocab_tensor: Float[torch.Tensor, "d_vocab"] = torch.arange(
         d_vocab, dtype=torch.long
     )
+    # TODO: just embedding or all layers?
     vocab_residual_directions = model.tokens_to_residual_directions(vocab_tensor)
     # get embedding of answer tokens
     answer_residual_directions = vocab_residual_directions[answer_tokens]
