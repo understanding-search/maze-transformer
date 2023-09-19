@@ -16,8 +16,8 @@ from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, Conf
     ],
 )
 def test_random_baseline(tok_mode):
-    # Setup will be refactored in https://github.com/orgs/AISC-understanding-search/projects/1?pane=issue&itemId=22504590
-    # Disk interactions can be removed after https://github.com/AISC-understanding-search/maze-transformer/issues/113
+    # Setup will be refactored in https://github.com/orgs/understanding-search/projects/1?pane=issue&itemId=22504590
+    # Disk interactions can be removed after https://github.com/understanding-search/maze-transformer/issues/113
     # First create a dataset and train a model
     cfg: ConfigHolder = ConfigHolder(
         train_cfg=TRAINING_CONFIGS["test-v1"],
