@@ -552,7 +552,7 @@ class ConfigHolder(SerializableDataclass):
 
 
 @set_config_class(ConfigHolder)
-class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
+class ZanjHookedTransformer(ConfiguredModel[ConfigHolder], HookedTransformer):
     """A hooked transformer that is configured by a ConfigHolder
 
     the inheritance order is critical here -- super() does not call parent, but calls the next class in the MRO

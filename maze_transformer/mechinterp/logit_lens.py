@@ -30,8 +30,8 @@ def compute_logit_lens(
     avg_diff, diff_direction = logit_diff_residual_stream(
         model=model,
         cache=cache,
-        answer_tokens=answer_tokens,
-        compare_to=None,
+        tokens_correct=answer_tokens,
+        tokens_compare_to=None,
         directions=True,
     )
 
