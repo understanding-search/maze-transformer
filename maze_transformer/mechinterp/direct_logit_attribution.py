@@ -38,6 +38,17 @@ def compute_direct_logit_attribution(
     cache: ActivationCache,
     answer_tokens: Int[torch.Tensor, "n_mazes"],
 ) -> dict[Literal["heads", "neurons"], Float[np.ndarray, "layer index"]]:
+    
+    n_layers: int = model.zanj_model_config.model_cfg.n_layers
+    n_heads: int = model.zanj_model_config.model_cfg.n_heads
+    d_model: int = model.zanj_model_config.model_cfg.d_model
+    mlp_dim: int = 4 * d_model
+
+    print(f"{answer_tokens.shape = }")
+    print(f"{n_layers = }, {n_heads = }, {d_model = }")
+    print(f"{n_layers * n_heads = }")
+    print(f"{n_layers * mlp_dim = }")
+
     # logit diff
     avg_diff, diff_direction = logit_diff_residual_stream(
         model=model,
@@ -47,11 +58,9 @@ def compute_direct_logit_attribution(
         directions=True,
     )
 
+    # per head
     per_head_residual, head_labels = cache.stack_head_results(
         layer=-1, pos_slice=-1, return_labels=True
-    )
-    per_neuron_residual, neuron_labels = cache.stack_neuron_results(
-        layer=-1, pos_slice=-1, return_labels=True,
     )
 
     per_head_logit_diffs = residual_stack_to_logit_diff(
@@ -60,11 +69,21 @@ def compute_direct_logit_attribution(
         logit_diff_directions=diff_direction,
     )
 
+    print(f"{per_head_residual.shape = }")
+    print(f"{per_head_logit_diffs.shape = }")
+
     per_head_logit_diffs = einops.rearrange(
         per_head_logit_diffs,
         "(layer head_index) -> layer head_index",
-        layer=model.zanj_model_config.model_cfg.n_layers,
-        head_index=model.zanj_model_config.model_cfg.n_heads,
+        layer=n_layers,
+        head_index=n_heads,
+    )
+
+    print(f"{per_head_logit_diffs.shape = }")
+
+    # per neuron
+    per_neuron_residual, neuron_labels = cache.stack_neuron_results(
+        layer=-1, pos_slice=-1, return_labels=True,
     )
 
     per_neuron_logit_diffs = residual_stack_to_logit_diff(
@@ -73,13 +92,19 @@ def compute_direct_logit_attribution(
         logit_diff_directions=diff_direction,
     )
 
+    print(f"{per_neuron_residual.shape = }")
+    print(f"{per_neuron_logit_diffs.shape = }")
+
     per_neuron_logit_diffs = einops.rearrange(
         per_neuron_logit_diffs,
         "(layer neuron_index) -> layer neuron_index",
-        layer=model.zanj_model_config.model_cfg.n_layers,
-        neuron_index=model.zanj_model_config.model_cfg.n_neurons,
+        layer=n_layers,
+        neuron_index=mlp_dim,
     )
 
+    print(f"{per_neuron_logit_diffs.shape = }")
+
+    # return
     return dict(
         heads=per_head_logit_diffs.to("cpu").numpy(),
         neurons=per_neuron_logit_diffs.to("cpu").numpy(),
@@ -104,19 +129,31 @@ def plot_direct_logit_attribution(
     dla_heads: Float[np.ndarray, "layer head"] = dla_data["heads"]
     dla_neurons: Float[np.ndarray, "layer neuron"] = dla_data["neurons"]
 
-    data_extreme: float = max(np.max(np.abs(dla_heads)), np.max(np.abs(dla_neurons)))
-    # colormap centeres on zero
-    fig, ax = plt.subplots()
-    ax.imshow(data, cmap="RdBu", vmin=-data_extreme, vmax=data_extreme)
-    ax.set_xlabel("Head")
-    ax.set_ylabel("Layer")
-    plt.colorbar(ax.get_images()[0], ax=ax)
-    ax.set_title(f"Logit Difference from each head\n{model.zanj_model_config.name}")
+    extval_heads: float = np.max(np.abs(dla_heads))
+    extval_neurons: float = np.max(np.abs(dla_neurons))
+    fig_heads, ax_heads = plt.subplots(figsize=(5, 5))
+    fig_neurons, ax_neurons = plt.subplots(figsize=(20, 5))
+    
+    # heads
+    ax_heads.imshow(dla_heads, cmap="RdBu", vmin=-extval_heads, vmax=extval_heads)
+    ax_heads.set_xlabel("Head")
+    ax_heads.set_ylabel("Layer")
+    plt.colorbar(ax_heads.get_images()[0], ax=ax_heads)
+    ax_heads.set_title(f"Logit Difference from each head\n{model.zanj_model_config.name}")
+
+    # neurons
+    # don't enforce aspect ratio, no blending
+    ax_neurons.imshow(dla_neurons, cmap="RdBu", vmin=-extval_neurons, vmax=extval_neurons, aspect='auto', interpolation='none')
+    ax_neurons.set_xlabel("Neuron")
+    ax_neurons.set_ylabel("Layer")
+    plt.colorbar(ax_neurons.get_images()[0], ax=ax_neurons)
+    ax_neurons.set_title(f"Logit Difference from each neuron\n{model.zanj_model_config.name}")
+    
 
     if show:
         plt.show()
 
-    return fig, ax, dla_data
+    return (fig_heads, fig_neurons), (ax_heads, ax_neurons), dla_data
 
 def _output_codeblock(
     data: str|dict,
