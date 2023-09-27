@@ -5,61 +5,129 @@ import matplotlib.pyplot as plt
 
 from transformer_lens import HookedTransformer
 
+def _weights_plot_helper(
+        fig: plt.Figure,
+        ax: plt.Axes,
+        data: Float[np.ndarray, "inputs_outputs_or_1 n_interesting_neurons"],
+        title: str, 
+        ylabel: str = None,
+        cmap: str = 'RdBu',
+    ):
+    # plot heatmap
+    n_rows: int = data.shape[0]
+    singlerow: bool = n_rows == 1
+    vbound: float = np.max(np.abs(data))
+    im: plt.AxesImage = ax.imshow(
+        data, 
+        aspect='auto' if not singlerow else 'equal',
+        interpolation='none', 
+        cmap=cmap,
+        vmin=-vbound,
+        vmax=vbound,
+    )
+    # colorbar
+    fig.colorbar(im, ax=ax)
+    # other figure adjustments
+    ax.set_title(title)
+    if ylabel:
+        ax.set_ylabel(ylabel)
+
+    if singlerow:
+        ax.set_yticks([])
+    
+
 def plot_important_neurons(
         model: HookedTransformer,
         layer: int,
-        neuron_idxs: Int[np.ndarray, "neuron_idxs"]|None,
-        dla_data: dict[str, np.ndarray]|None,
+        neuron_idxs: Int[np.ndarray, "neuron_idxs"]|None = None,
+        neuron_dla_data: Float[np.ndarray, "n_layers n_neurons"]|None = None,
         n_important_neurons: int = 10,
     ) -> tuple[plt.Figure, plt.Axes]:
     """Plot the weights and biases for the selected or most important neurons in a given layer
     
-    - if both of `neuron_idxs` and `dla_data` are `None`, then all neurons will be plotted
+    - if both of `neuron_idxs` and `neuron_dla_data` are `None`, then all neurons will be plotted
     - if a value is provided for `neuron_idxs`, then only those neurons will be plotted
-    - if a value is provided for `dla_data`, then the most important neurons will be selected based on the DLA data
+    - if a value is provided for `neuron_dla_data`, then the most important neurons will be selected based on the DLA data
     """
     
-    # get layers from the form of the state dict
-    state_dict_keys: list[str] = list(model.state_dict().keys())
-    n_layers
-    if neuron_idxs is None and dla_data is None:
-        neuron_idxs = 
+    # get dimension info from model state dict (expecting TransformerLens style)
 
+    # state dict
+    state_dict: dict[str, torch.Tensor] = model.state_dict()
+    state_dict_keys: list[str] = list(state_dict.keys())
+
+    # layers
+    layer_ids: list[int] = sorted(list(set(
+        [
+            int(key.split(".")[1]) 
+            for key in state_dict_keys 
+            if key.startswith("blocks.")
+        ]
+    )))
+    n_layers: int = len(layer_ids)
+    assert n_layers == max(layer_ids) + 1, f"Layers are not contiguous? {layer_ids}"
+    assert layer_ids == list(range(n_layers)), f"Layers are not contiguous? {layer_ids}"
+    # handle layer negative indexing
+    if layer < 0:
+        layer = layer_ids[layer]
+    assert layer in layer_ids, f"Layer {layer} not found in {layer_ids}"
+
+    # model dim and hidden dim
+    d_model: int; n_neurons: int
+    d_model, n_neurons = state_dict[f"blocks.{layer}.mlp.W_in"].shape
     
-    # Identify important neurons based on DLA data
-    important_neuron_idxs: np.ndarray = np.argsort(np.abs(dla_data["neurons"][layer]))[-n_important_neurons:][::-1]
+    # dim checks for sanity
+    assert state_dict[f"blocks.{layer}.mlp.b_in"].shape[0] == n_neurons
+    assert state_dict[f"blocks.{layer}.mlp.W_out"].shape[0] == n_neurons
+    assert state_dict[f"blocks.{layer}.mlp.W_out"].shape[1] == d_model
+    assert state_dict[f"blocks.{layer}.mlp.b_out"].shape[0] == d_model
+
+
+    # get the neuron indices to plot
+
+    # all neurons if nothing specified
+    if neuron_idxs is None and neuron_dla_data is None:
+        neuron_idxs = np.arange(n_neurons)
+
+    # from dla data
+    if neuron_dla_data is not None:
+        assert neuron_idxs is None, "Cannot provide both neuron_idxs and neuron_dla_data"
+
+        neuron_idxs: np.ndarray = np.argsort(np.abs(neuron_dla_data[layer]))[-n_important_neurons:][::-1]
     
-    # Get the number of layers and construct the key for accessing model state
-    n_layers: int = model.zanj_model_config.model_cfg.n_layers
-    key: str = f"blocks.{layer}.mlp"
+    mlp_key_base: str = f"blocks.{layer}.mlp"
     
     # Cache model state for easier access
     model_state = model.state_dict()
     
-    # Create named subplots
-    fig, axes = plt.subplots(4, 1, figsize=(10, 10), sharex=True)
-    w_in_ax, b_in_ax, w_out_ax, dla_ax = axes
-    
-    # Helper function to reduce repetition in plotting
-    def plot_data(ax, data, title: str, ylabel: str = None):
-        im = ax.imshow(data, aspect='auto', interpolation='none', cmap='RdBu')
-        fig.colorbar(im, ax=ax)
-        ax.set_title(title)
-        if ylabel:
-            ax.set_ylabel(ylabel)
+    # Create named subplots, tight layout
+    fig, axes = plt.subplots(
+        3 + int(neuron_dla_data is not None), # w_in, b_in, w_out, dla (if applicable) 
+        1, 
+        figsize=(10, 10), 
+        sharex=True,
+        gridspec_kw=dict(hspace=0.1, wspace=0.1),
+    )
+
+    if neuron_dla_data is not None:
+        ax_w_in, ax_b_in, ax_w_out, ax_dla = axes
+    else:
+        ax_w_in, ax_b_in, ax_w_out = axes
     
     # Plot in weight
-    w_in_data = model_state[key + ".W_in"].cpu().numpy()[:, important_neuron_idxs]
-    plot_data(w_in_ax, w_in_data, "W_in", "input neuron")
+    w_in_data = model_state[mlp_key_base + ".W_in"].cpu().numpy()[:, neuron_idxs]
+    _weights_plot_helper(fig, ax_w_in, w_in_data, "W_in", "input neuron")
     
     # Plot in bias
-    b_in_data = model_state[key + ".b_in"].cpu().numpy()[important_neuron_idxs][None, :]
-    plot_data(b_in_ax, b_in_data, "b_in")
+    b_in_data = model_state[mlp_key_base + ".b_in"].cpu().numpy()[neuron_idxs][None, :]
+    _weights_plot_helper(fig, ax_b_in, b_in_data, "b_in")
     
     # Plot out weight
-    w_out_data = model_state[key + ".W_out"].cpu().numpy()[important_neuron_idxs, :].T
-    plot_data(w_out_ax, w_out_data, "W_out", "output neuron")
+    w_out_data = model_state[mlp_key_base + ".W_out"].cpu().numpy()[neuron_idxs, :].T
+    _weights_plot_helper(fig, ax_w_out, w_out_data, "W_out", "output neuron")
     
     # Plot DLA
-    dla_data = dla_data["neurons"][layer][important_neuron_idxs][None, :]
-    plot_data(dla_ax, dla_data, "DLA")
+    neuron_dla_data = neuron_dla_data[layer][neuron_idxs][None, :]
+    _weights_plot_helper(fig, ax_dla, neuron_dla_data, "DLA")
+
+    return fig, axes
