@@ -1,6 +1,7 @@
 import datetime
 import json
 from pathlib import Path
+from typing import Literal
 
 import einops
 import matplotlib.pyplot as plt
@@ -36,7 +37,7 @@ def compute_direct_logit_attribution(
     model: ZanjHookedTransformer,
     cache: ActivationCache,
     answer_tokens: Int[torch.Tensor, "n_mazes"],
-):
+) -> dict[Literal["heads", "neurons"], Float[np.ndarray, "layer index"]]:
     # logit diff
     avg_diff, diff_direction = logit_diff_residual_stream(
         model=model,
@@ -46,14 +47,19 @@ def compute_direct_logit_attribution(
         directions=True,
     )
 
-    per_head_residual, labels = cache.stack_head_results(
+    per_head_residual, head_labels = cache.stack_head_results(
         layer=-1, pos_slice=-1, return_labels=True
     )
+    per_neuron_residual, neuron_labels = cache.stack_neuron_results(
+        layer=-1, pos_slice=-1, return_labels=True,
+    )
+
     per_head_logit_diffs = residual_stack_to_logit_diff(
         residual_stack=per_head_residual,
         cache=cache,
         logit_diff_directions=diff_direction,
     )
+
     per_head_logit_diffs = einops.rearrange(
         per_head_logit_diffs,
         "(layer head_index) -> layer head_index",
@@ -61,7 +67,23 @@ def compute_direct_logit_attribution(
         head_index=model.zanj_model_config.model_cfg.n_heads,
     )
 
-    return per_head_logit_diffs.to("cpu").numpy()
+    per_neuron_logit_diffs = residual_stack_to_logit_diff(
+        residual_stack=per_neuron_residual,
+        cache=cache,
+        logit_diff_directions=diff_direction,
+    )
+
+    per_neuron_logit_diffs = einops.rearrange(
+        per_neuron_logit_diffs,
+        "(layer neuron_index) -> layer neuron_index",
+        layer=model.zanj_model_config.model_cfg.n_layers,
+        neuron_index=model.zanj_model_config.model_cfg.n_neurons,
+    )
+
+    return dict(
+        heads=per_head_logit_diffs.to("cpu").numpy(),
+        neurons=per_neuron_logit_diffs.to("cpu").numpy(),
+    )
 
 
 def plot_direct_logit_attribution(
@@ -69,14 +91,20 @@ def plot_direct_logit_attribution(
     cache: ActivationCache,
     answer_tokens: Int[torch.Tensor, "n_mazes"],
     show: bool = True,
-) -> tuple[plt.Figure, plt.Axes, Float[np.ndarray, "layer head"]]:
-    data = compute_direct_logit_attribution(
+) -> tuple[
+        plt.Figure, 
+        plt.Axes, 
+        dict[str, Float[np.ndarray, "layer head"]],
+    ]:
+    dla_data: dict[str, torch.Tensor] = compute_direct_logit_attribution(
         model=model,
         cache=cache,
         answer_tokens=answer_tokens,
     )
+    dla_heads: Float[np.ndarray, "layer head"] = dla_data["heads"]
+    dla_neurons: Float[np.ndarray, "layer neuron"] = dla_data["neurons"]
 
-    data_extreme: float = np.max(np.abs(data))
+    data_extreme: float = max(np.max(np.abs(dla_heads)), np.max(np.abs(dla_neurons)))
     # colormap centeres on zero
     fig, ax = plt.subplots()
     ax.imshow(data, cmap="RdBu", vmin=-data_extreme, vmax=data_extreme)
@@ -88,7 +116,7 @@ def plot_direct_logit_attribution(
     if show:
         plt.show()
 
-    return fig, ax, data
+    return fig, ax, dla_data
 
 def _output_codeblock(
     data: str|dict,

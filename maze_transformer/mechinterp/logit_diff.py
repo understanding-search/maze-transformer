@@ -100,28 +100,28 @@ def logit_diff_residual_stream(
         )
 
     # get the values from the cache at the last layer and last token
-    final_token_residual_stream = cache["resid_post", -1][:, -1, :]
-    #                                    layer        pos  d_model
+    final_token_residual_stream: Float[torch.Tensor, "samples d_model"] = cache["resid_post", -1][:, -1, :]
+
     # scaling the values in residual stream with layer norm
-    scaled_final_token_residual_stream = cache.apply_ln_to_stack(
+    scaled_final_token_residual_stream: Float[torch.Tensor, "samples d_model"] = cache.apply_ln_to_stack(
         final_token_residual_stream,
         layer=-1,
         pos_slice=-1,
     )
 
     # measure similarity between the logit diff directions and the residual stream at final layer directions
-    average_logit_diff = (
+    average_logit_diff: float = (
         torch.dot(
             scaled_final_token_residual_stream.flatten(),
             logit_diff_directions.flatten(),
         )
         / logit_diff_directions.shape[0]
-    )
+    ).item()
 
     if directions:
-        return average_logit_diff.item(), logit_diff_directions
+        return average_logit_diff, logit_diff_directions
     else:
-        return average_logit_diff.item()
+        return average_logit_diff
 
 
 def logits_diff_multi(
