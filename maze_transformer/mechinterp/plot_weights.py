@@ -131,3 +131,37 @@ def plot_important_neurons(
     _weights_plot_helper(fig, ax_dla, neuron_dla_data, "DLA")
 
     return fig, axes
+
+
+
+def plot_embeddings():
+    raise NotImplementedError("TODO")
+    print(f"{MODEL.W_pos.shape = }")
+    print(f"{MODEL.W_E.shape = }")
+    print(f"{VOCAB_EMBEDS.shape = }")
+
+    fig, (ax_e, ax_pos) = plt.subplots(2, 1, figsize=(16, 16), sharex=True)
+
+    assert VOCAB_EMBEDS.shape[1] == d_model
+    vbound: float = VOCAB_EMBEDS.abs().max().item()
+
+    ax_e.imshow(VOCAB_EMBEDS.cpu().numpy(), cmap="RdBu", aspect="auto", vmin=-vbound, vmax=vbound)
+    ax_e.set_title("Vocab Embeddings")
+    ax_e.set_ylabel("vocab item")
+    ax_e.set_yticks(VOCAB_TOKENS.cpu().numpy(), labels=TOKENIZER.token_arr, fontsize=5)
+    fig.colorbar(ax_e.get_images()[0], ax=ax_e)
+
+
+    assert MODEL.W_pos.shape[1] == d_model
+
+    vbound_pos: float = MODEL.W_pos.abs().max().item()
+    ax_pos.imshow(
+        MODEL.W_pos.cpu().numpy(),
+        cmap="RdBu", aspect="auto",
+        interpolation="none",
+        vmin=-vbound_pos, vmax=vbound_pos,
+    )
+    fig.colorbar(ax_pos.get_images()[0], ax=ax_pos)
+    ax_pos.set_title("Positional Embeddings")
+    ax_pos.set_ylabel("pos vs token embed")
+    ax_pos.set_xlabel("d_model")
