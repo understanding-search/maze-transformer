@@ -113,3 +113,7 @@ def plot_logits(
         plt.show()
 
     return fig, (ax_all, ax_sum)
+
+
+def plot_logits_maze(*args, **kwargs):
+    raise NotImplementedError()
