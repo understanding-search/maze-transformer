@@ -115,7 +115,7 @@ def plot_pca_colored(
     lattice_connections: bool = True,
     symlog_scale: float|None = None,
     axes_and_centered: bool = True,
-) -> None:
+) -> tuple[plt.Figure, plt.Axes]:
     
     # set up figure, get PCA results
     fig, ax = plt.subplots(figsize=(5, 5))
@@ -189,4 +189,4 @@ def plot_pca_colored(
             ax.set_xscale('symlog', linthresh=symlog_scale)
             ax.set_yscale('symlog', linthresh=symlog_scale)
 
-    plt.show()
+    return fig, ax
