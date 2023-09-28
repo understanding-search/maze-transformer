@@ -30,9 +30,9 @@ def coordinate_to_color(coord: tuple[float, float], max_val: float = 1.0) -> tup
 
 TokenPlottingInfo = NamedTuple(
     "TokenPlottingInfo",
-	token = str,
-	coord = tuple[float, float]|str,
-	color = tuple[float, float, float],
+    token = str,
+    coord = tuple[float, float]|str,
+    color = tuple[float, float, float],
 )
 
 def process_tokens_for_pca(tokenizer: MazeTokenizer) -> list[TokenPlottingInfo]:
@@ -43,16 +43,16 @@ def process_tokens_for_pca(tokenizer: MazeTokenizer) -> list[TokenPlottingInfo]:
     # token_idxs_coords: list[int] = tokenizer.encode(tokenizer.coords_to_strings(tokens_coords_only))
 
     vocab_coordinates_colored: list[TokenPlottingInfo] = [
-        TokenPlottingInfo(*x) for x in		
-		zip(
-			tokenizer.token_arr,
-			tokens_coords,
-			[
-				coordinate_to_color(coord, max_val=max_coord) if isinstance(coord, tuple) else (0.0, 1.0, 0.0)
-				for coord in tokens_coords
-			],
-    	)
-	]
+        TokenPlottingInfo(*x) for x in        
+        zip(
+            tokenizer.token_arr,
+            tokens_coords,
+            [
+                coordinate_to_color(coord, max_val=max_coord) if isinstance(coord, tuple) else (0.0, 1.0, 0.0)
+                for coord in tokens_coords
+            ],
+        )
+    ]
         
     return vocab_coordinates_colored
 
@@ -90,18 +90,18 @@ def compute_pca(
     return dict(
         all = EmbeddingsPCAResult(
             result = pca_all.fit_transform(model.W_E.cpu().numpy().T), 
-			index_map = None,
-			pca_obj = pca_all,
+            index_map = None,
+            pca_obj = pca_all,
         ),
         coords_only = EmbeddingsPCAResult(
             result = pca_coords.fit_transform(model.W_E[idxs_coords].cpu().numpy().T), 
-			index_map = idxs_coords,
-			pca_obj = pca_coords,
+            index_map = idxs_coords,
+            pca_obj = pca_coords,
         ),
         special_only = EmbeddingsPCAResult(
             result = pca_special.fit_transform(model.W_E[idxs_special].cpu().numpy().T), 
-			index_map = idxs_special,
-			pca_obj = pca_special,
+            index_map = idxs_special,
+            pca_obj = pca_special,
         ),
     )
 
@@ -113,9 +113,11 @@ def plot_pca_colored(
     dim1: int, 
     dim2: int,
     lattice_connections: bool = True,
+    symlog_scale: float|None = None,
+    axes_and_centered: bool = True,
 ) -> None:
-	
-	# set up figure, get PCA results
+    
+    # set up figure, get PCA results
     fig, ax = plt.subplots(figsize=(5, 5))
     pca_result: EmbeddingsPCAResult = pca_results_options[pca_results_key]
 
@@ -131,8 +133,8 @@ def plot_pca_colored(
         token, coord, color = vocab_colors[i_map]
         # plot the point
         ax.scatter(
-            pca_result.result[dim1-1, i], 
-            pca_result.result[dim2-1, i], 
+            pca_result.result[dim1-1, i],
+            pca_result.result[dim2-1, i],
             alpha=0.5,
             color=color,
         )
@@ -150,6 +152,17 @@ def plot_pca_colored(
                 coord,
                 (pca_result.result[dim1-1, i], pca_result.result[dim2-1, i]),
             ))
+            
+    if axes_and_centered:
+        # find x and y limits
+        xbound: float = np.max(np.abs(pca_result.result[dim1-1])) * 1.1
+        ybound: float = np.max(np.abs(pca_result.result[dim2-1])) * 1.1
+        # set axes limits
+        ax.set_xlim(-xbound, xbound)
+        ax.set_ylim(-ybound, ybound)
+        # plot axes
+        ax.plot([-xbound, xbound], [0, 0], color='black', alpha=0.5, linewidth=0.5)
+        ax.plot([0, 0], [-ybound, ybound], color='black', alpha=0.5, linewidth=0.5)
     
     # add lattice connections
     if lattice_connections:
@@ -161,13 +174,19 @@ def plot_pca_colored(
                     ax.plot(
                         [x, x2],
                         [y, y2],
-                        color='black',
-                        alpha=0.5,
+                        color='red',
+                        alpha=0.2,
                         linewidth=0.5,
                     )
         
     ax.set_xlabel(f"PC{dim1}")
     ax.set_ylabel(f"PC{dim2}")
     ax.set_title(f"PCA of Survey Responses:\nPC{dim1} vs PC{dim2}")
-    # ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+
+    # semi-log scale
+    if isinstance(symlog_scale, (float, int)):
+        if symlog_scale > 0:
+            ax.set_xscale('symlog', linthresh=symlog_scale)
+            ax.set_yscale('symlog', linthresh=symlog_scale)
+
     plt.show()
