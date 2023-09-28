@@ -147,8 +147,7 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
     hktransformer: HookedTransformer = cfg_holder.create_model()
 
     token_ids = hktransformer.to_tokens(" ".join(maze_str_tokens), prepend_bos=False)
-    token_ids_sep = hktransformer.to_tokens(maze_str_tokens, prepend_bos=False)
-    token_ids_sep = torch.tensor(token_ids_sep).flatten()
+    token_ids_sep = hktransformer.to_tokens(maze_str_tokens, prepend_bos=False).flatten()
     assert torch.allclose(token_ids, token_ids_sep), "Tokenization mismatch"
 
     # -- Test Simple Tokenization --

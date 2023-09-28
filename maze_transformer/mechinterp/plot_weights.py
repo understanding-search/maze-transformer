@@ -42,6 +42,7 @@ def plot_important_neurons(
         neuron_idxs: Int[np.ndarray, "neuron_idxs"]|None = None,
         neuron_dla_data: Float[np.ndarray, "n_layers n_neurons"]|None = None,
         n_important_neurons: int = 10,
+        show: bool = True,
     ) -> tuple[plt.Figure, plt.Axes]:
     """Plot the weights and biases for the selected or most important neurons in a given layer
     
@@ -129,6 +130,10 @@ def plot_important_neurons(
     # Plot DLA
     neuron_dla_data = neuron_dla_data[layer][neuron_idxs][None, :]
     _weights_plot_helper(fig, ax_dla, neuron_dla_data, "DLA")
+
+    # Show the plot
+    if show:
+        plt.show()
 
     return fig, axes
 
