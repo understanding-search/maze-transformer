@@ -134,34 +134,38 @@ def plot_important_neurons(
 
 
 
-def plot_embeddings():
-    raise NotImplementedError("TODO")
-    print(f"{MODEL.W_pos.shape = }")
-    print(f"{MODEL.W_E.shape = }")
-    print(f"{VOCAB_EMBEDS.shape = }")
+def plot_embeddings(model: HookedTransformer, token_arr: list[str], show: bool = True) -> tuple[plt.Figure, plt.Axes]:
 
+    # Get the weight matrices for vocab and positional embeddings
+    W_E: Float[torch.Tensor, "vocab_size d_model"] = model.W_E
+    W_pos: Float[torch.Tensor, "max_seq_len d_model"] = model.W_pos
+    
+    # Make sure they have the same dimension
+    d_model: int = W_E.shape[1]
+    assert W_pos.shape[1] == d_model
+    
+    # Create the figure and axes
     fig, (ax_e, ax_pos) = plt.subplots(2, 1, figsize=(16, 16), sharex=True)
-
-    assert VOCAB_EMBEDS.shape[1] == d_model
-    vbound: float = VOCAB_EMBEDS.abs().max().item()
-
-    ax_e.imshow(VOCAB_EMBEDS.cpu().numpy(), cmap="RdBu", aspect="auto", vmin=-vbound, vmax=vbound)
+    
+    # Visualize vocab embeddings
+    vbound_e: float = W_E.abs().max().item()
+    ax_e.imshow(W_E.cpu().detach().numpy(), cmap="RdBu", aspect="auto", vmin=-vbound_e, vmax=vbound_e)
     ax_e.set_title("Vocab Embeddings")
     ax_e.set_ylabel("vocab item")
-    ax_e.set_yticks(VOCAB_TOKENS.cpu().numpy(), labels=TOKENIZER.token_arr, fontsize=5)
+    ax_e.set_yticks(np.arange(len(token_arr)))
+    ax_e.set_yticklabels(token_arr, fontsize=5)
     fig.colorbar(ax_e.get_images()[0], ax=ax_e)
-
-
-    assert MODEL.W_pos.shape[1] == d_model
-
-    vbound_pos: float = MODEL.W_pos.abs().max().item()
-    ax_pos.imshow(
-        MODEL.W_pos.cpu().numpy(),
-        cmap="RdBu", aspect="auto",
-        interpolation="none",
-        vmin=-vbound_pos, vmax=vbound_pos,
-    )
-    fig.colorbar(ax_pos.get_images()[0], ax=ax_pos)
+    
+    # Visualize positional embeddings
+    vbound_pos: float = W_pos.abs().max().item()
+    ax_pos.imshow(W_pos.cpu().detach().numpy(), cmap="RdBu", aspect="auto", vmin=-vbound_pos, vmax=vbound_pos)
     ax_pos.set_title("Positional Embeddings")
     ax_pos.set_ylabel("pos vs token embed")
     ax_pos.set_xlabel("d_model")
+    fig.colorbar(ax_pos.get_images()[0], ax=ax_pos)
+    
+    # Show the plot
+    if show:
+        plt.show()
+
+    return fig, (ax_e, ax_pos)
