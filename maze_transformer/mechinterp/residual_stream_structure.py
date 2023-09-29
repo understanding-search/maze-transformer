@@ -206,6 +206,7 @@ def compute_distances_and_correlation(
         coordinate_metric: str = "euclidean",
         show: bool = True,
     ) -> dict:
+    """embedding distances passed to pdist from scipy"""
 
     coord_tokens_ids: dict[str, int] = tokenizer.coordinate_tokens_ids
     coord_embeddings: Float[np.ndarray, "n_coord_tokens d_model"] = np.array([
@@ -277,37 +278,44 @@ def plot_distances_matrix(
 
     return fig, ax
 
-def plot_distance_grid(
-        embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"], 
-        tokenizer: MazeTokenizer,
-        embedding_metric: str,
-        coordinate_metric: str,
-        show: bool = True,
-        **kwargs,
-    ):
+def compute_grid_distances(
+    embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"], 
+    tokenizer: MazeTokenizer,
+) -> Float[np.ndarray, "n n n n"]:
     n: int = tokenizer.max_grid_size
-    # print(n)
-    # print(tokenizer.coordinate_tokens_coords)
-    fig, axs = plt.subplots(n, n, figsize=(20, 20))
+    grid_distances: Float[np.ndarray, "n n n n"] = np.full((n, n, n, n), np.nan)
 
     for idx, ((x, y), token_id) in enumerate(tokenizer.coordinate_tokens_coords.items()):
-        ax = axs[x, y]
-        
+
         # Extract distances for this particular token from the distance matrix
         distances: Float[np.ndarray, "n_coord_tokens"] = embedding_distances_matrix[idx, :]
         
         # get distances
-        grid_distances: Float[np.ndarray, "n n"] = np.full((n, n), np.nan)
         for (x2, y2), distance in zip(tokenizer.coordinate_tokens_coords.keys(), distances):
-            grid_distances[x2, y2] = distance
+            grid_distances[x, y, x2, y2] = distance
         # coords = np.array(list(tokenizer.coordinate_tokens_coords.keys()))
-        # grid_distances[coords[:, 0], coords[:, 1]] = distances
+        # grid_distances[x, y, coords[:, 0], coords[:, 1]] = distances
+    
+    return grid_distances
 
-        cax = ax.matshow(grid_distances, cmap='viridis', interpolation='none')
-        ax.plot(y, x, 'rx')
-        ax.set_title(f"from ({x},{y})")
-        # fully remove both major and minor gridlines
-        ax.grid(False)
+def plot_distance_grid(
+        grid_distances: Float[np.ndarray, "n n n n"],
+        embedding_metric: str,
+        show: bool = True,
+    ):
+    n: int = grid_distances.shape[0]
+    # print(n)
+    # print(tokenizer.coordinate_tokens_coords)
+    fig, axs = plt.subplots(n, n, figsize=(20, 20))
+
+    for i in range(n):
+        for j in range(n):
+            ax = axs[i, j]
+            cax = ax.matshow(grid_distances[i,j], cmap='viridis', interpolation='none')
+            ax.plot(j, i, 'rx')
+            ax.set_title(f"from ({i},{j})")
+            # fully remove both major and minor gridlines
+            ax.grid(False)
 
     fig.suptitle(f"{embedding_metric} distances grid")
     plt.colorbar(cax, ax=axs.ravel().tolist())
