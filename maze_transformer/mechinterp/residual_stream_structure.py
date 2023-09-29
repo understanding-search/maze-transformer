@@ -2,8 +2,15 @@ from typing import NamedTuple, Annotated
 
 # numerical
 import numpy as np
+from jaxtyping import Float
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+
+# scipy
+from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import euclidean
+from scipy.stats import pearsonr
+# from scipy.spatial.distance import cosine
 
 # transformerlens
 from transformer_lens import HookedTransformer, ActivationCache
@@ -190,3 +197,69 @@ def plot_pca_colored(
             ax.set_yscale('symlog', linthresh=symlog_scale)
 
     return fig, ax
+
+
+def compute_distances_and_correlation(
+        embedding_matrix: Float[np.ndarray, "d_vocab d_model"], 
+        tokenizer: MazeTokenizer,
+        show: bool = True,
+    ) -> dict:
+
+    coord_tokens_ids: dict[str, int] = tokenizer.coordinate_tokens_ids
+    coord_embeddings: Float[np.ndarray, "n_coord_tokens d_model"] = np.array([
+        embedding_matrix[v]
+        for v in coord_tokens_ids.values()
+    ])
+    
+    # Calculate the pairwise cosine distances
+    cosine_distances: Float[np.ndarray, "n_coord_tokens d_model"] = pdist(
+        coord_embeddings, 
+        metric='cosine',
+    )
+    # normalize the distance by the maximum distance
+    cosine_distances /= cosine_distances.max()
+
+    # Convert the distances to a square matrix
+    cosine_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"] = squareform(cosine_distances)
+    # lower triangle of the matrix is the same as the upper triangle
+    # cosine_distances_matrix = np.triu(cosine_distances_matrix)
+
+    # Calculate the correlation between the embedding and coordinate distances
+    euclidean_coordinates: Float[np.ndarray, "n_coord_tokens 2"] = np.array(list(tokenizer.coordinate_tokens_coords.keys()))
+    euclidean_distances = pdist(
+        euclidean_coordinates, 
+        metric='euclidean',
+    )
+    correlation, corr_pval = pearsonr(cosine_distances, euclidean_distances)
+
+    return dict(
+        cosine_distances_matrix = cosine_distances_matrix,
+        correlation = correlation,
+        corr_pval = corr_pval,
+    )
+    
+def plot_distances_and_correlation(
+        cosine_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
+        correlation: float,
+        corr_pval: float,
+        tokenizer: MazeTokenizer,
+        show: bool = True,
+    ) -> tuple[float, np.ndarray]:
+
+    coord_tokens_ids: dict[str, int] = tokenizer.coordinate_tokens_ids
+
+    # Plot the cosine distances
+    fig, ax = plt.subplots(figsize=(15, 15))
+    cax = ax.matshow(cosine_distances_matrix, cmap='viridis')
+    fig.colorbar(cax)
+
+    ax.set_xticks(np.arange(len(coord_tokens_ids)))
+    ax.set_yticks(np.arange(len(coord_tokens_ids)))
+    ax.set_xticklabels(coord_tokens_ids.keys())
+    ax.set_yticklabels(coord_tokens_ids.keys())
+
+    plt.setp(ax.get_xticklabels(), rotation=90, ha="left", rotation_mode="anchor")
+
+    ax.set_title('Cosine Distances Between Coordinate Embeddings')
+    if show:
+        plt.show()
