@@ -270,11 +270,50 @@ def plot_distances_matrix(
     plt.setp(ax.get_xticklabels(), rotation=90, ha="left", rotation_mode="anchor")
 
     ax.set_title(f"{embedding_metric} Distances Between Coordinate Embeddings")
+    ax.grid(False)
 
     if show:
         plt.show()
 
     return fig, ax
+
+def plot_distance_grid(
+        embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"], 
+        tokenizer: MazeTokenizer,
+        embedding_metric: str,
+        coordinate_metric: str,
+        show: bool = True,
+        **kwargs,
+    ):
+    n: int = tokenizer.max_grid_size
+    # print(n)
+    # print(tokenizer.coordinate_tokens_coords)
+    fig, axs = plt.subplots(n, n, figsize=(20, 20))
+
+    for idx, ((x, y), token_id) in enumerate(tokenizer.coordinate_tokens_coords.items()):
+        ax = axs[x, y]
+        
+        # Extract distances for this particular token from the distance matrix
+        distances: Float[np.ndarray, "n_coord_tokens"] = embedding_distances_matrix[idx, :]
+        
+        # get distances
+        grid_distances: Float[np.ndarray, "n n"] = np.full((n, n), np.nan)
+        for (x2, y2), distance in zip(tokenizer.coordinate_tokens_coords.keys(), distances):
+            grid_distances[x2, y2] = distance
+        # coords = np.array(list(tokenizer.coordinate_tokens_coords.keys()))
+        # grid_distances[coords[:, 0], coords[:, 1]] = distances
+
+        cax = ax.matshow(grid_distances, cmap='viridis', interpolation='none')
+        ax.plot(y, x, 'rx')
+        ax.set_title(f"from ({x},{y})")
+        # fully remove both major and minor gridlines
+        ax.grid(False)
+
+    fig.suptitle(f"{embedding_metric} distances grid")
+    plt.colorbar(cax, ax=axs.ravel().tolist())
+
+    if show:
+        plt.show()
 
 def plot_correlation(
     embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
