@@ -202,6 +202,8 @@ def plot_pca_colored(
 def compute_distances_and_correlation(
         embedding_matrix: Float[np.ndarray, "d_vocab d_model"], 
         tokenizer: MazeTokenizer,
+        embedding_metric: str = "cosine",
+        coordinate_metric: str = "euclidean",
         show: bool = True,
     ) -> dict:
 
@@ -211,46 +213,49 @@ def compute_distances_and_correlation(
         for v in coord_tokens_ids.values()
     ])
     
-    # Calculate the pairwise cosine distances
-    cosine_distances: Float[np.ndarray, "n_coord_tokens d_model"] = pdist(
+    # Calculate the pairwise distances in embedding space
+    embedding_distances: Float[np.ndarray, "n_coord_tokens d_model"] = pdist(
         coord_embeddings, 
-        metric='cosine',
+        metric=embedding_metric,
     )
     # normalize the distance by the maximum distance
-    cosine_distances /= cosine_distances.max()
+    embedding_distances /= embedding_distances.max()
 
     # Convert the distances to a square matrix
-    cosine_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"] = squareform(cosine_distances)
-    # lower triangle of the matrix is the same as the upper triangle
-    # cosine_distances_matrix = np.triu(cosine_distances_matrix)
+    embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"] = squareform(embedding_distances)
 
     # Calculate the correlation between the embedding and coordinate distances
-    euclidean_coordinates: Float[np.ndarray, "n_coord_tokens 2"] = np.array(list(tokenizer.coordinate_tokens_coords.keys()))
-    euclidean_distances = pdist(
-        euclidean_coordinates, 
-        metric='euclidean',
+    coordinate_coordinates: Float[np.ndarray, "n_coord_tokens 2"] = np.array(list(tokenizer.coordinate_tokens_coords.keys()))
+    coordinate_distances = pdist(
+        coordinate_coordinates, 
+        metric=coordinate_metric,
     )
-    correlation, corr_pval = pearsonr(cosine_distances, euclidean_distances)
+    correlation, corr_pval = pearsonr(embedding_distances, coordinate_distances)
 
     return dict(
-        cosine_distances_matrix = cosine_distances_matrix,
+        embedding_distances_matrix = embedding_distances_matrix,
         correlation = correlation,
         corr_pval = corr_pval,
+        tokenizer = tokenizer,
+        embedding_metric = embedding_metric,
+        coordinate_metric = coordinate_metric,
     )
     
 def plot_distances_and_correlation(
-        cosine_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
+        embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
         correlation: float,
         corr_pval: float,
+        embedding_metric: str,
+        coordinate_metric: str,
         tokenizer: MazeTokenizer,
         show: bool = True,
     ) -> tuple[float, np.ndarray]:
 
     coord_tokens_ids: dict[str, int] = tokenizer.coordinate_tokens_ids
 
-    # Plot the cosine distances
+    # Plot the embedding distances
     fig, ax = plt.subplots(figsize=(15, 15))
-    cax = ax.matshow(cosine_distances_matrix, cmap='viridis')
+    cax = ax.matshow(embedding_distances_matrix, cmap='viridis')
     fig.colorbar(cax)
 
     ax.set_xticks(np.arange(len(coord_tokens_ids)))
@@ -260,6 +265,10 @@ def plot_distances_and_correlation(
 
     plt.setp(ax.get_xticklabels(), rotation=90, ha="left", rotation_mode="anchor")
 
-    ax.set_title('Cosine Distances Between Coordinate Embeddings')
+    ax.set_title(
+        f"""{embedding_metric} Distances Between Coordinate Embeddings
+        Correlation with {coordinate_metric} on coordinates: {correlation} (p={corr_pval})
+        """
+    )
     if show:
         plt.show()
