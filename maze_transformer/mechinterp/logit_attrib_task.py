@@ -3,7 +3,6 @@ import typing
 
 import numpy as np
 from jaxtyping import Float
-
 from maze_dataset import SPECIAL_TOKENS
 
 
@@ -72,6 +71,7 @@ def token_after_fixed_start_token(
 
     return TaskSetup(prompts=prompts, targets=targets)
 
+
 def rand_token_in_range(
     dataset_tokens: list[list[str]],
     start_token: str = SPECIAL_TOKENS.PATH_START,
@@ -87,7 +87,9 @@ def rand_token_in_range(
     positions_p: Float[np.ndarray, "n_samples"] = np.random.uniform(size=(n_samples,))
 
     for i, sample_tokens in enumerate(dataset_tokens):
-        start_idx: int = get_token_first_index(start_token, sample_tokens) + start_offset
+        start_idx: int = (
+            get_token_first_index(start_token, sample_tokens) + start_offset
+        )
         end_idx: int = get_token_first_index(end_token, sample_tokens) + end_offset
 
         selected_token_idx: int
@@ -119,13 +121,17 @@ LOGIT_ATTRIB_TASKS: dict[str, DLAProtocolFixed] = {
         token_after_fixed_start_token, start_token=SPECIAL_TOKENS.PATH_END, offset=-1
     ),
     "rand_path_token": functools.partial(
-        rand_token_in_range, 
-        start_token=SPECIAL_TOKENS.PATH_START, end_token=SPECIAL_TOKENS.PATH_END,
-        start_offset=1, end_offset=-1,
+        rand_token_in_range,
+        start_token=SPECIAL_TOKENS.PATH_START,
+        end_token=SPECIAL_TOKENS.PATH_END,
+        start_offset=1,
+        end_offset=-1,
     ),
     "rand_path_token_non_endpoint": functools.partial(
         rand_token_in_range,
-        start_token=SPECIAL_TOKENS.PATH_START, end_token=SPECIAL_TOKENS.PATH_END,
-        start_offset=3, end_offset=-2,
+        start_token=SPECIAL_TOKENS.PATH_START,
+        end_token=SPECIAL_TOKENS.PATH_END,
+        start_offset=3,
+        end_offset=-2,
     ),
 }

@@ -81,7 +81,6 @@ def plot_logit_lens(
         torch.Tensor,  # x/y for attr
     ],
 ]:
-
     diff_x, diff_y, attr_x, attr_y = compute_logit_lens(
         model=model,
         cache=cache,
@@ -91,19 +90,19 @@ def plot_logit_lens(
     fig, ax1 = plt.subplots(figsize=(10, 5))
 
     ax1.set_xlabel("Layer")
-    ax1.set_ylabel("Logit Difference", color='tab:blue')
+    ax1.set_ylabel("Logit Difference", color="tab:blue")
     ax1.set_title("Logit Lens")
-    ax1.plot(diff_x, diff_y, label="Logit Difference", color='tab:blue')
-    ax1.tick_params(axis='y', labelcolor='tab:blue')
-    ax1.legend(loc='upper left')
+    ax1.plot(diff_x, diff_y, label="Logit Difference", color="tab:blue")
+    ax1.tick_params(axis="y", labelcolor="tab:blue")
+    ax1.legend(loc="upper left")
 
     # create a second y-axis sharing the same x-axis
     ax2 = ax1.twinx()
 
-    ax2.set_ylabel("Logit Attribution", color='tab:red')
-    ax2.plot(attr_x, attr_y, label="Logit Attribution", color='tab:red')
-    ax2.tick_params(axis='y', labelcolor='tab:red')
-    ax2.legend(loc='lower right')
+    ax2.set_ylabel("Logit Attribution", color="tab:red")
+    ax2.plot(attr_x, attr_y, label="Logit Attribution", color="tab:red")
+    ax2.tick_params(axis="y", labelcolor="tab:red")
+    ax2.legend(loc="lower right")
 
     plt.show()
 

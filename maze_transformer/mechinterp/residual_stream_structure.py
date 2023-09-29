@@ -1,85 +1,98 @@
-from typing import NamedTuple, Annotated
 import itertools
+from typing import NamedTuple
+
+import matplotlib.pyplot as plt
 
 # numerical
 import numpy as np
-from jaxtyping import Float
-from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
 import seaborn as sns
-
-# scipy
-from scipy.spatial.distance import pdist, squareform
-from scipy.spatial.distance import euclidean
-from scipy.stats import pearsonr
-# from scipy.spatial.distance import cosine
-
-# transformerlens
-from transformer_lens import HookedTransformer, ActivationCache
+from jaxtyping import Float
 
 # maze_dataset
 from maze_dataset.constants import _SPECIAL_TOKENS_ABBREVIATIONS
+from maze_dataset.tokenization import MazeTokenizer
 from maze_dataset.tokenization.token_utils import strings_to_coords
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
 
-def coordinate_to_color(coord: tuple[float, float], max_val: float = 1.0) -> tuple[float, float, float]:
+# scipy
+from scipy.spatial.distance import pdist, squareform
+from scipy.stats import pearsonr
+from sklearn.decomposition import PCA
+
+# transformerlens
+from transformer_lens import HookedTransformer
+
+# from scipy.spatial.distance import cosine
+
+
+def coordinate_to_color(
+    coord: tuple[float, float], max_val: float = 1.0
+) -> tuple[float, float, float]:
     """Maps a coordinate (i, j) to a unique RGB color"""
     coord = np.array(coord)
     if max_val < coord.max():
-        raise ValueError(f"max_val ({max_val}) must be at least as large as the largest coordinate ({coord.max()})")
-    
+        raise ValueError(
+            f"max_val ({max_val}) must be at least as large as the largest coordinate ({coord.max()})"
+        )
+
     coord = coord / max_val
 
     return (
-        coord[0] * 0.6 + 0.3, # r
-        0.5,                  # g
-        coord[1] * 0.6 + 0.3, # b
+        coord[0] * 0.6 + 0.3,  # r
+        0.5,  # g
+        coord[1] * 0.6 + 0.3,  # b
     )
 
 
 TokenPlottingInfo = NamedTuple(
     "TokenPlottingInfo",
-    token = str,
-    coord = tuple[float, float]|str,
-    color = tuple[float, float, float],
+    token=str,
+    coord=tuple[float, float] | str,
+    color=tuple[float, float, float],
 )
 
-def process_tokens_for_pca(tokenizer: MazeTokenizer) -> list[TokenPlottingInfo]:
 
-    tokens_coords: list[str|tuple[int,int]] = strings_to_coords(tokenizer.token_arr, when_noncoord="include")
-    tokens_coords_only: list[tuple[int,int]] = strings_to_coords(tokenizer.token_arr, when_noncoord="skip")
+def process_tokens_for_pca(tokenizer: MazeTokenizer) -> list[TokenPlottingInfo]:
+    tokens_coords: list[str | tuple[int, int]] = strings_to_coords(
+        tokenizer.token_arr, when_noncoord="include"
+    )
+    tokens_coords_only: list[tuple[int, int]] = strings_to_coords(
+        tokenizer.token_arr, when_noncoord="skip"
+    )
     max_coord: int = np.array(tokens_coords_only).max()
     # token_idxs_coords: list[int] = tokenizer.encode(tokenizer.coords_to_strings(tokens_coords_only))
 
     vocab_coordinates_colored: list[TokenPlottingInfo] = [
-        TokenPlottingInfo(*x) for x in        
-        zip(
+        TokenPlottingInfo(*x)
+        for x in zip(
             tokenizer.token_arr,
             tokens_coords,
             [
-                coordinate_to_color(coord, max_val=max_coord) if isinstance(coord, tuple) else (0.0, 1.0, 0.0)
+                coordinate_to_color(coord, max_val=max_coord)
+                if isinstance(coord, tuple)
+                else (0.0, 1.0, 0.0)
                 for coord in tokens_coords
             ],
         )
     ]
-        
+
     return vocab_coordinates_colored
+
 
 EmbeddingsPCAResult = NamedTuple(
     "EmbeddingsPCAResult",
-    result = np.ndarray,
-    index_map = list[int]|None,
-    pca_obj = PCA,
+    result=np.ndarray,
+    index_map=list[int] | None,
+    pca_obj=PCA,
 )
 
-def compute_pca(
-        model: HookedTransformer, 
-        token_plotting_info: list[TokenPlottingInfo],
-    ) -> dict[str, EmbeddingsPCAResult]:
 
-    pca_all: PCA = PCA(svd_solver='full')
-    pca_coords: PCA = PCA(svd_solver='full')
-    pca_special: PCA = PCA(svd_solver='full')
+def compute_pca(
+    model: HookedTransformer,
+    token_plotting_info: list[TokenPlottingInfo],
+) -> dict[str, EmbeddingsPCAResult]:
+    pca_all: PCA = PCA(svd_solver="full")
+    pca_coords: PCA = PCA(svd_solver="full")
+    pca_special: PCA = PCA(svd_solver="full")
 
     # PCA_RESULTS = pca_all.fit_transform(MODEL.W_E.cpu().numpy().T)
     # PCA_RESULTS_COORDS_ONLY = pca_coords.fit_transform(MODEL.W_E[token_idxs_coords].cpu().numpy().T)
@@ -87,30 +100,33 @@ def compute_pca(
     idxs_coords: list[int] = list()
     idxs_special: list[int] = list()
 
-    i: int; tokinfo: TokenPlottingInfo
+    i: int
+    tokinfo: TokenPlottingInfo
     for i, tokinfo in enumerate(token_plotting_info):
         if isinstance(tokinfo.coord, tuple):
             idxs_coords.append(i)
         elif isinstance(tokinfo.coord, str):
             idxs_special.append(i)
         else:
-            raise ValueError(f"unexpected coord type: {type(tokinfo.coord)}\n{tokinfo = }")
+            raise ValueError(
+                f"unexpected coord type: {type(tokinfo.coord)}\n{tokinfo = }"
+            )
 
     return dict(
-        all = EmbeddingsPCAResult(
-            result = pca_all.fit_transform(model.W_E.cpu().numpy().T), 
-            index_map = None,
-            pca_obj = pca_all,
+        all=EmbeddingsPCAResult(
+            result=pca_all.fit_transform(model.W_E.cpu().numpy().T),
+            index_map=None,
+            pca_obj=pca_all,
         ),
-        coords_only = EmbeddingsPCAResult(
-            result = pca_coords.fit_transform(model.W_E[idxs_coords].cpu().numpy().T), 
-            index_map = idxs_coords,
-            pca_obj = pca_coords,
+        coords_only=EmbeddingsPCAResult(
+            result=pca_coords.fit_transform(model.W_E[idxs_coords].cpu().numpy().T),
+            index_map=idxs_coords,
+            pca_obj=pca_coords,
         ),
-        special_only = EmbeddingsPCAResult(
-            result = pca_special.fit_transform(model.W_E[idxs_special].cpu().numpy().T), 
-            index_map = idxs_special,
-            pca_obj = pca_special,
+        special_only=EmbeddingsPCAResult(
+            result=pca_special.fit_transform(model.W_E[idxs_special].cpu().numpy().T),
+            index_map=idxs_special,
+            pca_obj=pca_special,
         ),
     )
 
@@ -119,13 +135,12 @@ def plot_pca_colored(
     pca_results_options: dict[str, EmbeddingsPCAResult],
     pca_results_key: str,
     vocab_colors: list[tuple],
-    dim1: int, 
+    dim1: int,
     dim2: int,
     lattice_connections: bool = True,
-    symlog_scale: float|None = None,
+    symlog_scale: float | None = None,
     axes_and_centered: bool = True,
 ) -> tuple[plt.Figure, plt.Axes]:
-    
     # set up figure, get PCA results
     fig, ax = plt.subplots(figsize=(5, 5))
     pca_result: EmbeddingsPCAResult = pca_results_options[pca_results_key]
@@ -142,37 +157,39 @@ def plot_pca_colored(
         token, coord, color = vocab_colors[i_map]
         # plot the point
         ax.scatter(
-            pca_result.result[dim1-1, i],
-            pca_result.result[dim2-1, i],
+            pca_result.result[dim1 - 1, i],
+            pca_result.result[dim2 - 1, i],
             alpha=0.5,
             color=color,
         )
         if isinstance(coord, str):
             # label with the abbreviated token name
             ax.text(
-                pca_result.result[dim1-1, i], 
-                pca_result.result[dim2-1, i], 
+                pca_result.result[dim1 - 1, i],
+                pca_result.result[dim2 - 1, i],
                 _SPECIAL_TOKENS_ABBREVIATIONS[coord],
                 fontsize=8,
             )
         else:
             # add to the lattice points list for later
-            lattice_points.append((
-                coord,
-                (pca_result.result[dim1-1, i], pca_result.result[dim2-1, i]),
-            ))
-            
+            lattice_points.append(
+                (
+                    coord,
+                    (pca_result.result[dim1 - 1, i], pca_result.result[dim2 - 1, i]),
+                )
+            )
+
     if axes_and_centered:
         # find x and y limits
-        xbound: float = np.max(np.abs(pca_result.result[dim1-1])) * 1.1
-        ybound: float = np.max(np.abs(pca_result.result[dim2-1])) * 1.1
+        xbound: float = np.max(np.abs(pca_result.result[dim1 - 1])) * 1.1
+        ybound: float = np.max(np.abs(pca_result.result[dim2 - 1])) * 1.1
         # set axes limits
         ax.set_xlim(-xbound, xbound)
         ax.set_ylim(-ybound, ybound)
         # plot axes
-        ax.plot([-xbound, xbound], [0, 0], color='black', alpha=0.5, linewidth=0.5)
-        ax.plot([0, 0], [-ybound, ybound], color='black', alpha=0.5, linewidth=0.5)
-    
+        ax.plot([-xbound, xbound], [0, 0], color="black", alpha=0.5, linewidth=0.5)
+        ax.plot([0, 0], [-ybound, ybound], color="black", alpha=0.5, linewidth=0.5)
+
     # add lattice connections
     if lattice_connections:
         for (i, j), (x, y) in lattice_points:
@@ -183,11 +200,11 @@ def plot_pca_colored(
                     ax.plot(
                         [x, x2],
                         [y, y2],
-                        color='red',
+                        color="red",
                         alpha=0.2,
                         linewidth=0.5,
                     )
-        
+
     ax.set_xlabel(f"PC{dim1}")
     ax.set_ylabel(f"PC{dim2}")
     ax.set_title(f"PCA of Survey Responses:\nPC{dim1} vs PC{dim2}")
@@ -195,74 +212,77 @@ def plot_pca_colored(
     # semi-log scale
     if isinstance(symlog_scale, (float, int)):
         if symlog_scale > 0:
-            ax.set_xscale('symlog', linthresh=symlog_scale)
-            ax.set_yscale('symlog', linthresh=symlog_scale)
+            ax.set_xscale("symlog", linthresh=symlog_scale)
+            ax.set_yscale("symlog", linthresh=symlog_scale)
 
     return fig, ax
 
 
 def compute_distances_and_correlation(
-        embedding_matrix: Float[np.ndarray, "d_vocab d_model"], 
-        tokenizer: MazeTokenizer,
-        embedding_metric: str = "cosine",
-        coordinate_metric: str = "euclidean",
-        show: bool = True,
-    ) -> dict:
+    embedding_matrix: Float[np.ndarray, "d_vocab d_model"],
+    tokenizer: MazeTokenizer,
+    embedding_metric: str = "cosine",
+    coordinate_metric: str = "euclidean",
+    show: bool = True,
+) -> dict:
     """embedding distances passed to pdist from scipy"""
 
     coord_tokens_ids: dict[str, int] = tokenizer.coordinate_tokens_ids
-    coord_embeddings: Float[np.ndarray, "n_coord_tokens d_model"] = np.array([
-        embedding_matrix[v]
-        for v in coord_tokens_ids.values()
-    ])
-    
+    coord_embeddings: Float[np.ndarray, "n_coord_tokens d_model"] = np.array(
+        [embedding_matrix[v] for v in coord_tokens_ids.values()]
+    )
+
     # Calculate the pairwise distances in embedding space
     embedding_distances: Float[np.ndarray, "n_coord_tokens d_model"] = pdist(
-        coord_embeddings, 
+        coord_embeddings,
         metric=embedding_metric,
     )
     # normalize the distance by the maximum distance
     embedding_distances /= embedding_distances.max()
 
     # Convert the distances to a square matrix
-    embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"] = squareform(embedding_distances)
+    embedding_distances_matrix: Float[
+        np.ndarray, "n_coord_tokens n_coord_tokens"
+    ] = squareform(embedding_distances)
 
     # Calculate the correlation between the embedding and coordinate distances
-    coordinate_coordinates: Float[np.ndarray, "n_coord_tokens 2"] = np.array(list(tokenizer.coordinate_tokens_coords.keys()))
+    coordinate_coordinates: Float[np.ndarray, "n_coord_tokens 2"] = np.array(
+        list(tokenizer.coordinate_tokens_coords.keys())
+    )
     coordinate_distances = pdist(
-        coordinate_coordinates, 
+        coordinate_coordinates,
         metric=coordinate_metric,
     )
     correlation, corr_pval = pearsonr(embedding_distances, coordinate_distances)
 
     return dict(
-        embedding_distances_matrix = embedding_distances_matrix,
-        correlation = correlation,
-        corr_pval = corr_pval,
-        tokenizer = tokenizer,
-        embedding_metric = embedding_metric,
-        coordinate_metric = coordinate_metric,
+        embedding_distances_matrix=embedding_distances_matrix,
+        correlation=correlation,
+        corr_pval=corr_pval,
+        tokenizer=tokenizer,
+        embedding_metric=embedding_metric,
+        coordinate_metric=coordinate_metric,
     )
-    
-def plot_distances_matrix(
-        embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
-        tokenizer: MazeTokenizer,
-        embedding_metric: str,
-        show: bool = True,
-        **kwargs,
-    ) -> tuple[plt.Figure, plt.Axes]:
 
+
+def plot_distances_matrix(
+    embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
+    tokenizer: MazeTokenizer,
+    embedding_metric: str,
+    show: bool = True,
+    **kwargs,
+) -> tuple[plt.Figure, plt.Axes]:
     coord_tokens_ids: dict[str, int] = tokenizer.coordinate_tokens_ids
 
     # Plot the embedding distances
     fig, ax = plt.subplots(figsize=(15, 15))
     cax = ax.matshow(
-        embedding_distances_matrix, 
-        cmap='viridis',
-        interpolation='none',
+        embedding_distances_matrix,
+        cmap="viridis",
+        interpolation="none",
     )
-    ax.grid(which='major', color='white', linestyle='-', linewidth=0.5)
-    ax.grid(which='minor', color='white', linestyle='-', linewidth=0.0)
+    ax.grid(which="major", color="white", linestyle="-", linewidth=0.5)
+    ax.grid(which="minor", color="white", linestyle="-", linewidth=0.0)
     fig.colorbar(cax)
 
     ax.set_xticks(np.arange(len(coord_tokens_ids)))
@@ -280,31 +300,38 @@ def plot_distances_matrix(
 
     return fig, ax
 
+
 def compute_grid_distances(
-    embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"], 
+    embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
     tokenizer: MazeTokenizer,
 ) -> Float[np.ndarray, "n n n n"]:
     n: int = tokenizer.max_grid_size
     grid_distances: Float[np.ndarray, "n n n n"] = np.full((n, n, n, n), np.nan)
 
-    for idx, ((x, y), token_id) in enumerate(tokenizer.coordinate_tokens_coords.items()):
-
+    for idx, ((x, y), token_id) in enumerate(
+        tokenizer.coordinate_tokens_coords.items()
+    ):
         # Extract distances for this particular token from the distance matrix
-        distances: Float[np.ndarray, "n_coord_tokens"] = embedding_distances_matrix[idx, :]
-        
+        distances: Float[np.ndarray, "n_coord_tokens"] = embedding_distances_matrix[
+            idx, :
+        ]
+
         # get distances
-        for (x2, y2), distance in zip(tokenizer.coordinate_tokens_coords.keys(), distances):
+        for (x2, y2), distance in zip(
+            tokenizer.coordinate_tokens_coords.keys(), distances
+        ):
             grid_distances[x, y, x2, y2] = distance
         # coords = np.array(list(tokenizer.coordinate_tokens_coords.keys()))
         # grid_distances[x, y, coords[:, 0], coords[:, 1]] = distances
-    
+
     return grid_distances
 
+
 def plot_distance_grid(
-        grid_distances: Float[np.ndarray, "n n n n"],
-        embedding_metric: str,
-        show: bool = True,
-    ) -> tuple[plt.Figure, plt.Axes]:
+    grid_distances: Float[np.ndarray, "n n n n"],
+    embedding_metric: str,
+    show: bool = True,
+) -> tuple[plt.Figure, plt.Axes]:
     n: int = grid_distances.shape[0]
     # print(n)
     # print(tokenizer.coordinate_tokens_coords)
@@ -313,8 +340,8 @@ def plot_distance_grid(
     for i in range(n):
         for j in range(n):
             ax = axs[i, j]
-            cax = ax.matshow(grid_distances[i,j], cmap='viridis', interpolation='none')
-            ax.plot(j, i, 'rx')
+            cax = ax.matshow(grid_distances[i, j], cmap="viridis", interpolation="none")
+            ax.plot(j, i, "rx")
             ax.set_title(f"from ({i},{j})")
             # fully remove both major and minor gridlines
             ax.grid(False)
@@ -327,27 +354,31 @@ def plot_distance_grid(
 
     return fig, axs
 
+
 def plot_distance_correlation(
-        distance_grid: Float[np.ndarray, "n n n n"], 
-        embedding_metric: str,
-        coordinate_metric: str,
-        show: bool = False,
-        **kwargs,
-    ) -> plt.Axes:
+    distance_grid: Float[np.ndarray, "n n n n"],
+    embedding_metric: str,
+    coordinate_metric: str,
+    show: bool = False,
+    **kwargs,
+) -> plt.Axes:
     n: int = distance_grid.shape[0]
     n_coord_tokens: int = n**2
-    n_dists: int = ((n_coord_tokens)**2 - n_coord_tokens) / 2
-    
+    n_dists: int = ((n_coord_tokens) ** 2 - n_coord_tokens) / 2
+
     # Initialize lists to store distances
     embedding_distances: list[float] = []
 
     # Create an array of points to be used with pdist
-    points: Float[np.ndarray, "n_coord_tokens 2"] = np.array(list(itertools.product(range(n), range(n))))
+    points: Float[np.ndarray, "n_coord_tokens 2"] = np.array(
+        list(itertools.product(range(n), range(n)))
+    )
     assert points.shape == (n_coord_tokens, 2)
-    pdist_distances: Float[np.ndarray, "n_dists"] = pdist(points, metric=coordinate_metric)
+    pdist_distances: Float[np.ndarray, "n_dists"] = pdist(
+        points, metric=coordinate_metric
+    )
     assert pdist_distances.shape == (n_dists,)
 
-    
     # Calculate distances in the embedding space using itertools for unique pairs
     for idx1, idx2 in zip(*np.triu_indices(len(points), k=1)):
         x1, y1 = points[idx1]
@@ -358,10 +389,10 @@ def plot_distance_correlation(
     assert embedding_distances_np.shape == (n_dists,)
 
     ax = sns.boxplot(
-        x=pdist_distances, 
-        y=embedding_distances, 
-        color=sns.color_palette()[0], 
-        showfliers=False, 
+        x=pdist_distances,
+        y=embedding_distances,
+        color=sns.color_palette()[0],
+        showfliers=False,
         width=0.5,
     )
     ax.set_xlabel(f"{coordinate_metric} distance between coordinates")
@@ -369,5 +400,5 @@ def plot_distance_correlation(
 
     if show:
         plt.show()
-        
+
     return ax

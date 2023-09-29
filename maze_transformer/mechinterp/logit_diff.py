@@ -12,6 +12,7 @@ from maze_transformer.training.config import ZanjHookedTransformer
 
 LArr = Float[torch.Tensor, "samples"]
 
+
 def residual_stack_to_logit_diff(
     residual_stack: Float[torch.Tensor, "components batch d_model"],
     cache: ActivationCache,
@@ -85,7 +86,9 @@ def logit_diff_residual_stream(
     vocab_tensor: Float[torch.Tensor, "d_vocab"] = torch.arange(
         d_vocab, dtype=torch.long
     )
-    vocab_residual_directions: Float[torch.Tensor, "d_vocab d_model"] = model.tokens_to_residual_directions(vocab_tensor)
+    vocab_residual_directions: Float[
+        torch.Tensor, "d_vocab d_model"
+    ] = model.tokens_to_residual_directions(vocab_tensor)
     # get embedding of answer tokens
     answer_residual_directions = vocab_residual_directions[tokens_correct]
     # get the directional difference between logits and corrent and logits on {all other tokens, comparison tokens}
@@ -100,10 +103,14 @@ def logit_diff_residual_stream(
         )
 
     # get the values from the cache at the last layer and last token
-    final_token_residual_stream: Float[torch.Tensor, "samples d_model"] = cache["resid_post", -1][:, -1, :]
+    final_token_residual_stream: Float[torch.Tensor, "samples d_model"] = cache[
+        "resid_post", -1
+    ][:, -1, :]
 
     # scaling the values in residual stream with layer norm
-    scaled_final_token_residual_stream: Float[torch.Tensor, "samples d_model"] = cache.apply_ln_to_stack(
+    scaled_final_token_residual_stream: Float[
+        torch.Tensor, "samples d_model"
+    ] = cache.apply_ln_to_stack(
         final_token_residual_stream,
         layer=-1,
         pos_slice=-1,

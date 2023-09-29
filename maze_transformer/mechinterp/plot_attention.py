@@ -15,8 +15,8 @@ from circuitsvis.tokens import colored_tokens_multi
 from jaxtyping import Float
 from maze_dataset import CoordTup, MazeDataset, MazeDatasetConfig, SolvedMaze
 from maze_dataset.plotting import MazePlot
-from maze_dataset.plotting.print_tokens import color_tokens_cmap
 from maze_dataset.plotting.plot_tokens import plot_colored_text
+from maze_dataset.plotting.print_tokens import color_tokens_cmap
 from maze_dataset.tokenization import MazeTokenizer
 from maze_dataset.tokenization.token_utils import coord_str_to_tuple_noneable
 
@@ -246,9 +246,8 @@ def mazeplot_attention(
     min_for_positive: float = 0.0,
     show_other_tokens: bool = True,
     fig_ax: tuple[plt.Figure, plt.Axes] | None = None,
-    colormap_center: None|float|typing.Literal["median", "mean"] = None,
+    colormap_center: None | float | typing.Literal["median", "mean"] = None,
 ) -> tuple[MazePlot, plt.Figure, plt.Axes]:
-
     # storing attention
     node_values: Float[np.ndarray, "grid_n grid_n"] = np.zeros(maze.grid_shape)
     total_logits_nonpos = defaultdict(float)
@@ -270,8 +269,8 @@ def mazeplot_attention(
         tokens_context[-1]
     )
     target_coord: CoordTup | None = coord_str_to_tuple_noneable(target)
-    
-    colormap_center_val: float|None
+
+    colormap_center_val: float | None
     if colormap_center is None:
         colormap_center_val = None
     elif colormap_center == "median":
@@ -285,15 +284,17 @@ def mazeplot_attention(
         node_values=node_values,
         color_map=cmap,
         target_token_coord=target_coord,
-        preceeding_tokens_coords=[final_prompt_coord] if final_prompt_coord is not None else None,
+        preceeding_tokens_coords=[final_prompt_coord]
+        if final_prompt_coord is not None
+        else None,
         colormap_center=colormap_center_val,
     )
-
 
     # set up combined figure
     if fig_ax is None:
         fig, (ax_maze, ax_other) = plt.subplots(
-            2, 1, 
+            2,
+            1,
             figsize=(7, 7),
             height_ratios=[7, 1],
         )
@@ -306,11 +307,9 @@ def mazeplot_attention(
     )
 
     # non-pos tokens attention
-    total_logits_nonpos_processed: tuple[list[str], list[float]] = tuple(zip(*
-        sorted(
-            total_logits_nonpos.items(), key=lambda x: x[0]
-        )
-    ))
+    total_logits_nonpos_processed: tuple[list[str], list[float]] = tuple(
+        zip(*sorted(total_logits_nonpos.items(), key=lambda x: x[0]))
+    )
 
     if len(total_logits_nonpos_processed) == 2:
         plot_colored_text(
@@ -324,7 +323,6 @@ def mazeplot_attention(
         )
     else:
         print(f"No non-pos tokens found!\n{total_logits_nonpos_processed = }")
-
 
     ax_other.set_title("Non-Positional Tokens Attention")
 
@@ -346,25 +344,23 @@ def plot_attention_final_token(
     plot_colored_tokens: bool = True,
     plot_scores: bool = True,
     plot_attn_maze: bool = True,
-    maze_colormap_center: None|float|typing.Literal["median", "mean"] = None,
+    maze_colormap_center: None | float | typing.Literal["median", "mean"] = None,
     show_all: bool = True,
     print_fmt: str = "terminal",
 ) -> list[dict]:
-
     # str, # head info
     # str|None, # colored tokens text
     # tuple[plt.Figure, plt.Axes]|None, # scores plot
     # tuple[plt.Figure, plt.Axes]|None, # attn maze plot
-    output: list[dict[str, str|None|tuple[plt.Figure, plt.Axes]]] = list()
+    output: list[dict[str, str | None | tuple[plt.Figure, plt.Axes]]] = list()
 
     for k, (c, v) in important_heads_scores.items():
-
         head_info: str = f"head: {k}, score: {c = }, {v.shape = }"
         if show_all:
-            print("-"*80)
+            print("-" * 80)
             print(head_info)
 
-        head_output: dict[str, str|None|tuple[plt.Figure, plt.Axes]] = dict(
+        head_output: dict[str, str | None | tuple[plt.Figure, plt.Axes]] = dict(
             head_info_str=head_info,
             head_info=dict(
                 head=k,
@@ -381,7 +377,8 @@ def plot_attention_final_token(
         # set up attention across maze figure
         if plot_attn_maze:
             mazes_fig, mazes_ax = plt.subplots(
-                2, n_mazes,
+                2,
+                n_mazes,
                 figsize=(7 * n_mazes, 7),
                 height_ratios=[7, 1],
             )
@@ -431,7 +428,7 @@ def plot_attention_final_token(
                 )
 
                 head_output["attn_maze"] = (mazes_fig, mazes_ax)
-    
+
         if show_all:
             plt.show()
         else:

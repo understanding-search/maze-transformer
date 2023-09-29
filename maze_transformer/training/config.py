@@ -412,15 +412,15 @@ class ConfigHolder(SerializableDataclass):
     @property
     def d_model(self) -> int:
         return self.model_cfg.d_model
-    
+
     @property
     def d_head(self) -> int:
         return self.model_cfg.d_head
-    
+
     @property
     def n_layers(self) -> int:
         return self.model_cfg.n_layers
-    
+
     @property
     def n_heads(self) -> int:
         return self.model_cfg.n_heads
