@@ -1,10 +1,12 @@
 from typing import NamedTuple, Annotated
+import itertools
 
 # numerical
 import numpy as np
 from jaxtyping import Float
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # scipy
 from scipy.spatial.distance import pdist, squareform
@@ -302,7 +304,7 @@ def plot_distance_grid(
         grid_distances: Float[np.ndarray, "n n n n"],
         embedding_metric: str,
         show: bool = True,
-    ):
+    ) -> tuple[plt.Figure, plt.Axes]:
     n: int = grid_distances.shape[0]
     # print(n)
     # print(tokenizer.coordinate_tokens_coords)
@@ -323,13 +325,49 @@ def plot_distance_grid(
     if show:
         plt.show()
 
-def plot_correlation(
-    embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
-    tokenizer: MazeTokenizer,
-    correlation: float,
-    corr_pval: float,
-    embedding_metric: str,
-    coordinate_metric: str,
-    show: bool = True,
-):
-    raise NotImplementedError()
+    return fig, axs
+
+def plot_distance_correlation(
+        distance_grid: Float[np.ndarray, "n n n n"], 
+        embedding_metric: str,
+        coordinate_metric: str,
+        show: bool = False,
+        **kwargs,
+    ) -> plt.Axes:
+    n: int = distance_grid.shape[0]
+    n_coord_tokens: int = n**2
+    n_dists: int = ((n_coord_tokens)**2 - n_coord_tokens) / 2
+    
+    # Initialize lists to store distances
+    embedding_distances: list[float] = []
+
+    # Create an array of points to be used with pdist
+    points: Float[np.ndarray, "n_coord_tokens 2"] = np.array(list(itertools.product(range(n), range(n))))
+    assert points.shape == (n_coord_tokens, 2)
+    pdist_distances: Float[np.ndarray, "n_dists"] = pdist(points, metric=coordinate_metric)
+    assert pdist_distances.shape == (n_dists,)
+
+    
+    # Calculate distances in the embedding space using itertools for unique pairs
+    for idx1, idx2 in zip(*np.triu_indices(len(points), k=1)):
+        x1, y1 = points[idx1]
+        x2, y2 = points[idx2]
+        embedding_distances.append(distance_grid[x1, y1, x2, y2])
+
+    embedding_distances_np: Float[np.ndarray, "n_dists"] = np.array(embedding_distances)
+    assert embedding_distances_np.shape == (n_dists,)
+
+    ax = sns.boxplot(
+        x=pdist_distances, 
+        y=embedding_distances, 
+        color=sns.color_palette()[0], 
+        showfliers=False, 
+        width=0.5,
+    )
+    ax.set_xlabel(f"{coordinate_metric} distance between coordinates")
+    ax.set_ylabel(f"{embedding_metric} embedding distance")
+
+    if show:
+        plt.show()
+        
+    return ax
