@@ -241,21 +241,25 @@ def compute_distances_and_correlation(
         coordinate_metric = coordinate_metric,
     )
     
-def plot_distances_and_correlation(
+def plot_distances_matrix(
         embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
-        correlation: float,
-        corr_pval: float,
-        embedding_metric: str,
-        coordinate_metric: str,
         tokenizer: MazeTokenizer,
+        embedding_metric: str,
         show: bool = True,
-    ) -> tuple[float, np.ndarray]:
+        **kwargs,
+    ) -> tuple[plt.Figure, plt.Axes]:
 
     coord_tokens_ids: dict[str, int] = tokenizer.coordinate_tokens_ids
 
     # Plot the embedding distances
     fig, ax = plt.subplots(figsize=(15, 15))
-    cax = ax.matshow(embedding_distances_matrix, cmap='viridis')
+    cax = ax.matshow(
+        embedding_distances_matrix, 
+        cmap='viridis',
+        interpolation='none',
+    )
+    ax.grid(which='major', color='white', linestyle='-', linewidth=0.5)
+    ax.grid(which='minor', color='white', linestyle='-', linewidth=0.0)
     fig.colorbar(cax)
 
     ax.set_xticks(np.arange(len(coord_tokens_ids)))
@@ -265,10 +269,20 @@ def plot_distances_and_correlation(
 
     plt.setp(ax.get_xticklabels(), rotation=90, ha="left", rotation_mode="anchor")
 
-    ax.set_title(
-        f"""{embedding_metric} Distances Between Coordinate Embeddings
-        Correlation with {coordinate_metric} on coordinates: {correlation} (p={corr_pval})
-        """
-    )
+    ax.set_title(f"{embedding_metric} Distances Between Coordinate Embeddings")
+
     if show:
         plt.show()
+
+    return fig, ax
+
+def plot_correlation(
+    embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
+    tokenizer: MazeTokenizer,
+    correlation: float,
+    corr_pval: float,
+    embedding_metric: str,
+    coordinate_metric: str,
+    show: bool = True,
+):
+    raise NotImplementedError()
