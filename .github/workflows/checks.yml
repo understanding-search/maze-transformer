@@ -36,14 +36,15 @@ jobs:
     env:
       WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
     runs-on: ubuntu-latest
-    matrix:
-      versions:
-        - python: "3.10"
-          torch: "1.13.1"
-        - python: "3.10"
-          torch: "2.0.1"
-        - python: "3.11"
-          torch: "2.0.1"
+    strategy:
+      matrix:
+        versions:
+          - python: "3.10"
+            torch: "1.13.1"
+          - python: "3.10"
+            torch: "2.0.1"
+          - python: "3.11"
+            torch: "2.0.1"
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
