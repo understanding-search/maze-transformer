@@ -48,6 +48,11 @@ filterwarnings = [
 testpaths = "tests"
 norecursedirs="maze_transformer/utils/test_helpers"
 
+[[tool.poetry.source]]
+name = "torch_cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
 [[tool.mypy.overrides]]
 module = "fire"
 ignore_missing_imports = true
