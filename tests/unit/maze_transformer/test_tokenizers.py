@@ -184,11 +184,20 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
     batched_tokens_manual = [maze_tokens, maze_tokens_2]
 
     # WrappedTokenizer use
-    token_ids_2 = hktransformer.to_tokens(batched_tokens, prepend_bos=False)
+    token_ids_2 = hktransformer.to_tokens(batched_tokens, prepend_bos=False).cpu()
+    batched_tokens_manual_tensor = torch.tensor(batched_tokens_manual)
 
-    assert torch.all(
-        token_ids_2.cpu() == torch.tensor(batched_tokens_manual)
-    ), "Batched tokenization encoding inside HookedTransformer failed"
+    manual_hk_match = token_ids_2 == batched_tokens_manual_tensor
+    if not manual_hk_match.all():
+        raise AssertionError(
+            f"Batched tokenization encoding inside HookedTransformer failed",
+            f"{manual_hk_match.shape = }, {token_ids_2.shape = }, {batched_tokens_manual_tensor.shape = }",
+            f"{[len(x.split(' ')) for x in batched_tokens] = }",
+            f"{batched_tokens = }"
+            f"{manual_hk_match = }",
+            f"{token_ids_2 = }",
+            f"{batched_tokens_manual_tensor = }",
+        )
 
 
 # Padding Tests
