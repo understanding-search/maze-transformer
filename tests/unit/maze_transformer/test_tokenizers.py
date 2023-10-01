@@ -174,8 +174,6 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
     (0,1) <--> (0,0) ; (0,2) <--> (0,1) ; <ADJLIST_END> <ORIGIN_START> (0,0) <ORIGIN_END> <TARGET_START> (1,0) <TARGET_END>
     <PATH_START> (0,0) (1,0) <PATH_END>""".split()
 
-
-
     total_len: int = max(len(maze_str_tokens), len(maze_str_tokens_2))
 
     # Manual Tokenization
@@ -199,8 +197,7 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
             f"Batched tokenization encoding inside HookedTransformer failed",
             f"{manual_hk_match.shape = }, {token_ids_2.shape = }, {batched_tokens_manual_tensor.shape = }",
             f"{[len(x.split(' ')) for x in batched_tokens] = }",
-            f"{batched_tokens = }"
-            f"{manual_hk_match = }",
+            f"{batched_tokens = }" f"{manual_hk_match = }",
             f"{token_ids_2 = }",
             f"{batched_tokens_manual_tensor = }",
         )
