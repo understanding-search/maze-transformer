@@ -11,6 +11,8 @@ from maze_transformer.test_helpers.assertions import assert_model_output_equalit
 from transformer_lens import HookedTransformer
 from wandb.sdk.wandb_run import Artifact, Run
 
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+
 from maze_transformer.training.config import (
     BaseGPTConfig,
     ConfigHolder,
@@ -141,6 +143,7 @@ def load_wandb_pt_model_as_zanj(
     save_zanj_model: bool = True,
     verbose: bool = True,
     allow_weight_processing_diff: bool = True,
+    tokenization_mode_override: TokenizationMode|None = None,
     test_reload: bool = True,
 ) -> ZanjHookedTransformer:
     print(f"# Loading model and config from wandb:\n{run_id = }, {project = }, {checkpoint = }")
@@ -152,6 +155,10 @@ def load_wandb_pt_model_as_zanj(
     model_wandb: HookedTransformer
     cfg: ConfigHolder
     model_wandb, cfg = load_wandb_run(**model_kwargs)
+    if tokenization_mode_override is not None:
+        print(f"# Overriding tokenization mode with {tokenization_mode_override = }, original: {cfg.maze_tokenizer.tokenization_mode = }")
+        cfg.maze_tokenizer.tokenization_mode = tokenization_mode_override
+
     print(f"\t{cfg.model_cfg.weight_processing = }")
     print(f"\t{type(model_wandb) = } {type(cfg) = }")
 

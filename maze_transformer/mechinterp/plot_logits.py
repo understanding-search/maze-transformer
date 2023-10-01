@@ -71,6 +71,8 @@ def plot_logits(
             marker=".",
             color="red",
         )
+        # place red x at correct token
+        ax_all.scatter(target_idxs, np.arange(n_mazes), marker="x", color="red")
 
     # histogram of logits for correct and incorrect tokens
     # --------------------------------------------------
