@@ -174,13 +174,19 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
     (0,1) <--> (0,0) ; (0,2) <--> (0,1) ; <ADJLIST_END> <ORIGIN_START> (0,0) <ORIGIN_END> <TARGET_START> (1,0) <TARGET_END>
     <PATH_START> (0,0) (1,0) <PATH_END>""".split()
 
-    batched_tokens = [" ".join(maze_str_tokens), " ".join(maze_str_tokens_2)]
+
+
+    total_len: int = max(len(maze_str_tokens), len(maze_str_tokens_2))
 
     # Manual Tokenization
     padded_str_2 = ["<PADDING>"] * (
-        len(maze_str_tokens) - len(maze_str_tokens_2)
+        total_len - len(maze_str_tokens_2)
     ) + maze_str_tokens_2
+    print(f"{len(padded_str_2) = }")
+    print(f"{len(maze_tokens) = }")
+    batched_tokens = [" ".join(maze_str_tokens), " ".join(padded_str_2)]
     maze_tokens_2 = [vocab_map[token] for token in padded_str_2]
+    print(f"{len(maze_tokens_2) = }")
     batched_tokens_manual = [maze_tokens, maze_tokens_2]
 
     # WrappedTokenizer use
