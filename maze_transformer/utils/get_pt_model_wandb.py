@@ -4,7 +4,10 @@ from pathlib import Path
 import torch
 import wandb
 from maze_dataset import MazeDatasetConfig
+from zanj import ZANJ
 from muutils.misc import shorten_numerical_to_str
+from muutils.tensor_utils import compare_state_dicts
+from maze_transformer.test_helpers.assertions import assert_model_output_equality
 from transformer_lens import HookedTransformer
 from wandb.sdk.wandb_run import Artifact, Run
 
@@ -91,8 +94,8 @@ def load_wandb_run(
     model_cfg: BaseGPTConfig = BaseGPTConfig(
         name=f"model {run_id}",
         weight_processing={
-            "are_layernorms_folded": True,
-            "are_weights_processed": True,
+            "are_layernorms_folded": False,
+            "are_weights_processed": False,
         },
         **model_properties,
     )
@@ -137,24 +140,37 @@ def load_wandb_pt_model_as_zanj(
     output_path: str = "./downloaded_models",
     save_zanj_model: bool = True,
     verbose: bool = True,
+    allow_weight_processing_diff: bool = True,
+    test_reload: bool = True,
 ) -> ZanjHookedTransformer:
     model_kwargs: dict = dict(
         project=project,
         run_id=run_id,
         checkpoint=checkpoint,
     )
-    model: HookedTransformer
+    model_wandb: HookedTransformer
     cfg: ConfigHolder
-    model, cfg = load_wandb_run(**model_kwargs)
+    model_wandb, cfg = load_wandb_run(**model_kwargs)
+    print(f"{cfg.model_cfg.weight_processing = }")
     if verbose:
-        print(f"{type(model) = } {type(cfg) = }")
+        print(f"{type(model_wandb) = } {type(cfg) = }")
 
     model_zanj: ZanjHookedTransformer = ZanjHookedTransformer(cfg)
-    model_zanj.load_state_dict(model.state_dict())
+    model_zanj.load_state_dict(model_wandb.state_dict())
     model_zanj.training_records = {
         "load_wandb_run_kwargs": model_kwargs,
         "train_cfg.name": cfg.train_cfg.name,
     }
+    print(f"{model_zanj.zanj_model_config.model_cfg.weight_processing = }")
+    # check state dicts match
+    compare_state_dicts(model_wandb.state_dict(), model_zanj.state_dict())
+    assert_model_output_equality(
+        model_wandb, model_zanj,
+        check_config_equality=False,
+        vocab_size=cfg.maze_tokenizer.vocab_size,
+        seq_len_max=cfg.dataset_cfg.seq_len_max,
+    )
+
     if verbose:
         print(
             f"loaded model with {shorten_numerical_to_str(model_zanj.num_params())} parameters"
@@ -168,5 +184,28 @@ def load_wandb_pt_model_as_zanj(
         model_zanj.save(model_zanj_save_path)
         if verbose:
             print(f"Saved model to {model_zanj_save_path.as_posix()}")
+    
+    if test_reload:
+        zanj: ZANJ = ZANJ(custom_settings={
+            "_load_state_dict_wrapper": {"recover_exact": True, "fold_ln": False, "refactor_factored_attn_matrices": False}
+        })
+        model_loaded: ZanjHookedTransformer = ZanjHookedTransformer.read(model_zanj_save_path, zanj=zanj)
+        print(f"{model_loaded.zanj_model_config.model_cfg.weight_processing = }")
+        # fold layernorms for wandb model
+        # model_wandb.process_weights_(fold_ln=True)
+
+        assert model_zanj.training_records == model_loaded.training_records, f"training records do not match\n{model_zanj.training_records = }\n{model_loaded.training_records = }"
+        cfg_diff: dict = model_zanj.zanj_model_config.diff(model_loaded.zanj_model_config)
+        print(f"diff between loaded and saved model configs:\n{cfg_diff = }")
+        if allow_weight_processing_diff:
+            try:
+                del cfg_diff["model_cfg"]["weight_processing"]
+                print(f"\tdeleted model_cfg.weight_processing from diff")
+            except KeyError:
+                pass
+        assert not any(cfg_diff.values()), f"configs do not match\n{cfg_diff = }"
+        
+        compare_state_dicts(model_loaded.state_dict(), model_zanj.state_dict())
+        compare_state_dicts(model_loaded.state_dict(), model_wandb.state_dict())
 
     return model_zanj

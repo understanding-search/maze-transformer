@@ -3,6 +3,7 @@ import warnings
 import torch
 from jaxtyping import Int
 from zanj.torchutil import ConfigMismatchException, assert_model_cfg_equality
+from transformer_lens import HookedTransformer
 
 from maze_transformer.training.config import ZanjHookedTransformer
 
@@ -26,29 +27,43 @@ def _check_except_config_equality_modulo_weight_processing(
 
 
 def assert_model_output_equality(
-    model_a: ZanjHookedTransformer,
-    model_b: ZanjHookedTransformer,
+    model_a: HookedTransformer,
+    model_b: HookedTransformer,
+    vocab_size: int|None = None,
+    seq_len_max: int|None = None,
+    check_config_equality: bool = True,
     test_sequence_length: int = 10,
     output_rtol_warn: float = 1e-8,
     output_rtol_assert: float = 1e-4,
 ):
-    """checks that configs are equal (modulo weight processing) and that the models output the same thing"""
-    try:
-        assert_model_cfg_equality(model_a, model_b)
-    except ConfigMismatchException as e:
-        if _check_except_config_equality_modulo_weight_processing(
-            e.diff, ["are_weights_processed", "are_layernorms_folded"]
-        ):
-            pass
-        else:
-            raise e
+    """checks the models output the same thing, but first optionally checks that configs are equal (modulo weight processing)"""
+    models_are_zanj: bool = isinstance(model_a, ZanjHookedTransformer) and isinstance(model_b, ZanjHookedTransformer)
+    if check_config_equality:
+        if not models_are_zanj:
+            raise ValueError("cant compare configs of non-zanj models")
+        try:
+            assert_model_cfg_equality(model_a, model_b)
+        except ConfigMismatchException as e:
+            if _check_except_config_equality_modulo_weight_processing(
+                e.diff, ["are_weights_processed", "are_layernorms_folded"]
+            ):
+                pass
+            else:
+                raise e
 
     # Random input tokens
-    tokenizer = model_a.zanj_model_config.tokenizer
+    if vocab_size is None or seq_len_max is None:
+        assert models_are_zanj
+        tokenizer = model_a.zanj_model_config.tokenizer
+        if vocab_size is None:
+            vocab_size = len(tokenizer._token_arr)
+        if seq_len_max is None:
+            seq_len_max = tokenizer._seq_len_max
+
     input_sequence: Int[torch.Tensor, "1 test_sequence_length"] = torch.randint(
         low=0,
-        high=len(tokenizer._token_arr),
-        size=(1, min(tokenizer._seq_len_max, test_sequence_length)),
+        high=vocab_size,
+        size=(1, min(seq_len_max, test_sequence_length)),
     )
 
     # (copied from `test_eval_model.py`)
