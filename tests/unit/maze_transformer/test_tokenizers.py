@@ -147,8 +147,9 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
     hktransformer: HookedTransformer = cfg_holder.create_model()
 
     token_ids = hktransformer.to_tokens(" ".join(maze_str_tokens), prepend_bos=False)
-    token_ids_sep = hktransformer.to_tokens(maze_str_tokens, prepend_bos=False)
-    token_ids_sep = torch.tensor(token_ids_sep).flatten()
+    token_ids_sep = hktransformer.to_tokens(
+        maze_str_tokens, prepend_bos=False
+    ).flatten()
     assert torch.allclose(token_ids, token_ids_sep), "Tokenization mismatch"
 
     # -- Test Simple Tokenization --
@@ -173,21 +174,33 @@ def test_tokenizer_inside_hooked_transformer(tok_mode):
     (0,1) <--> (0,0) ; (0,2) <--> (0,1) ; <ADJLIST_END> <ORIGIN_START> (0,0) <ORIGIN_END> <TARGET_START> (1,0) <TARGET_END>
     <PATH_START> (0,0) (1,0) <PATH_END>""".split()
 
-    batched_tokens = [" ".join(maze_str_tokens), " ".join(maze_str_tokens_2)]
+    total_len: int = max(len(maze_str_tokens), len(maze_str_tokens_2))
 
     # Manual Tokenization
     padded_str_2 = ["<PADDING>"] * (
-        len(maze_str_tokens) - len(maze_str_tokens_2)
+        total_len - len(maze_str_tokens_2)
     ) + maze_str_tokens_2
+    print(f"{len(padded_str_2) = }")
+    print(f"{len(maze_tokens) = }")
+    batched_tokens = [" ".join(maze_str_tokens), " ".join(padded_str_2)]
     maze_tokens_2 = [vocab_map[token] for token in padded_str_2]
+    print(f"{len(maze_tokens_2) = }")
     batched_tokens_manual = [maze_tokens, maze_tokens_2]
 
     # WrappedTokenizer use
-    token_ids_2 = hktransformer.to_tokens(batched_tokens, prepend_bos=False)
+    token_ids_2 = hktransformer.to_tokens(batched_tokens, prepend_bos=False).cpu()
+    batched_tokens_manual_tensor = torch.tensor(batched_tokens_manual)
 
-    assert torch.all(
-        token_ids_2.cpu() == torch.tensor(batched_tokens_manual)
-    ), "Batched tokenization encoding inside HookedTransformer failed"
+    manual_hk_match = token_ids_2 == batched_tokens_manual_tensor
+    if not manual_hk_match.all():
+        raise AssertionError(
+            f"Batched tokenization encoding inside HookedTransformer failed",
+            f"{manual_hk_match.shape = }, {token_ids_2.shape = }, {batched_tokens_manual_tensor.shape = }",
+            f"{[len(x.split(' ')) for x in batched_tokens] = }",
+            f"{batched_tokens = }" f"{manual_hk_match = }",
+            f"{token_ids_2 = }",
+            f"{batched_tokens_manual_tensor = }",
+        )
 
 
 # Padding Tests

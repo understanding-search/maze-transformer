@@ -123,6 +123,8 @@ def train(
         f"will train for {n_batches} batches, {evals_enabled=}, with intervals: {intervals}"
     )
 
+    # TODO: add model output dir / run name to model.training_records
+
     # start up training
     # ==============================
     model.train()

@@ -408,6 +408,23 @@ class ConfigHolder(SerializableDataclass):
         loading_fn=_load_maze_tokenizer,
     )
 
+    # shortcut properties
+    @property
+    def d_model(self) -> int:
+        return self.model_cfg.d_model
+
+    @property
+    def d_head(self) -> int:
+        return self.model_cfg.d_head
+
+    @property
+    def n_layers(self) -> int:
+        return self.model_cfg.n_layers
+
+    @property
+    def n_heads(self) -> int:
+        return self.model_cfg.n_heads
+
     def _set_tok_gridsize_from_dataset(self):
         self.maze_tokenizer.max_grid_size = self.dataset_cfg.max_grid_n
         self.maze_tokenizer.clear_cache()
@@ -552,7 +569,7 @@ class ConfigHolder(SerializableDataclass):
 
 
 @set_config_class(ConfigHolder)
-class ZanjHookedTransformer(ConfiguredModel, HookedTransformer):
+class ZanjHookedTransformer(ConfiguredModel[ConfigHolder], HookedTransformer):
     """A hooked transformer that is configured by a ConfigHolder
 
     the inheritance order is critical here -- super() does not call parent, but calls the next class in the MRO
