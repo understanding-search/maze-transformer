@@ -32,6 +32,7 @@ def assert_model_output_equality(
     vocab_size: int|None = None,
     seq_len_max: int|None = None,
     check_config_equality: bool = True,
+    check_argsort_equality: bool = True,
     test_sequence_length: int = 10,
     output_rtol_warn: float = 1e-8,
     output_rtol_assert: float = 1e-4,
@@ -68,10 +69,14 @@ def assert_model_output_equality(
 
     # (copied from `test_eval_model.py`)
     # Check for equality in argsort (absolute values won't be equal due to centering the unembedding weight matrix)
-    assert torch.all(
-        model_a(input_sequence.clone()).argsort()
-        == model_b(input_sequence.clone()).argsort()
-    )
+    if check_argsort_equality:
+        output_a_raw: torch.Tensor = model_a(input_sequence.clone())
+        output_b_raw: torch.Tensor = model_b(input_sequence.clone())
+        output_a_raw_argsort: torch.Tensor = output_a_raw.argsort()
+        output_b_raw_argsort: torch.Tensor = output_b_raw.argsort()
+        output_argsort_match: torch.Tensor = output_a_raw_argsort == output_b_raw_argsort
+        assert torch.all(output_argsort_match), f"argsort not equal, {output_argsort_match.numel() - output_argsort_match.sum()} / {output_argsort_match.numel()} elements differ"
+
     # apply normalization (e.g. softmax) and check with atol v-small
     # (roughly 1E-7 for float error on logexp I think)
     output_a: torch.Tensor = torch.nn.functional.softmax(

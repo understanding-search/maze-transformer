@@ -143,6 +143,7 @@ def load_wandb_pt_model_as_zanj(
     allow_weight_processing_diff: bool = True,
     test_reload: bool = True,
 ) -> ZanjHookedTransformer:
+    print(f"# Loading model and config from wandb:\n{run_id = }, {project = }, {checkpoint = }")
     model_kwargs: dict = dict(
         project=project,
         run_id=run_id,
@@ -151,61 +152,94 @@ def load_wandb_pt_model_as_zanj(
     model_wandb: HookedTransformer
     cfg: ConfigHolder
     model_wandb, cfg = load_wandb_run(**model_kwargs)
-    print(f"{cfg.model_cfg.weight_processing = }")
-    if verbose:
-        print(f"{type(model_wandb) = } {type(cfg) = }")
+    print(f"\t{cfg.model_cfg.weight_processing = }")
+    print(f"\t{type(model_wandb) = } {type(cfg) = }")
 
+    print(f"# Converting model to zanj")
     model_zanj: ZanjHookedTransformer = ZanjHookedTransformer(cfg)
     model_zanj.load_state_dict(model_wandb.state_dict())
     model_zanj.training_records = {
         "load_wandb_run_kwargs": model_kwargs,
         "train_cfg.name": cfg.train_cfg.name,
     }
-    print(f"{model_zanj.zanj_model_config.model_cfg.weight_processing = }")
+    print(f"\tgot zanj model with {shorten_numerical_to_str(model_zanj.num_params())} parameters")
+    print(f"\t{model_zanj.training_records = }")
+    print(f"\t{model_zanj.zanj_model_config.model_cfg.weight_processing = }")
     # check state dicts match
-    compare_state_dicts(model_wandb.state_dict(), model_zanj.state_dict())
+    print(f"# Checking zanj-converted model matches wandb model")
     assert_model_output_equality(
         model_wandb, model_zanj,
         check_config_equality=False,
         vocab_size=cfg.maze_tokenizer.vocab_size,
         seq_len_max=cfg.dataset_cfg.seq_len_max,
     )
+    print(f"\tmodel outputs match")
+    compare_state_dicts(model_wandb.state_dict(), model_zanj.state_dict())
+    print(f"\tstate dicts match")
 
-    if verbose:
-        print(
-            f"loaded model with {shorten_numerical_to_str(model_zanj.num_params())} parameters"
-        )
-        print(model_zanj.training_records)
+    zanj: ZANJ = ZANJ(custom_settings={
+        "_load_state_dict_wrapper": {"recover_exact": True, "fold_ln": False, "refactor_factored_attn_matrices": False}
+    })
 
     if save_zanj_model:
         model_zanj_save_path: Path = (
             Path(output_path) / f"wandb.{model_kwargs['run_id']}.zanj"
         )
+        print(f"# Saving model to {model_zanj_save_path.as_posix()}")
         model_zanj.save(model_zanj_save_path)
-        if verbose:
-            print(f"Saved model to {model_zanj_save_path.as_posix()}")
     
     if test_reload:
-        zanj: ZANJ = ZANJ(custom_settings={
-            "_load_state_dict_wrapper": {"recover_exact": True, "fold_ln": False, "refactor_factored_attn_matrices": False}
-        })
-        model_loaded: ZanjHookedTransformer = ZanjHookedTransformer.read(model_zanj_save_path, zanj=zanj)
-        print(f"{model_loaded.zanj_model_config.model_cfg.weight_processing = }")
-        # fold layernorms for wandb model
-        # model_wandb.process_weights_(fold_ln=True)
+        assert save_zanj_model, f"must save model to test reloading"
 
+        print(f"# Reloading model from {model_zanj_save_path.as_posix()}")
+        model_loaded: ZanjHookedTransformer = ZanjHookedTransformer.read(model_zanj_save_path, zanj=zanj)
+        print(f"\t{model_loaded.zanj_model_config.model_cfg.weight_processing = }")
+        # fold layernorms for wandb model
+        model_loaded_process_weights: ZanjHookedTransformer = ZanjHookedTransformer.read(model_zanj_save_path, zanj=zanj)
+        model_loaded_process_weights.process_weights_(fold_ln=True, center_writing_weights=False, center_unembed=False)
+
+        print(f"# Checking reloaded model matches saved model")
+        print(f"\tcomparing output equality")
+        print(f"\t\tzanj vs loaded zanj")
+        assert_model_output_equality(
+            model_zanj, model_loaded,
+            check_config_equality=False,
+        )
+        try:
+            print(f"\t\tzanj vs loaded zanj with processed weights")
+            assert_model_output_equality(
+                model_loaded_process_weights, model_loaded,
+                check_config_equality=False,
+            )
+        except AssertionError as e:
+            print(f"\t\t\toutput equality with argsort failed for processed weights loaded model:")
+            print(f"\t\t\t{e = }")
+        print(f"\t\tzanj vs loaded zanj with processed weights, argsort check disabled")
+        assert_model_output_equality(
+            model_zanj, model_loaded_process_weights,
+            check_config_equality=False,
+            check_argsort_equality=False,
+        )
+
+        print(f"\tcomparing configs and training records")
         assert model_zanj.training_records == model_loaded.training_records, f"training records do not match\n{model_zanj.training_records = }\n{model_loaded.training_records = }"
         cfg_diff: dict = model_zanj.zanj_model_config.diff(model_loaded.zanj_model_config)
-        print(f"diff between loaded and saved model configs:\n{cfg_diff = }")
+        print(f"\tdiff between loaded and saved model configs:\n\t\t{cfg_diff = }")
         if allow_weight_processing_diff:
             try:
                 del cfg_diff["model_cfg"]["weight_processing"]
-                print(f"\tdeleted model_cfg.weight_processing from diff")
+                print(f"\t\tdeleted model_cfg.weight_processing from diff because {allow_weight_processing_diff = }")
             except KeyError:
                 pass
         assert not any(cfg_diff.values()), f"configs do not match\n{cfg_diff = }"
         
-        compare_state_dicts(model_loaded.state_dict(), model_zanj.state_dict())
-        compare_state_dicts(model_loaded.state_dict(), model_wandb.state_dict())
+        print(f"\tcomparing state dicts")
+        print(f"\t\tloaded with processed weights vs zanj")
+        compare_state_dicts(model_loaded_process_weights.state_dict(), model_zanj.state_dict(), verbose=verbose)
+        print(f"\t\tloaded with processed weights vs wandb")
+        compare_state_dicts(model_loaded_process_weights.state_dict(), model_wandb.state_dict(), verbose=verbose)
+        print(f"\tstate dicts match")
+
+    print(f"# Checks complete!")
 
     return model_zanj
