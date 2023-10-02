@@ -577,7 +577,7 @@ class ZanjHookedTransformer(ConfiguredModel[ConfigHolder], HookedTransformer):
     """
 
     def __init__(self, cfg_holder: ConfigHolder) -> None:
-        super().__init__(
+        super(ZanjHookedTransformer, self).__init__(
             # for ConfiguredModel
             zanj_model_config=cfg_holder,
             # for HookedTransformer

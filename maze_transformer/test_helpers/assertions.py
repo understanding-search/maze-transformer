@@ -25,6 +25,14 @@ def _check_except_config_equality_modulo_weight_processing(
         ]
     )
 
+class ModelOutputEqualityError(AssertionError):
+    """raised when model outputs are not equal"""
+    pass
+
+class ModelOutputArgsortEqualityError(ModelOutputEqualityError):
+    """raised when argsort of model outputs is not equal"""
+    pass
+
 
 def assert_model_output_equality(
     model_a: HookedTransformer,
@@ -75,7 +83,10 @@ def assert_model_output_equality(
         output_a_raw_argsort: torch.Tensor = output_a_raw.argsort()
         output_b_raw_argsort: torch.Tensor = output_b_raw.argsort()
         output_argsort_match: torch.Tensor = output_a_raw_argsort == output_b_raw_argsort
-        assert torch.all(output_argsort_match), f"argsort not equal, {output_argsort_match.numel() - output_argsort_match.sum()} / {output_argsort_match.numel()} elements differ"
+        if not torch.all(output_argsort_match):
+            raise ModelOutputArgsortEqualityError(
+                f"argsort not equal, {output_argsort_match.numel() - output_argsort_match.sum()} / {output_argsort_match.numel()} elements differ"
+            )
 
     # apply normalization (e.g. softmax) and check with atol v-small
     # (roughly 1E-7 for float error on logexp I think)
@@ -91,6 +102,9 @@ def assert_model_output_equality(
             f"model outputs not equal within rtol={output_rtol_warn}:\n{torch.norm(output_a - output_b) = }"
         )
 
-    assert torch.allclose(
+    if not torch.allclose(
         output_a, output_b, rtol=output_rtol_assert
-    ), f"model outputs not equal within rtol={output_rtol_assert}:\n{torch.norm(output_a - output_b) = }"
+    ):
+        raise ModelOutputEqualityError(
+            f"model outputs not equal within rtol={output_rtol_assert}:\n{torch.norm(output_a - output_b) = }"
+        )
