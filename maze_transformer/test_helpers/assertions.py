@@ -2,8 +2,8 @@ import warnings
 
 import torch
 from jaxtyping import Int
-from zanj.torchutil import ConfigMismatchException, assert_model_cfg_equality
 from transformer_lens import HookedTransformer
+from zanj.torchutil import ConfigMismatchException, assert_model_cfg_equality
 
 from maze_transformer.training.config import ZanjHookedTransformer
 
@@ -25,20 +25,24 @@ def _check_except_config_equality_modulo_weight_processing(
         ]
     )
 
+
 class ModelOutputEqualityError(AssertionError):
     """raised when model outputs are not equal"""
+
     pass
+
 
 class ModelOutputArgsortEqualityError(ModelOutputEqualityError):
     """raised when argsort of model outputs is not equal"""
+
     pass
 
 
 def assert_model_output_equality(
     model_a: HookedTransformer,
     model_b: HookedTransformer,
-    vocab_size: int|None = None,
-    seq_len_max: int|None = None,
+    vocab_size: int | None = None,
+    seq_len_max: int | None = None,
     check_config_equality: bool = True,
     check_argsort_equality: bool = True,
     test_sequence_length: int = 10,
@@ -46,7 +50,9 @@ def assert_model_output_equality(
     output_rtol_assert: float = 1e-4,
 ):
     """checks the models output the same thing, but first optionally checks that configs are equal (modulo weight processing)"""
-    models_are_zanj: bool = isinstance(model_a, ZanjHookedTransformer) and isinstance(model_b, ZanjHookedTransformer)
+    models_are_zanj: bool = isinstance(model_a, ZanjHookedTransformer) and isinstance(
+        model_b, ZanjHookedTransformer
+    )
     if check_config_equality:
         if not models_are_zanj:
             raise ValueError("cant compare configs of non-zanj models")
@@ -82,7 +88,9 @@ def assert_model_output_equality(
         output_b_raw: torch.Tensor = model_b(input_sequence.clone())
         output_a_raw_argsort: torch.Tensor = output_a_raw.argsort()
         output_b_raw_argsort: torch.Tensor = output_b_raw.argsort()
-        output_argsort_match: torch.Tensor = output_a_raw_argsort == output_b_raw_argsort
+        output_argsort_match: torch.Tensor = (
+            output_a_raw_argsort == output_b_raw_argsort
+        )
         if not torch.all(output_argsort_match):
             raise ModelOutputArgsortEqualityError(
                 f"argsort not equal, {output_argsort_match.numel() - output_argsort_match.sum()} / {output_argsort_match.numel()} elements differ"
@@ -102,9 +110,7 @@ def assert_model_output_equality(
             f"model outputs not equal within rtol={output_rtol_warn}:\n{torch.norm(output_a - output_b) = }"
         )
 
-    if not torch.allclose(
-        output_a, output_b, rtol=output_rtol_assert
-    ):
+    if not torch.allclose(output_a, output_b, rtol=output_rtol_assert):
         raise ModelOutputEqualityError(
             f"model outputs not equal within rtol={output_rtol_assert}:\n{torch.norm(output_a - output_b) = }"
         )

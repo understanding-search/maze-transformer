@@ -1,29 +1,39 @@
-from dataclasses import asdict
 import itertools
 import math
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 import torch
 import wandb
 from maze_dataset import MazeDatasetConfig
-from zanj import ZANJ
-from zanj.torchutil import assert_model_cfg_equality, ConfigMismatchException
+from maze_dataset.tokenization import TokenizationMode
 from muutils.misc import shorten_numerical_to_str
-from muutils.tensor_utils import compare_state_dicts, StateDictValueError, StateDictShapeError, StateDictKeysError
+from muutils.tensor_utils import (
+    StateDictKeysError,
+    StateDictShapeError,
+    StateDictValueError,
+    compare_state_dicts,
+)
 from transformer_lens import HookedTransformer
 from wandb.sdk.wandb_run import Artifact, Run
-# from rich import print
+from zanj import ZANJ
+from zanj.torchutil import ConfigMismatchException, assert_model_cfg_equality
 
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
-
-from maze_transformer.test_helpers.assertions import assert_model_output_equality, ModelOutputEqualityError, ModelOutputArgsortEqualityError, _check_except_config_equality_modulo_weight_processing
+from maze_transformer.test_helpers.assertions import (
+    ModelOutputArgsortEqualityError,
+    ModelOutputEqualityError,
+    _check_except_config_equality_modulo_weight_processing,
+    assert_model_output_equality,
+)
 from maze_transformer.training.config import (
     BaseGPTConfig,
     ConfigHolder,
     TrainConfig,
     ZanjHookedTransformer,
 )
+
+# from rich import print
 
 
 def get_step(artifact: Artifact) -> int:
@@ -144,8 +154,8 @@ def load_and_configure_wandb_model(
     run_id: str,
     project: str = "aisc-search/alex",
     checkpoint: int | None = None,
-    tokenization_mode_override: TokenizationMode|None = None,
-)  -> tuple[HookedTransformer, ConfigHolder, dict]:
+    tokenization_mode_override: TokenizationMode | None = None,
+) -> tuple[HookedTransformer, ConfigHolder, dict]:
     wandb_kwargs: dict = dict(
         project=project,
         run_id=run_id,
@@ -156,13 +166,16 @@ def load_and_configure_wandb_model(
     model_wandb, cfg = load_wandb_run(**wandb_kwargs)
 
     if tokenization_mode_override is not None:
-        print(f"# Overriding tokenization mode with {tokenization_mode_override = }, original: {cfg.maze_tokenizer.tokenization_mode = }")
+        print(
+            f"# Overriding tokenization mode with {tokenization_mode_override = }, original: {cfg.maze_tokenizer.tokenization_mode = }"
+        )
         cfg.maze_tokenizer.tokenization_mode = tokenization_mode_override
 
     print(f"\t{cfg.model_cfg.weight_processing = }")
     print(f"\t{type(model_wandb) = } {type(cfg) = }")
 
     return model_wandb, cfg, wandb_kwargs
+
 
 def convert_model_to_zanj(
     model: HookedTransformer,
@@ -175,11 +188,14 @@ def convert_model_to_zanj(
         "load_wandb_run_kwargs": wandb_kwargs,
         "train_cfg.name": cfg.train_cfg.name,
     }
-    print(f"\tgot zanj model with {shorten_numerical_to_str(model_zanj.num_params())} parameters")
+    print(
+        f"\tgot zanj model with {shorten_numerical_to_str(model_zanj.num_params())} parameters"
+    )
     print(f"\t{model_zanj.training_records = }")
     print(f"\t{model_zanj.zanj_model_config.model_cfg.weight_processing = }")
 
     return model_zanj
+
 
 def full_model_compare(
     model_a: HookedTransformer,
@@ -189,7 +205,7 @@ def full_model_compare(
     """will pass on config tests if non-zanj model"""
     vocab_size: int = cfg.maze_tokenizer.vocab_size
     seq_len_max: int = cfg.dataset_cfg.seq_len_max
-    tests_passed: dict[str, bool|None] = dict(
+    tests_passed: dict[str, bool | None] = dict(
         zanj_config=False,
         zanj_config_nowp=False,
         ht_config=False,
@@ -206,7 +222,9 @@ def full_model_compare(
         tests_passed["ht_config"] = True
 
     # check zanj config, if possible
-    if isinstance(model_a, ZanjHookedTransformer) and isinstance(model_b, ZanjHookedTransformer):
+    if isinstance(model_a, ZanjHookedTransformer) and isinstance(
+        model_b, ZanjHookedTransformer
+    ):
         try:
             assert_model_cfg_equality(model_a, model_b)
             tests_passed["zanj_config"] = True
@@ -221,11 +239,12 @@ def full_model_compare(
         # why a string here instead of `None`? so that we can do `if tests_passed["zanj_config"]`
         tests_passed["zanj_config"] = "not_zanj"
         tests_passed["zanj_config_nowp"] = "not_zanj"
-    
+
     # check output equality
     try:
         assert_model_output_equality(
-            model_a, model_b,
+            model_a,
+            model_b,
             check_config_equality=False,
             check_argsort_equality=True,
             vocab_size=vocab_size,
@@ -238,7 +257,8 @@ def full_model_compare(
         # if argsort fails, try again with argsort check disabled
         try:
             assert_model_output_equality(
-                model_a, model_b,
+                model_a,
+                model_b,
                 check_config_equality=False,
                 check_argsort_equality=False,
                 vocab_size=vocab_size,
@@ -258,7 +278,7 @@ def full_model_compare(
         tests_info["state_dict_shape"] = e
     except StateDictShapeError as e:
         tests_passed["state_dict_keys"] = True
-        tests_info["state_dict_shape"] = e            
+        tests_info["state_dict_shape"] = e
     except StateDictValueError as e:
         tests_passed["state_dict_keys"] = True
         tests_passed["state_dict_shape"] = True
@@ -266,20 +286,21 @@ def full_model_compare(
 
     return tests_passed, tests_info
 
+
 ModelComboTestResults = dict[
-    tuple[str, str], # model names
+    tuple[str, str],  # model names
     tuple[
-        dict[str, bool], # tests passed
-        dict[str, Any], # tests info
-    ]
+        dict[str, bool],  # tests passed
+        dict[str, Any],  # tests info
+    ],
 ]
+
 
 def compare_model_combos(
     model_dict: dict[str, HookedTransformer],
     cfg: ConfigHolder,
     verbose: bool = True,
 ) -> ModelComboTestResults:
-    
     output: ModelComboTestResults = dict()
 
     for (name_a, m_a), (name_b, m_b) in itertools.combinations(model_dict.items(), 2):
@@ -290,6 +311,7 @@ def compare_model_combos(
         output[(name_a, name_b)] = tests_passed, tests_info
 
     return output
+
 
 def perform_reload_checks(
     model_wandb: HookedTransformer,
@@ -302,8 +324,12 @@ def perform_reload_checks(
     model_loaded: ZanjHookedTransformer = ZanjHookedTransformer.read(model_path)
     print(f"\t{model_loaded.zanj_model_config.model_cfg.weight_processing = }")
     # fold layernorms for wandb model
-    model_loaded_process_weights: ZanjHookedTransformer = ZanjHookedTransformer.read(model_path)
-    model_loaded_process_weights.process_weights_(fold_ln=True, center_writing_weights=False, center_unembed=False)
+    model_loaded_process_weights: ZanjHookedTransformer = ZanjHookedTransformer.read(
+        model_path
+    )
+    model_loaded_process_weights.process_weights_(
+        fold_ln=True, center_writing_weights=False, center_unembed=False
+    )
 
     model_dict: dict[str, HookedTransformer] = {
         "wandb": model_wandb,
@@ -319,21 +345,20 @@ def perform_reload_checks(
     )
 
     print(f"# Comparison results:")
-    outputs_keys: list[str] = ['output_argsort', 'output_no_argsort']
+    outputs_keys: list[str] = ["output_argsort", "output_no_argsort"]
     for (model_a, model_b), (test_results, test_info) in compare_result.items():
         print(f"\t## {model_a} vs {model_b}")
         if not all(test_results.values()):
             failed_tests: list[str] = [k for k, v in test_results.items() if not v]
             print(f"\tFAILED: {failed_tests}")
-            print(f"\t!FAILED OUTPUTS: {[k for k in failed_tests if k in outputs_keys]}")
+            print(
+                f"\t!FAILED OUTPUTS: {[k for k in failed_tests if k in outputs_keys]}"
+            )
         print(f"\t\t{test_results = }")
         if test_info:
             print(f"\t\t{test_info = }")
 
-        
-
-    return 
-    
+    return
 
 
 def load_wandb_pt_model_as_zanj(
@@ -344,12 +369,15 @@ def load_wandb_pt_model_as_zanj(
     save_zanj_model: bool = True,
     verbose: bool = True,
     allow_weight_processing_diff: bool = True,
-    tokenization_mode_override: TokenizationMode|None = None,
+    tokenization_mode_override: TokenizationMode | None = None,
     test_reload: bool = True,
 ) -> ZanjHookedTransformer:
-    
-    print(f"# Loading model and config from wandb:\n{run_id = }, {project = }, {checkpoint = }")
-    model_wandb: HookedTransformer; cfg: ConfigHolder; wandb_kwargs: dict
+    print(
+        f"# Loading model and config from wandb:\n{run_id = }, {project = }, {checkpoint = }"
+    )
+    model_wandb: HookedTransformer
+    cfg: ConfigHolder
+    wandb_kwargs: dict
     model_wandb, cfg, wandb_kwargs = load_and_configure_wandb_model(
         run_id=run_id,
         project=project,
@@ -366,7 +394,8 @@ def load_wandb_pt_model_as_zanj(
 
     print(f"# Checking zanj-converted model matches wandb model")
     assert_model_output_equality(
-        model_wandb, model_zanj,
+        model_wandb,
+        model_zanj,
         check_config_equality=False,
         vocab_size=cfg.maze_tokenizer.vocab_size,
         seq_len_max=cfg.dataset_cfg.seq_len_max,
@@ -375,9 +404,15 @@ def load_wandb_pt_model_as_zanj(
     compare_state_dicts(model_wandb.state_dict(), model_zanj.state_dict())
     print(f"\tstate dicts match")
 
-    zanj: ZANJ = ZANJ(custom_settings={
-        "_load_state_dict_wrapper": {"recover_exact": True, "fold_ln": False, "refactor_factored_attn_matrices": False}
-    })
+    zanj: ZANJ = ZANJ(
+        custom_settings={
+            "_load_state_dict_wrapper": {
+                "recover_exact": True,
+                "fold_ln": False,
+                "refactor_factored_attn_matrices": False,
+            }
+        }
+    )
 
     if save_zanj_model:
         model_zanj_save_path: Path = (
@@ -385,7 +420,7 @@ def load_wandb_pt_model_as_zanj(
         )
         print(f"# Saving model to {model_zanj_save_path.as_posix()}")
         model_zanj.save(model_zanj_save_path)
-    
+
     if test_reload:
         assert save_zanj_model, f"must save model to test reloading"
         perform_reload_checks(
