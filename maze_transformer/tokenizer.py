@@ -32,13 +32,15 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     # as of https://github.com/neelnanda-io/TransformerLens/pull/344 this gets overwritten to "right" on `HookedTransformer.__init__()`
     # so, we have to do this overwriting in a weird way
     _true_padding_side = "left"
-    _true_truncation_side = "left"  #! strange choice, but it's what we did in pad_sequence
+    _true_truncation_side = (
+        "left"  #! strange choice, but it's what we did in pad_sequence
+    )
 
     name_or_path = "hugging_maze_tokenizer"
 
     def apply_overrides(self) -> None:
         """Overwrite class attributes to deal with padding direction issues
-        
+
         see https://github.com/neelnanda-io/TransformerLens/pull/344
         """
         self.padding_side = self._true_padding_side

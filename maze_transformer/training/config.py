@@ -408,7 +408,7 @@ class ConfigHolder(SerializableDataclass):
         loading_fn=_load_maze_tokenizer,
     )
 
-    _tokenizer: PreTrainedTokenizer|None = serializable_field(
+    _tokenizer: PreTrainedTokenizer | None = serializable_field(
         default=None,
         serialization_fn=lambda x: str(x),
         loading_fn=lambda data: None,
@@ -439,7 +439,7 @@ class ConfigHolder(SerializableDataclass):
         # fallback to default maze tokenizer if no kwargs are provided
         if self.pretrainedtokenizer_kwargs is None:
             if self.maze_tokenizer is None:
-                # TODO: is this the right default? maybe set it to AOTP_UT_rasterized 
+                # TODO: is this the right default? maybe set it to AOTP_UT_rasterized
                 # since thats what legacy models are likely to be?
                 self.maze_tokenizer = MazeTokenizer(
                     tokenization_mode=TokenizationMode.AOTP_UT_uniform,
@@ -602,7 +602,7 @@ class ZanjHookedTransformer(ConfiguredModel[ConfigHolder], HookedTransformer):
             self.zanj_model_config.tokenizer.apply_overrides()
             self.set_tokenizer(
                 self.zanj_model_config.tokenizer,
-                default_padding_side = self.zanj_model_config.tokenizer.padding_side,
+                default_padding_side=self.zanj_model_config.tokenizer.padding_side,
             )
         else:
             warnings.warn(
