@@ -408,6 +408,12 @@ class ConfigHolder(SerializableDataclass):
         loading_fn=_load_maze_tokenizer,
     )
 
+    _tokenizer: PreTrainedTokenizer|None = serializable_field(
+        default=None,
+        serialization_fn=lambda x: str(x),
+        loading_fn=lambda data: None,
+    )
+
     # shortcut properties
     @property
     def d_model(self) -> int:
@@ -433,6 +439,8 @@ class ConfigHolder(SerializableDataclass):
         # fallback to default maze tokenizer if no kwargs are provided
         if self.pretrainedtokenizer_kwargs is None:
             if self.maze_tokenizer is None:
+                # TODO: is this the right default? maybe set it to AOTP_UT_rasterized 
+                # since thats what legacy models are likely to be?
                 self.maze_tokenizer = MazeTokenizer(
                     tokenization_mode=TokenizationMode.AOTP_UT_uniform,
                     max_grid_size=None,
@@ -460,18 +468,21 @@ class ConfigHolder(SerializableDataclass):
     def seed(self) -> int:
         return self.dataset_cfg.seed
 
-    @cached_property
+    @property
     def tokenizer(self) -> PreTrainedTokenizer:
         """get a tokenizer via a pretrainedtokenizer_kwargs, or a hugging maze tokenizer"""
-        if self.pretrainedtokenizer_kwargs is not None:
-            return PreTrainedTokenizer(**self.pretrainedtokenizer_kwargs)
-        elif self.maze_tokenizer is not None:
-            return HuggingMazeTokenizer(
-                seq_len_max=self.dataset_cfg.seq_len_max,
-                maze_tokenizer=self.maze_tokenizer,
-            )
+        if self._tokenizer is None:
+            if self.pretrainedtokenizer_kwargs is not None:
+                return PreTrainedTokenizer(**self.pretrainedtokenizer_kwargs)
+            elif self.maze_tokenizer is not None:
+                return HuggingMazeTokenizer(
+                    seq_len_max=self.dataset_cfg.seq_len_max,
+                    maze_tokenizer=self.maze_tokenizer,
+                )
+            else:
+                raise ValueError("no tokenizer specified")
         else:
-            raise ValueError("no tokenizer specified")
+            return self._tokenizer
 
     @cached_property
     def hooked_transformer_cfg(self) -> HookedTransformerConfig:
@@ -584,6 +595,19 @@ class ZanjHookedTransformer(ConfiguredModel[ConfigHolder], HookedTransformer):
             cfg=cfg_holder.hooked_transformer_cfg,
             tokenizer=cfg_holder.tokenizer,
         )
+
+        # update the tokenizer attributes (evil)
+        # see `apply_overrides()` code for info
+        if isinstance(self.zanj_model_config.tokenizer, HuggingMazeTokenizer):
+            self.zanj_model_config.tokenizer.apply_overrides()
+            self.set_tokenizer(
+                self.zanj_model_config.tokenizer,
+                default_padding_side = self.zanj_model_config.tokenizer.padding_side,
+            )
+        else:
+            warnings.warn(
+                "tokenizer is not a HuggingMazeTokenizer, so we can't apply overrides. this might break padding and your whole model"
+            )
 
     @property
     def config(self) -> ConfigHolder:
