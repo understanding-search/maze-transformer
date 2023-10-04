@@ -18,8 +18,8 @@ def plot_logits(
     target_idxs: Int[torch.Tensor, "n_mazes"],
     tokenizer: MazeTokenizer,
     n_bins: int = 50,
-    mark_incorrect: bool = True,
-    mark_correct: bool = False,
+    mark_incorrect: bool = False,
+    mark_correct: bool = True,
     subplots_kwargs: dict | None = None,
     show: bool = True,
     density: bool = True,
@@ -51,24 +51,24 @@ def plot_logits(
     plt.colorbar(ax_all.imshow(last_tok_logits.numpy(), aspect="auto"), ax=ax_all)
 
     if mark_correct:
-        # place yellow x at max logit token
+        # place red dot at max logit token
         ax_all.scatter(
             last_tok_logits.argmax(dim=1),
             np.arange(n_mazes),
-            marker="x",
-            color="yellow",
+            marker=".",
+            color="red",
         )
-        # place red dot at correct token
-        ax_all.scatter(target_idxs, np.arange(n_mazes), marker=".", color="red")
+        # place red + at correct token
+        ax_all.scatter(target_idxs, np.arange(n_mazes), marker="+", color="red")
         if mark_incorrect:
             raise ValueError("mark_correct and mark_incorrect cannot both be True")
 
     if mark_incorrect:
-        # place a red dot wherever the max logit token is not the correct token
+        # place a red x wherever the max logit token is not the correct token
         ax_all.scatter(
             last_tok_logits.argmax(dim=1)[last_tok_logits.argmax(dim=1) != target_idxs],
             np.arange(n_mazes)[last_tok_logits.argmax(dim=1) != target_idxs],
-            marker=".",
+            marker="x",
             color="red",
         )
         # place red x at correct token
