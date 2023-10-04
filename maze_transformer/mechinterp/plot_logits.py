@@ -24,7 +24,7 @@ def plot_logits(
     show: bool = True,
     density: bool = True,
     logy: bool = False,
-) -> None:
+) -> tuple[plt.Figure, tuple[plt.Axes, plt.Axes]]:
     # set up figure
     # --------------------------------------------------
     n_mazes: int
