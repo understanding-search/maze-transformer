@@ -200,7 +200,6 @@ def load_wandb_zanj(
     project: str = "aisc-search/alex",
     checkpoint: int | None = None,
     output_path: str | Path = "./downloaded_models",
-    model: bool = True,
 ) -> ZanjHookedTransformer:
     output_path = Path(output_path)
     api: wandb.Api = wandb.Api()
