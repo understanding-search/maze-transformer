@@ -24,7 +24,11 @@ def plot_predicted_paths(
     dataset: MazeDataset,
     n_mazes: int | None = None,
     max_new_tokens: int = 8,
-):
+    show: bool = True,
+    remove_labels: bool = True,
+    row_length: int|None = None,
+    figsize_scale: int = 10,
+) -> tuple[plt.Figure, plt.Axes]:
     if n_mazes is None:
         n_mazes = len(dataset)
 
@@ -36,10 +40,38 @@ def plot_predicted_paths(
         max_new_tokens=max_new_tokens,
     )
 
+    # fig, axs = plt.subplots(1, n_mazes, figsize=(10, 10 * n_mazes))
+    if row_length is None:
+        row_length = n_mazes
+    n_rows = n_mazes // row_length
+    if n_mazes % row_length != 0:
+        n_rows += 1
+
+    fig, axs = plt.subplots(
+        n_rows, 
+        row_length, 
+        figsize=(figsize_scale * row_length, figsize_scale * n_rows)
+    )
+    fig.subplots_adjust(hspace=0.2, wspace=0.2)
+
     # plot
     for i, maze in enumerate(dataset.mazes[:n_mazes]):
-        MazePlot(maze).add_predicted_path(predictions[i]).plot()
+
+        ax_idx = i // row_length, i % row_length
+        ax = axs[ax_idx] if n_rows > 1 else axs[i]
+        mp: MazePlot = MazePlot(maze).add_predicted_path(predictions[i])
+        mp.plot(fig_ax=(fig, ax))
+
+        if remove_labels:
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xlabel("")
+            ax.set_ylabel("")
+    
+    if show:
         plt.show()
+    
+    return fig, axs
 
 
 def eval_model_at_checkpoints(

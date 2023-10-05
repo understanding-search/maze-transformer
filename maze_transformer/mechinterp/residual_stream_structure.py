@@ -2,6 +2,7 @@ import itertools
 from typing import NamedTuple
 
 import matplotlib.pyplot as plt
+import matplotlib.colors as mplcolors
 
 # numerical
 import numpy as np
@@ -331,20 +332,40 @@ def plot_distance_grid(
     grid_distances: Float[np.ndarray, "n n n n"],
     embedding_metric: str,
     show: bool = True,
+    vbounds: tuple[float, float]|None = None,
+    cmap: str = "viridis",
+    ignore_self_distances: bool = True,
 ) -> tuple[plt.Figure, plt.Axes]:
     n: int = grid_distances.shape[0]
-    # print(n)
-    # print(tokenizer.coordinate_tokens_coords)
+
+    # remove the self distances
+    if ignore_self_distances:
+        for i,j in itertools.product(range(n), range(n)):
+            grid_distances[i, j, i, j] = np.nan
+
+    if vbounds is None:
+        # calculate bounds ignoring nans
+        vbounds = (np.nanmin(grid_distances), np.nanmax(grid_distances))
+
+    print(f"{vbounds = }")
+    norm = mplcolors.Normalize(vmin=vbounds[0], vmax=vbounds[1])
+
     fig, axs = plt.subplots(n, n, figsize=(20, 20))
 
-    for i in range(n):
-        for j in range(n):
-            ax = axs[i, j]
-            cax = ax.matshow(grid_distances[i, j], cmap="viridis", interpolation="none")
-            ax.plot(j, i, "rx")
-            ax.set_title(f"from ({i},{j})")
-            # fully remove both major and minor gridlines
-            ax.grid(False)
+    # for i in range(n):
+    #     for j in range(n):
+    for i,j in itertools.product(range(n), range(n)):
+        ax = axs[i, j]
+        cax = ax.matshow(
+            grid_distances[i, j], 
+            cmap=cmap, 
+            interpolation="none", 
+            norm=norm,
+        )
+        ax.plot(j, i, "rx")
+        ax.set_title(f"from ({i},{j})")
+        # fully remove both major and minor gridlines
+        ax.grid(False)
 
     fig.suptitle(f"{embedding_metric} distances grid")
     plt.colorbar(cax, ax=axs.ravel().tolist())
