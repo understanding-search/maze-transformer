@@ -3,19 +3,17 @@ from pathlib import Path
 
 # Plotting
 import matplotlib.pyplot as plt
-from maze_dataset import MazeDataset
 
 # dataset
-from maze_dataset.plotting import MazePlot
-from muutils.mlutils import get_checkpoint_paths_for_run
+from maze_dataset import MazeDataset
+from maze_dataset.plotting import MazePlot, PathFormat
 
-# Numerical Computing
 # Utilities
+from muutils.mlutils import get_checkpoint_paths_for_run
 from muutils.statcounter import StatCounter
 
-from maze_transformer.evaluation.eval_model import evaluate_model, predict_maze_paths
-
 # maze-transformer
+from maze_transformer.evaluation.eval_model import evaluate_model, predict_maze_paths
 from maze_transformer.training.config import ZanjHookedTransformer
 
 
@@ -28,6 +26,7 @@ def plot_predicted_paths(
     remove_labels: bool = True,
     row_length: int|None = None,
     figsize_scale: int = 10,
+    predicted_path_fmt: PathFormat|None = None,
 ) -> tuple[plt.Figure, plt.Axes]:
     if n_mazes is None:
         n_mazes = len(dataset)
@@ -59,7 +58,7 @@ def plot_predicted_paths(
 
         ax_idx = i // row_length, i % row_length
         ax = axs[ax_idx] if n_rows > 1 else axs[i]
-        mp: MazePlot = MazePlot(maze).add_predicted_path(predictions[i])
+        mp: MazePlot = MazePlot(maze).add_predicted_path(predictions[i], path_fmt=predicted_path_fmt)
         mp.plot(fig_ax=(fig, ax))
 
         if remove_labels:
