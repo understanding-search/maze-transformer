@@ -63,6 +63,9 @@ class RandomBaseline(HookedTransformer):
     ) -> tuple[CoordTup | str | None, list[CoordTup | str]]:
         """returns a tuple of (correct_step, incorrect_steps)"""
 
+        if path is None or len(path) == 0:
+            return (tuple(solved_maze.start_pos), [])
+
         path_end_return: tuple[str, list[str]] = (SPECIAL_TOKENS.PATH_END, [])
 
         current_position: CoordTup = path[-1]
@@ -204,7 +207,7 @@ class RandomBaseline(HookedTransformer):
         if isinstance(context, torch.Tensor):
             tokens = self.to_str_tokens(context)
         elif isinstance(context, list):
-            if all(isinstance(x, str) for x in tokens):
+            if all(isinstance(x, str) for x in context):
                 tokens = context
             else:
                 raise TypeError(
@@ -245,7 +248,7 @@ class RandomBaseline(HookedTransformer):
     def get_valid_next_steps(
         self,
         context: str | list[str] | Float[torch.Tensor, "pos"],
-    ) -> list[CoordTup | str]:
+    ) -> tuple[CoordTup | str | None, list[CoordTup | str]]:
         # convert input to a list of tokens
         tokens: list[str] = self._process_context(context)
 
@@ -255,16 +258,8 @@ class RandomBaseline(HookedTransformer):
         solved_maze, context_existing_path = self._tokens_to_maze_and_path(tokens)
 
         # get valid next steps
-        correct_step: CoordTup | str | None
-        incorrect_steps: list[CoordTup | str]
-        correct_step, incorrect_steps = self._get_all_valid_next_steps(
+        return self._get_all_valid_next_steps(
             solved_maze=solved_maze,
             target=tuple(solved_maze.end_pos.tolist()),
             path=context_existing_path,
         )
-
-        # return valid next steps
-        if correct_step is None:
-            return incorrect_steps
-        else:
-            return [correct_step] + incorrect_steps
