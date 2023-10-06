@@ -135,12 +135,11 @@ class RandomBaseline(HookedTransformer):
             return correct_step
         else:
             return random.choice(incorrect_steps)
-
-    def _generate_path(
+        
+    def _tokens_to_maze_and_path(
         self,
         tokens: list[str],
-        steps_to_predict: int,
-    ) -> list[str]:
+    ) -> tuple[SolvedMaze, list[Coord]]:
         # assemble the maze from the tokens
         maze: LatticeMaze = LatticeMaze.from_tokens(
             tokens, self.tokenizer._maze_tokenizer
@@ -157,6 +156,19 @@ class RandomBaseline(HookedTransformer):
             get_path_tokens(tokens, trim_end=True),
             when_noncoord="except",
         )
+
+        return (solved_maze, context_existing_path)
+
+    def _generate_path(
+        self,
+        tokens: list[str],
+        steps_to_predict: int,
+    ) -> list[str]:
+        
+        solved_maze: SolvedMaze; context_existing_path: list[Coord]
+        solved_maze, context_existing_path = self._tokens_to_maze_and_path(tokens)
+        origin_coord: CoordTup = tuple(solved_maze.start_pos.tolist())
+        target_coord: CoordTup = tuple(solved_maze.end_pos.tolist())
 
         # assemble our predicted path
         predictions: list[Coord] = list()
@@ -181,13 +193,10 @@ class RandomBaseline(HookedTransformer):
             predictions, when_noncoord="include"
         )
 
-    def generate(
+    def _process_context(
         self,
         context: str | list[str] | Float[torch.Tensor, "pos"],
-        max_new_tokens: int,
-        **_,
-    ) -> str:
-        # convert input to a list of tokens
+    ) -> list[str]:
         tokens: list[str]
         if isinstance(context, torch.Tensor):
             tokens = self.to_str_tokens(context)
@@ -202,6 +211,17 @@ class RandomBaseline(HookedTransformer):
             tokens = self.tokenizer.tokenize(context)
         else:
             raise TypeError(f"Expected list[str], str, or tensor, got {type(context)}")
+        
+        return tokens
+
+    def generate(
+        self,
+        context: str | list[str] | Float[torch.Tensor, "pos"],
+        max_new_tokens: int,
+        **_,
+    ) -> str:
+        # convert input to a list of tokens
+        tokens: list[str] = self._process_context(context)
 
         # generate path
         generated_path: list[str] = self._generate_path(
@@ -218,3 +238,29 @@ class RandomBaseline(HookedTransformer):
 
         # output: Float[torch.Tensor, "batch pos_plus_new_tokens"] = self.tokenizer(solved_maze, is_split_into_words=True)["input_ids"]
         return output
+
+    def get_valid_next_steps(
+        self,
+        context: str | list[str] | Float[torch.Tensor, "pos"],
+    ) -> list[CoordTup | str]:
+        # convert input to a list of tokens
+        tokens: list[str] = self._process_context(context)
+
+        # get maze and path
+        solved_maze: SolvedMaze; context_existing_path: list[Coord]
+        solved_maze, context_existing_path = self._tokens_to_maze_and_path(tokens)
+
+        # get valid next steps
+        correct_step: CoordTup | str | None
+        incorrect_steps: list[CoordTup | str]
+        correct_step, incorrect_steps = self._get_all_valid_next_steps(
+            solved_maze=solved_maze,
+            target=tuple(solved_maze.end_pos.tolist()),
+            path=context_existing_path,
+        )
+
+        # return valid next steps
+        if correct_step is None:
+            return incorrect_steps
+        else:
+            return [correct_step] + incorrect_steps
