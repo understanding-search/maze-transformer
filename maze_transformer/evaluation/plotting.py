@@ -24,9 +24,9 @@ def plot_predicted_paths(
     max_new_tokens: int = 8,
     show: bool = True,
     remove_labels: bool = True,
-    row_length: int|None = None,
+    row_length: int | None = None,
     figsize_scale: int = 10,
-    predicted_path_fmt: PathFormat|None = None,
+    predicted_path_fmt: PathFormat | None = None,
 ) -> tuple[plt.Figure, plt.Axes]:
     if n_mazes is None:
         n_mazes = len(dataset)
@@ -47,18 +47,17 @@ def plot_predicted_paths(
         n_rows += 1
 
     fig, axs = plt.subplots(
-        n_rows, 
-        row_length, 
-        figsize=(figsize_scale * row_length, figsize_scale * n_rows)
+        n_rows, row_length, figsize=(figsize_scale * row_length, figsize_scale * n_rows)
     )
     fig.subplots_adjust(hspace=0.2, wspace=0.2)
 
     # plot
     for i, maze in enumerate(dataset.mazes[:n_mazes]):
-
         ax_idx = i // row_length, i % row_length
         ax = axs[ax_idx] if n_rows > 1 else axs[i]
-        mp: MazePlot = MazePlot(maze).add_predicted_path(predictions[i], path_fmt=predicted_path_fmt)
+        mp: MazePlot = MazePlot(maze).add_predicted_path(
+            predictions[i], path_fmt=predicted_path_fmt
+        )
         mp.plot(fig_ax=(fig, ax))
 
         if remove_labels:
@@ -66,10 +65,10 @@ def plot_predicted_paths(
             ax.set_yticks([])
             ax.set_xlabel("")
             ax.set_ylabel("")
-    
+
     if show:
         plt.show()
-    
+
     return fig, axs
 
 

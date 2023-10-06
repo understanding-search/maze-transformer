@@ -1,8 +1,8 @@
 import itertools
 from typing import NamedTuple
 
-import matplotlib.pyplot as plt
 import matplotlib.colors as mplcolors
+import matplotlib.pyplot as plt
 
 # numerical
 import numpy as np
@@ -332,7 +332,7 @@ def plot_distance_grid(
     grid_distances: Float[np.ndarray, "n n n n"],
     embedding_metric: str,
     show: bool = True,
-    vbounds: tuple[float, float]|None = None,
+    vbounds: tuple[float, float] | None = None,
     cmap: str = "viridis",
     ignore_self_distances: bool = True,
 ) -> tuple[plt.Figure, plt.Axes]:
@@ -340,7 +340,7 @@ def plot_distance_grid(
 
     # remove the self distances
     if ignore_self_distances:
-        for i,j in itertools.product(range(n), range(n)):
+        for i, j in itertools.product(range(n), range(n)):
             grid_distances[i, j, i, j] = np.nan
 
     if vbounds is None:
@@ -354,12 +354,12 @@ def plot_distance_grid(
 
     # for i in range(n):
     #     for j in range(n):
-    for i,j in itertools.product(range(n), range(n)):
+    for i, j in itertools.product(range(n), range(n)):
         ax = axs[i, j]
         cax = ax.matshow(
-            grid_distances[i, j], 
-            cmap=cmap, 
-            interpolation="none", 
+            grid_distances[i, j],
+            cmap=cmap,
+            interpolation="none",
             norm=norm,
         )
         ax.plot(j, i, "rx")

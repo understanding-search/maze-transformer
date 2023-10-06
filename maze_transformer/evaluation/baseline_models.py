@@ -21,9 +21,12 @@ from transformer_lens import HookedTransformer
 
 from maze_transformer.training.config import ConfigHolder
 
+
 class InvalidTaskForRandomBaselineError(Exception):
     """the task is not coordinate prediction, and is not valid for a random baseline "model" """
+
     pass
+
 
 class RandomBaseline(HookedTransformer):
     """
@@ -55,7 +58,7 @@ class RandomBaseline(HookedTransformer):
         self,
         solved_maze: SolvedMaze,
         target: CoordTup,
-        path: list[CoordTup]|None = None,
+        path: list[CoordTup] | None = None,
         pad_eos: bool = False,
     ) -> tuple[CoordTup | str | None, list[CoordTup | str]]:
         """returns a tuple of (correct_step, incorrect_steps)"""
@@ -91,7 +94,7 @@ class RandomBaseline(HookedTransformer):
             if correct_step not in unvisited_neighbors:
                 return (None, unvisited_neighbors)
 
-            incorrect_steps = unvisited_neighbors[:] # what is this doing?
+            incorrect_steps = unvisited_neighbors[:]  # what is this doing?
             incorrect_steps.remove(correct_step)
 
             return (correct_step, incorrect_steps)
@@ -118,12 +121,12 @@ class RandomBaseline(HookedTransformer):
         if len(incorrect_steps) == 0:
             assert correct_step is not None
             return correct_step
-        
+
         # if no correct choice (no backtracking, towards target), return random choice
         if correct_step is None:
             assert len(incorrect_steps) > 0
             return random.choice(incorrect_steps)
-        
+
         # if there is a correct choice, choose randomly between correct and incorrect
         n_unvisited_neighbors: int = len(incorrect_steps) + 1
         prob_of_incorrect = (len(incorrect_steps) / n_unvisited_neighbors) * (
@@ -135,7 +138,7 @@ class RandomBaseline(HookedTransformer):
             return correct_step
         else:
             return random.choice(incorrect_steps)
-        
+
     def _tokens_to_maze_and_path(
         self,
         tokens: list[str],
@@ -164,8 +167,8 @@ class RandomBaseline(HookedTransformer):
         tokens: list[str],
         steps_to_predict: int,
     ) -> list[str]:
-        
-        solved_maze: SolvedMaze; context_existing_path: list[Coord]
+        solved_maze: SolvedMaze
+        context_existing_path: list[Coord]
         solved_maze, context_existing_path = self._tokens_to_maze_and_path(tokens)
         origin_coord: CoordTup = tuple(solved_maze.start_pos.tolist())
         target_coord: CoordTup = tuple(solved_maze.end_pos.tolist())
@@ -211,7 +214,7 @@ class RandomBaseline(HookedTransformer):
             tokens = self.tokenizer.tokenize(context)
         else:
             raise TypeError(f"Expected list[str], str, or tensor, got {type(context)}")
-        
+
         return tokens
 
     def generate(
@@ -247,7 +250,8 @@ class RandomBaseline(HookedTransformer):
         tokens: list[str] = self._process_context(context)
 
         # get maze and path
-        solved_maze: SolvedMaze; context_existing_path: list[Coord]
+        solved_maze: SolvedMaze
+        context_existing_path: list[Coord]
         solved_maze, context_existing_path = self._tokens_to_maze_and_path(tokens)
 
         # get valid next steps
