@@ -21,6 +21,9 @@ from transformer_lens import HookedTransformer
 
 from maze_transformer.training.config import ConfigHolder
 
+class InvalidTaskForRandomBaselineError(Exception):
+    """the task is not coordinate prediction, and is not valid for a random baseline "model" """
+    pass
 
 class RandomBaseline(HookedTransformer):
     """
@@ -48,21 +51,24 @@ class RandomBaseline(HookedTransformer):
         # This conversion won't be needed after https://github.com/understanding-search/maze-transformer/issues/154
         return [tuple(arr.tolist()) for arr in neighbors]
 
-    def _predict_next_step(
+    def _get_all_valid_next_steps(
         self,
         solved_maze: SolvedMaze,
         target: CoordTup,
-        path: list[CoordTup],
+        path: list[CoordTup]|None = None,
         pad_eos: bool = False,
-    ) -> CoordTup | str:
-        """returns a tuple coordinate or a special token"""
+    ) -> tuple[CoordTup | str | None, list[CoordTup | str]]:
+        """returns a tuple of (correct_step, incorrect_steps)"""
+
+        path_end_return: tuple[str, list[str]] = (SPECIAL_TOKENS.PATH_END, [])
+
         current_position: CoordTup = path[-1]
         # pad with eos up to max_new_tokens to avoid ragged tensors
         if pad_eos:
             if current_position in [target, SPECIAL_TOKENS.PATH_END]:
-                return SPECIAL_TOKENS.PATH_END
+                return path_end_return
         if current_position == target:
-            return SPECIAL_TOKENS.PATH_END
+            return path_end_return
 
         neighbors: list[CoordTup] = self._get_coord_neighbors(
             solved_maze, current_position
@@ -80,23 +86,55 @@ class RandomBaseline(HookedTransformer):
 
         if len(unvisited_neighbors) == 0:
             # break out if dead end
-            return SPECIAL_TOKENS.PATH_END
+            return path_end_return
         else:
             if correct_step not in unvisited_neighbors:
-                return random.choice(unvisited_neighbors)
+                return (None, unvisited_neighbors)
 
-            incorrect_steps = unvisited_neighbors[:]
+            incorrect_steps = unvisited_neighbors[:] # what is this doing?
             incorrect_steps.remove(correct_step)
 
-            prob_of_incorrect = (len(incorrect_steps) / len(unvisited_neighbors)) * (
-                1 - self.bias
-            )
+            return (correct_step, incorrect_steps)
 
-            will_choose_correctly = random.random() > prob_of_incorrect
-            if will_choose_correctly:
-                return correct_step
-            else:
-                return random.choice(incorrect_steps)
+    def _predict_next_step(
+        self,
+        solved_maze: SolvedMaze,
+        target: CoordTup,
+        path: list[CoordTup],
+        pad_eos: bool = False,
+    ) -> CoordTup | str:
+        """returns a tuple coordinate or a special token"""
+
+        correct_step: CoordTup | str | None
+        incorrect_steps: list[CoordTup | str]
+        correct_step, incorrect_steps = self._get_all_valid_next_steps(
+            solved_maze=solved_maze,
+            target=target,
+            path=path,
+            pad_eos=pad_eos,
+        )
+
+        # if only one option, return that
+        if len(incorrect_steps) == 0:
+            assert correct_step is not None
+            return correct_step
+        
+        # if no correct choice (no backtracking, towards target), return random choice
+        if correct_step is None:
+            assert len(incorrect_steps) > 0
+            return random.choice(incorrect_steps)
+        
+        # if there is a correct choice, choose randomly between correct and incorrect
+        n_unvisited_neighbors: int = len(incorrect_steps) + 1
+        prob_of_incorrect = (len(incorrect_steps) / n_unvisited_neighbors) * (
+            1 - self.bias
+        )
+
+        will_choose_correctly = random.random() > prob_of_incorrect
+        if will_choose_correctly:
+            return correct_step
+        else:
+            return random.choice(incorrect_steps)
 
     def _generate_path(
         self,
