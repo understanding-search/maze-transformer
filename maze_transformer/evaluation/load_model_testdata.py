@@ -18,7 +18,12 @@ def load_model_with_test_data(
 	# load model
 	model: ZanjHookedTransformer = ZanjHookedTransformer.read(model_path)
 	num_params: int = model.num_params()
-	model_name: str = model_path.stem
+	model_name: str = (
+		str(model_path.stem)
+		.removeprefix("model.")
+		.removeprefix("wandb.")
+	)
+
 	if verbose:
 		print(f"loaded model with {shorten_numerical_to_str(num_params)} params ({num_params = }) from\n{model_path.as_posix()}")
 		print(f"original model name: '{model.zanj_model_config.name = }', changing to '{model_name}'")
