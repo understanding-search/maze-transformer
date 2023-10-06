@@ -45,6 +45,8 @@ def plot_logit_histograms(
         for group_name, group_mask in token_groups.items():
             if group_mask.sum() > 0:
                 token_groups_logits[group_name] = last_tok_logits[group_mask].flatten()
+                # remove tokens in this group from mask
+                mask = mask & ~group_mask
 
     # all other tokens
     if show_all_other_tokens:
