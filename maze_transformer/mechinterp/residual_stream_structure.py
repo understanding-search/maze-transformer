@@ -335,7 +335,8 @@ def plot_distance_grid(
     vbounds: tuple[float, float] | None = None,
     cmap: str = "viridis",
     ignore_self_distances: bool = True,
-) -> tuple[plt.Figure, plt.Axes]:
+    figsize: tuple[float, float] = (20, 20),
+) -> tuple[plt.Figure, plt.Axes, plt.Axes]:
     n: int = grid_distances.shape[0]
 
     # remove the self distances
@@ -350,10 +351,9 @@ def plot_distance_grid(
     print(f"{vbounds = }")
     norm = mplcolors.Normalize(vmin=vbounds[0], vmax=vbounds[1])
 
-    fig, axs = plt.subplots(n, n, figsize=(20, 20))
+    fig, axs = plt.subplots(n, n, figsize=figsize)
 
-    # for i in range(n):
-    #     for j in range(n):
+    cbar_ax = fig.add_axes([0.91, 0.15, 0.02, 0.7])
     for i, j in itertools.product(range(n), range(n)):
         ax = axs[i, j]
         cax = ax.matshow(
@@ -368,12 +368,13 @@ def plot_distance_grid(
         ax.grid(False)
 
     fig.suptitle(f"{embedding_metric} distances grid")
-    plt.colorbar(cax, ax=axs.ravel().tolist())
+    colorbar_ax = fig.colorbar(cax, ax=axs.ravel().tolist())
+    # fig.colorbar(axs.ravel().tolist(), ax=cbar_ax)
 
     if show:
         plt.show()
 
-    return fig, axs
+    return fig, axs, cbar_ax
 
 
 def plot_distance_correlation(
