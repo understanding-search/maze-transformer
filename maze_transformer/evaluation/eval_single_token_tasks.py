@@ -1,6 +1,7 @@
 # Generic
 
 # Numerical Computing
+from typing import NamedTuple
 import matplotlib.pyplot as plt
 import torch
 
@@ -23,20 +24,21 @@ from maze_transformer.mechinterp.logit_attrib_task import (
 from maze_transformer.training.config import ZanjHookedTransformer
 
 # TransformerLens imports
+from transformer_lens import ActivationCache
 
 
-TaskPrompts = dict[
-    str,  # task key
-    tuple[
-        list[list[str]],  # prompts
-        list[str],  # targets
+TaskPrompt = NamedTuple(
+    "TaskPrompt",
+    [
+        ("prompts", list[str]),
+        ("targets", list[str]),
     ],
-]
-
+)
 
 @serializable_dataclass(kw_only=True)
 class TaskEvalResult(SerializableDataclass):
     logits: Float[torch.Tensor, "samples seq_len d_vocab"]
+    cache: ActivationCache|None
     last_tok_logits: Float[torch.Tensor, "samples d_vocab"]
     predicted_tokens: list[str]
     predicted_correct: Bool[torch.Tensor, "samples"]
@@ -46,7 +48,7 @@ def get_task_prompts_targets(
     dataset: MazeDataset,
     maze_tokenizer: MazeTokenizer,
     tasks: dict[str, DLAProtocolFixed] = LOGIT_ATTRIB_TASKS,
-) -> TaskPrompts:
+) -> dict[str, TaskPrompt]:
     dataset_tokens: list[list[str]] = dataset.as_tokens(
         maze_tokenizer,
         join_tokens_individual_maze=False,
@@ -54,42 +56,48 @@ def get_task_prompts_targets(
 
     return {task_name: task(dataset_tokens) for task_name, task in tasks.items()}
 
+def eval_model_task(
+    model: ZanjHookedTransformer,
+    task: TaskPrompt,
+    do_cache: bool = False,
+) -> TaskEvalResult:
+    
+    maze_tokenizer: MazeTokenizer = model.config.maze_tokenizer
+
+    prompts_joined: list[str] = [" ".join(prompt) for prompt in task.prompts]
+    
+    if do_cache:
+        logits, cache = model.run_with_cache(prompts_joined)
+    else:
+        logits = model(prompts_joined)
+        cache = None
+    
+    predicted_tokens=maze_tokenizer.decode(
+        logits[:, -1, :].argmax(dim=-1).tolist()
+    )
+
+    return TaskEvalResult(
+        logits=logits,
+        cache=cache,
+        last_tok_logits=logits[:, -1, :].cpu(),
+        predicted_tokens=predicted_tokens,
+        predicted_correct=torch.tensor(
+            [
+                pred == target
+                for pred, target in zip(predicted_tokens, task.targets)
+            ]
+        ),
+    )
 
 def eval_model_across_tasks(
     model: ZanjHookedTransformer,
-    task_prompts: TaskPrompts,
+    task_prompts: dict[str, TaskPrompt],
+    do_cache: bool = False,
 ) -> dict[str, TaskEvalResult]:
-    maze_tokenizer: MazeTokenizer = model.config.maze_tokenizer
-
-    task_logits: dict[str, Float[torch.Tensor, "n_mazes seq_len d_vocab"]] = dict()
-    last_tok_logits: dict[str, Float[torch.Tensor, "n_mazes d_vocab"]] = dict()
-    predicted_tokens: dict[str, list[str]] = dict()
-    predictions_correct: dict[str, Bool[torch.Tensor, "n_mazes"]] = dict()
-
-    for task_name, (prompts, targets) in task_prompts.items():
-        print(f"running task {task_name}")
-        prompts_joined: list[str] = [" ".join(prompt) for prompt in prompts]
-        logits = model(prompts_joined)
-        task_logits[task_name] = logits
-        last_tok_logits[task_name] = logits[:, -1, :].cpu()
-        predicted_tokens[task_name] = maze_tokenizer.decode(
-            last_tok_logits[task_name].argmax(dim=-1).tolist()
-        )
-        predictions_correct[task_name] = torch.tensor(
-            [
-                pred == target
-                for pred, target in zip(predicted_tokens[task_name], targets)
-            ]
-        )
-
+    
     return {
-        task_name: TaskEvalResult(
-            logits=task_logits[task_name],
-            last_tok_logits=last_tok_logits[task_name],
-            predicted_tokens=predicted_tokens[task_name],
-            predicted_correct=predictions_correct[task_name],
-        )
-        for task_name in task_prompts.keys()
+        task_name: eval_model_task(model, task, do_cache=do_cache)
+        for task_name, task in task_prompts.items()
     }
 
 
