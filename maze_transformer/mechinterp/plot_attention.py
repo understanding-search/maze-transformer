@@ -439,6 +439,7 @@ def plot_attention_final_token(
     # exponentiate_scores: bool = False,
     softmax_attention: bool = True,
     plot_attn_dist_corr: bool = True,
+    attn_dist_to: typing.Literal["current", "target"] = "current",
     plot_colored_tokens: bool = True,
     plot_scores: bool = True,
     plot_attn_maze: bool = True,
@@ -482,7 +483,11 @@ def plot_attention_final_token(
             for respect_topology in [False, True]:
                 ax, distcorr_dist, distcorr_attn = plot_attn_dist_correlation(
                     tokens_context=prompts,
-                    tokens_dist_to=[x[-1] for x in prompts],
+                    tokens_dist_to=(
+                        [x[-1] for x in prompts]
+                        if attn_dist_to == "current"
+                        else targets
+                    ),
                     tokenizer=tokenizer,
                     # apply softmax to attention
                     attention=attn,
