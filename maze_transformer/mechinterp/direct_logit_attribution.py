@@ -2,6 +2,7 @@ import datetime
 import json
 from pathlib import Path
 from typing import Literal
+import typing
 
 import einops
 import matplotlib.pyplot as plt
@@ -119,12 +120,30 @@ def plot_direct_logit_attribution(
     cache: ActivationCache,
     answer_tokens: Int[torch.Tensor, "n_mazes"],
     show: bool = True,
-) -> tuple[plt.Figure, plt.Axes, dict[str, Float[np.ndarray, "layer head"]],]:
-    dla_data: dict[str, torch.Tensor] = compute_direct_logit_attribution(
+    layer_index_normalization: typing.Callable[[float, int], float]|None = lambda contrib, layer_idx: contrib,
+) -> tuple[plt.Figure, plt.Axes, dict[str, Float[np.ndarray, "layer head/neuron"]]]:
+    """compute, process, and plot direct logit attribution
+
+    Layer index normalization allows us to process the contribution according to the layer index. 
+    by default, its the identity map for contribs:
+    `layer_index_normalization: typing.Callable[[float, int], float]|None = lambda contrib, layer_idx: contrib`    
+    """
+    dla_data: dict[str, Float[np.ndarray, "layer head/neuron"]] = compute_direct_logit_attribution(
         model=model,
         cache=cache,
         answer_tokens=answer_tokens,
     )
+    if layer_index_normalization is not None:
+        dla_data = {
+            k: np.array(
+                [
+                    layer_index_normalization(contrib, layer_idx)
+                    for layer_idx, contrib in enumerate(v)
+                ]
+            )
+            for k, v in dla_data.items()
+        }
+
     dla_heads: Float[np.ndarray, "layer head"] = dla_data["heads"]
     dla_neurons: Float[np.ndarray, "layer neuron"] = dla_data["neurons"]
 
