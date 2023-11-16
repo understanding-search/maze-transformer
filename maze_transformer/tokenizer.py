@@ -64,6 +64,12 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         self._tokenizer_map = maze_tokenizer.tokenizer_map
         self.apply_overrides()
 
+        # stupid thing because of transformer lens:
+        # utils.py:1075, in get_tokenizer_with_bos(tokenizer)
+        # -> 1075 pretrained_model_name_or_path = init_kwargs.pop("name_or_path")
+        self.init_kwargs["name_or_path"] = self.name_or_path
+        
+
         assert isinstance(
             seq_len_max, int
         ), f"seq_len_max must be an int, got {seq_len_max = } {type(seq_len_max) = }"

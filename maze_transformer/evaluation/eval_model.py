@@ -110,11 +110,12 @@ def predict_maze_paths(
     data_cfg: MazeDatasetConfig,
     model: HookedTransformer,
     # Note: The start coord is included in the model input, so max_new_tokens is how many tokens can be predicted AFTER the start. This function returns the full paths, including start coord, so in general the max returned path length is max_new_tokens + 1
-    max_new_tokens: int = 8,
+    max_new_tokens: int|None = 8,
+    smart_max_new_tokens: bool = False,
     verbose: bool = False,
     when_noncoord: WhenMissing = "skip",
     temperature: float = 0.0,
-) -> list[str | list[tuple[int, int]]]:
+) -> list[list[str|tuple[int, int]]]:
     """given the model and a batch of context tokens, make predictions for the path"""
 
     # check types
@@ -128,11 +129,19 @@ def predict_maze_paths(
         isinstance(x, str) for tokens in tokens_batch for x in tokens
     ), f"tokens_batch must be a list of lists of strings, got {[type(x) for tokens in tokens_batch for x in tokens] = }"
 
+    if max_new_tokens is None:
+        assert (
+            smart_max_new_tokens
+        ), "if max_new_tokens is None, smart_max_new_tokens must be True"
+
     # predict some tokens
     prediction_batch: list[list[str]] = list()
     for tokens in tokens_batch:
         # context is string
-        context: str = " ".join(get_context_tokens(tokens))
+        context_toks: list[str] = get_context_tokens(tokens)
+        context: str = " ".join(context_toks)
+        if smart_max_new_tokens:
+            max_new_tokens = model.cfg.n_ctx - len(context_toks) - 1
         # predict tokens
         prediction: str = model.generate(
             context,
@@ -150,16 +159,14 @@ def predict_maze_paths(
         prediction_batch.append(prediction.split(" "))
 
     # turn the predicted tokens into paths
-    paths: list[list[tuple[int, int]]] = []
+    paths: list[list[str|tuple[int, int]]] = []
     for pred_tokens in prediction_batch:
-        path_tokens: list[str] = get_path_tokens(pred_tokens, trim_end=True)
+        path_tokens: list[str] = get_path_tokens(pred_tokens)
         path_coords: list[str | CoordTup] = strings_to_coords(
             path_tokens,
             when_noncoord=when_noncoord,
         )
-        # This is the correct type when using "skip"
-        if when_noncoord == "skip":
-            paths.append(cast(list[tuple[int, int]], path_coords))
+        paths.append(path_coords)
 
     return paths
 

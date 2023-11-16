@@ -9,9 +9,9 @@ from maze_transformer.training.config import ZanjHookedTransformer
 def load_model_with_test_data(
     model_path: str | Path,
     dataset_cfg_source: MazeDatasetConfig | None = None,
-    n_examples: int | None = 100,
+    n_examples: int | None = 128,
     verbose: bool = True,
-) -> tuple[ZanjHookedTransformer, MazeDataset]:
+) -> tuple[ZanjHookedTransformer, MazeDataset|None]:
     model_path = Path(model_path)
 
     # load model
@@ -21,13 +21,21 @@ def load_model_with_test_data(
 
     if verbose:
         print(
-            f"loaded model with {shorten_numerical_to_str(num_params)} params ({num_params = }) from\n{model_path.as_posix()}"
+            f"loaded model with {shorten_numerical_to_str(num_params)} params ({num_params = }) from:\n\tpath: {model_path.as_posix()}"
         )
         print(
-            f"original model name: '{model.zanj_model_config.name = }', changing to '{model_name}'"
+            f"\toriginal model name: '{model.zanj_model_config.name = }', changing to '{model_name}'"
+        )
+        print(
+            f"\tmodel tensors on devices: {set(p.device for p in model.parameters())}"
         )
 
+    # adjust model name
     model.zanj_model_config.name = model_name
+
+    # don't return dataset if not requested
+    if n_examples is None:
+        return model, None
 
     # copy config if needed, adjust number of mazes
     if dataset_cfg_source is None:
@@ -35,10 +43,6 @@ def load_model_with_test_data(
         dataset_cfg_source = MazeDatasetConfig.load(
             model.zanj_model_config.dataset_cfg.serialize()
         )
-
-    # adjust number of mazes
-    if n_examples is not None:
-        dataset_cfg_source.n_mazes = n_examples
 
     # get the dataset
     dataset: MazeDataset = MazeDataset.from_config(dataset_cfg_source)

@@ -478,6 +478,10 @@ class ConfigHolder(SerializableDataclass):
                 return HuggingMazeTokenizer(
                     seq_len_max=self.dataset_cfg.seq_len_max,
                     maze_tokenizer=self.maze_tokenizer,
+                    name_or_path=(
+                        "hugging_maze_tokenizer" if self.maze_tokenizer is None 
+                        else f"hugging_maze_tokenizer{self.maze_tokenizer.name}"
+                    ),
                 )
             else:
                 raise ValueError("no tokenizer specified")
