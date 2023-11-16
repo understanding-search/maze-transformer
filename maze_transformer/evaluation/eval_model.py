@@ -159,9 +159,12 @@ def predict_maze_paths(
         eos_token_id=model.tokenizer._tokenizer_map[SPECIAL_TOKENS.PATH_END],
         stop_at_eos=True,
         verbose=verbose,
-        temperature=temperature,
         # return_type="str",
     )
+    if temperature != 0.0:
+        generate_kwargs["temperature"] = temperature
+    else:
+        generate_kwargs["top_k"] = 1
     
     if batch_size is not None:
         # tensor, pad, and batch the tokens
@@ -205,7 +208,6 @@ def predict_maze_paths(
 
             predictions_out.append(prediction.split(" "))
 
-    print(predictions_out)
 
     # turn the predicted tokens into paths
     paths: list[list[str|tuple[int, int]]] = []
