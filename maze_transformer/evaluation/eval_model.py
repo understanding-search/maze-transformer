@@ -4,7 +4,17 @@ from typing import cast
 
 import numpy as np
 import torch
-from jaxtyping import Float
+from jaxtyping import Float, Int
+
+# muutils
+from muutils.mlutils import chunks
+from muutils.statcounter import StatCounter
+
+# TransformerLens
+from transformer_lens import HookedTransformer
+from transformer_lens import utils as tl_utils
+
+# maze dataset
 from maze_dataset import (
     SPECIAL_TOKENS,
     CoordTup,
@@ -19,15 +29,14 @@ from maze_dataset.tokenization.token_utils import (
     remove_padding_from_token_str,
     strings_to_coords,
 )
-from muutils.mlutils import chunks
-from muutils.statcounter import StatCounter
-from transformer_lens import HookedTransformer
-from transformer_lens import utils as tl_utils
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+
 
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
+from maze_transformer.utils.padding import pad_and_batch_tensors
 
 # pylint: disable=protected-access
 
@@ -115,6 +124,7 @@ def predict_maze_paths(
     verbose: bool = False,
     when_noncoord: WhenMissing = "skip",
     temperature: float = 0.0,
+    batch_size: int|None = None,
 ) -> list[list[str|tuple[int, int]]]:
     """given the model and a batch of context tokens, make predictions for the path"""
 
@@ -134,29 +144,59 @@ def predict_maze_paths(
             smart_max_new_tokens
         ), "if max_new_tokens is None, smart_max_new_tokens must be True"
 
-    # predict some tokens
+    maze_tokenizer: MazeTokenizer = model.config.maze_tokenizer
+
+    contexts_lists: list[list[str]] = [get_context_tokens(tokens) for tokens in tokens_batch]
+    contexts_strings: list[str] = [" ".join(tokens) for tokens in contexts_lists]
+    contexts_tokens: list[list[int]] = [
+        maze_tokenizer.encode(x)
+        for x in contexts_lists
+    ]
+    
     prediction_batch: list[list[str]] = list()
-    for tokens in tokens_batch:
-        # context is string
-        context_toks: list[str] = get_context_tokens(tokens)
-        context: str = " ".join(context_toks)
-        if smart_max_new_tokens:
-            max_new_tokens = model.cfg.n_ctx - len(context_toks) - 1
-        # predict tokens
-        prediction: str = model.generate(
-            context,
-            eos_token_id=model.tokenizer._tokenizer_map[SPECIAL_TOKENS.PATH_END],
-            stop_at_eos=True,
-            max_new_tokens=max_new_tokens,
-            verbose=verbose,
-            temperature=temperature,
-            # use_past_kv_cache=False,
+
+    generate_kwargs: dict = dict(
+        eos_token_id=model.tokenizer._tokenizer_map[SPECIAL_TOKENS.PATH_END],
+        stop_at_eos=True,
+        verbose=verbose,
+        temperature=temperature,
+        return_type="str",
+    )
+    
+    if batch_size is not None:
+        # tensor, pad, and batch the tokens
+        contexts_tensored: list[Int[torch.Tensor, "batch pos"]] = pad_and_batch_tensors(
+            contexts_tokens=contexts_tokens,
+            batch_size=batch_size,
+            padding_idx=maze_tokenizer.padding_token_index,
+            padding_dir="left", # TODO: read this from model, but it breaks for the RandomBaseline
         )
-        assert isinstance(
-            prediction, str
-        ), f"prediction must be a string, got '{type(prediction)=}'\n{prediction = }"
-        # convert to strings
-        prediction_batch.append(prediction.split(" "))
+
+        for batch in contexts_tensored:
+            if smart_max_new_tokens:
+                max_new_tokens = model.cfg.n_ctx - batch.shape[1] - 1
+            
+            predictions: list[str] = model.generate(
+                batch,
+                max_new_tokens=max_new_tokens,
+                **generate_kwargs,
+            )
+
+            prediction_batch.append(predictions.split(" "))
+
+    else:
+        # pass string prompts one at a time
+        for i, context in enumerate(contexts_strings):
+            if smart_max_new_tokens:
+                max_new_tokens = model.cfg.n_ctx - len(contexts_lists[i]) - 1
+
+            prediction: str = model.generate(
+                context,
+                max_new_tokens=max_new_tokens,
+                **generate_kwargs,
+            )
+
+            prediction_batch.append(prediction.split(" "))
 
     # turn the predicted tokens into paths
     paths: list[list[str|tuple[int, int]]] = []
@@ -216,7 +256,7 @@ def evaluate_model(
 
     if dataset_tokens is None:
         dataset_tokens = dataset.as_tokens(
-            model.zanj_model_config.maze_tokenizer, join_tokens_individual_maze=False
+            model.config.maze_tokenizer, join_tokens_individual_maze=False
         )
     else:
         assert len(dataset) == len(
