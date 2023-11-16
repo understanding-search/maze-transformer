@@ -153,14 +153,14 @@ def predict_maze_paths(
         for x in contexts_lists
     ]
     
-    prediction_batch: list[list[str]] = list()
+    predictions_out: list[list[str]] = list()
 
     generate_kwargs: dict = dict(
         eos_token_id=model.tokenizer._tokenizer_map[SPECIAL_TOKENS.PATH_END],
         stop_at_eos=True,
         verbose=verbose,
         temperature=temperature,
-        return_type="str",
+        # return_type="str",
     )
     
     if batch_size is not None:
@@ -172,17 +172,24 @@ def predict_maze_paths(
             padding_dir="left", # TODO: read this from model, but it breaks for the RandomBaseline
         )
 
+        # print(f"{len(contexts_tensored) = }")
+        # print(f"{[x.shape for x in contexts_tensored]}")
+        # print(f"{contexts_tensored = }")
+
         for batch in contexts_tensored:
             if smart_max_new_tokens:
                 max_new_tokens = model.cfg.n_ctx - batch.shape[1] - 1
             
-            predictions: list[str] = model.generate(
+            predictions: torch.Tensor = model.generate(
                 batch,
                 max_new_tokens=max_new_tokens,
                 **generate_kwargs,
             )
 
-            prediction_batch.append(predictions.split(" "))
+            predictions_out.extend([
+                maze_tokenizer.decode(x) 
+                for x in predictions
+            ])
 
     else:
         # pass string prompts one at a time
@@ -196,12 +203,22 @@ def predict_maze_paths(
                 **generate_kwargs,
             )
 
-            prediction_batch.append(prediction.split(" "))
+            predictions_out.append(prediction.split(" "))
+
+    print(predictions_out)
 
     # turn the predicted tokens into paths
     paths: list[list[str|tuple[int, int]]] = []
-    for pred_tokens in prediction_batch:
-        path_tokens: list[str] = get_path_tokens(pred_tokens)
+    for pred_tokens in predictions_out:
+        # get the sequence from the path_start to the first path_end 
+        # (since the latter is also our EOS token)
+        path_start_idx: int = pred_tokens.index(SPECIAL_TOKENS.PATH_START)
+        path_end_idx: int
+        try:
+            path_end_idx = pred_tokens.index(SPECIAL_TOKENS.PATH_END, path_start_idx) + 1
+        except ValueError:
+            path_end_idx = len(pred_tokens)
+        path_tokens: list[str] = pred_tokens[path_start_idx:path_end_idx]
         path_coords: list[str | CoordTup] = strings_to_coords(
             path_tokens,
             when_noncoord=when_noncoord,
