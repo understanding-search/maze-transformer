@@ -246,8 +246,11 @@ def mazeplot_attention(
     cmap: str = "RdBu",
     min_for_positive: float = 0.0,
     show_other_tokens: bool = True,
+    plain_figure: bool = False,
     fig_ax: tuple[plt.Figure, plt.Axes] | None = None,
     colormap_center: None | float | typing.Literal["median", "mean"] = None,
+    colormap_max: None | float = None,
+    hide_colorbar: bool = False,
 ) -> tuple[MazePlot, plt.Figure, plt.Axes]:
     # storing attention
     node_values: Float[np.ndarray, "grid_n grid_n"] = np.zeros(maze.grid_shape)
@@ -289,45 +292,72 @@ def mazeplot_attention(
         if final_prompt_coord is not None
         else None,
         colormap_center=colormap_center_val,
+        colormap_max=colormap_max,
+        hide_colorbar=hide_colorbar,
     )
 
     # set up combined figure
     if fig_ax is None:
-        fig, (ax_maze, ax_other) = plt.subplots(
-            2,
+        fig_ax = plt.subplots(
+            # adding a second row for non-pos tokens
+            1 + int(show_other_tokens),
             1,
             figsize=(7, 7),
-            height_ratios=[7, 1],
+            **(
+                dict(height_ratios=[7, 1])
+                if show_other_tokens
+                else dict()
+            ),
         )
     else:
-        fig, (ax_maze, ax_other) = fig_ax
-    # set height ratio
+        if show_other_tokens:
+            fig, (ax_maze, ax_other) = fig_ax
+        else:
+            fig, ax_maze = fig_ax
+
+    print(ax_maze)
+
+    # add min and max in title
+    mp_title: str|None = None if plain_figure else f"{attention.min() = }\n{attention.max() = }"
     mazeplot.plot(
-        title=f"{attention.min() = }\n{attention.max() = }",
+        title=mp_title,
         fig_ax=(fig, ax_maze),
     )
 
+    if plain_figure:
+        # remove axis ticks
+        ax_maze.set_xticks([])
+        ax_maze.set_yticks([])
+        ax_maze.set_xlabel(None)
+        ax_maze.set_ylabel(None)
+        ax_maze.set_xticklabels([])
+        ax_maze.set_yticklabels([])
+
     # non-pos tokens attention
-    total_logits_nonpos_processed: tuple[list[str], list[float]] = tuple(
-        zip(*sorted(total_logits_nonpos.items(), key=lambda x: x[0]))
-    )
-
-    if len(total_logits_nonpos_processed) == 2:
-        plot_colored_text(
-            total_logits_nonpos_processed[0],
-            total_logits_nonpos_processed[1],
-            cmap=cmap,
-            ax=ax_other,
-            fontsize=5,
-            width_scale=0.01,
-            char_min=5,
+    if show_other_tokens:
+        total_logits_nonpos_processed: tuple[list[str], list[float]] = tuple(
+            zip(*sorted(total_logits_nonpos.items(), key=lambda x: x[0]))
         )
+
+        if len(total_logits_nonpos_processed) == 2:
+            plot_colored_text(
+                total_logits_nonpos_processed[0],
+                total_logits_nonpos_processed[1],
+                cmap=cmap,
+                ax=ax_other,
+                fontsize=5,
+                width_scale=0.01,
+                char_min=5,
+            )
+        else:
+            print(f"No non-pos tokens found!\n{total_logits_nonpos_processed = }")
+
+        ax_other.set_title("Non-Positional Tokens Attention")
+
+    if show_other_tokens:
+        return mazeplot, fig, (ax_maze, ax_other)
     else:
-        print(f"No non-pos tokens found!\n{total_logits_nonpos_processed = }")
-
-    ax_other.set_title("Non-Positional Tokens Attention")
-
-    return mazeplot, fig, (ax_maze, ax_other)
+        return mazeplot, fig, ax_maze
 
 
 def plot_attn_dist_correlation(
@@ -444,9 +474,12 @@ def plot_attention_final_token(
     plot_scores: bool = True,
     plot_attn_maze: bool = True,
     maze_colormap_center: None | float | typing.Literal["median", "mean"] = None,
+    max_colormap_max: float = 0.5,
+    mazeplot_simplified: bool = True,
     mazeplot_attn_cmap: str = "RdBu",
     show_all: bool = True,
     print_fmt: str = "terminal",
+    plotshow_func: typing.Callable[[str], None]|None = None,
 ) -> list[dict]:
     # str, # head info
     # str|None, # colored tokens text
@@ -494,7 +527,10 @@ def plot_attention_final_token(
                     respect_topology=respect_topology,
                 )
                 ax.set_title(k)
-                plt.show()
+                if plotshow_func is not None:
+                    plotshow_func(f"attn_dist_corr-{'topology' if respect_topology else 'lattice'}-{k}")
+                else:
+                    plt.show()
 
             head_output["attn_dist_corr"] = (distcorr_dist, distcorr_attn)
 
@@ -506,10 +542,10 @@ def plot_attention_final_token(
         # set up attention across maze figure
         if plot_attn_maze:
             mazes_fig, mazes_ax = plt.subplots(
-                2,
+                1 if mazeplot_simplified else 2,
                 n_mazes,
                 figsize=(7 * n_mazes, 7),
-                height_ratios=[7, 1],
+                height_ratios=[7, 1] if not mazeplot_simplified else None,
             )
 
         # for each maze
@@ -551,12 +587,29 @@ def plot_attention_final_token(
                     tokens_context=prompts[i][-n_tokens_prompt:],
                     target=targets[i],
                     attention=v_final[-n_tokens_prompt:],
-                    fig_ax=(mazes_fig, mazes_ax[:, i]),
+                    fig_ax=(
+                        mazes_fig, 
+                        mazes_ax[i] if mazeplot_simplified else mazes_ax[:, i],
+                    ),
                     colormap_center=maze_colormap_center,
                     cmap=mazeplot_attn_cmap,
+                    plain_figure=mazeplot_simplified,
+                    show_other_tokens=not mazeplot_simplified,
+                    colormap_max=max_colormap_max,
+                    hide_colorbar=mazeplot_simplified,
                 )
 
                 head_output["attn_maze"] = (mazes_fig, mazes_ax)
+
+        # put a shared colorbar on mazes_fig
+        if plot_attn_maze:
+            mazes_fig.colorbar(
+                ax.get_images()[0],
+                ax=mazes_ax,
+                location="right",
+                shrink=0.7,
+                pad=0.01,
+            )
 
         if show_all:
             plt.show()
