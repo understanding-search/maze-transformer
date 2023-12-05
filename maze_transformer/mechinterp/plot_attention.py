@@ -244,7 +244,7 @@ def mazeplot_attention(
     attention: Float[np.ndarray, "n_tokens"],
     mazeplot: MazePlot | None = None,
     cmap: str = "RdBu",
-    min_for_positive: float = 0.0,
+    # min_for_positive: float = 0.0,
     show_other_tokens: bool = True,
     plain_figure: bool = False,
     fig_ax: tuple[plt.Figure, plt.Axes] | None = None,
@@ -309,13 +309,11 @@ def mazeplot_attention(
                 else dict()
             ),
         )
-    else:
-        if show_other_tokens:
-            fig, (ax_maze, ax_other) = fig_ax
-        else:
-            fig, ax_maze = fig_ax
 
-    print(ax_maze)
+    if show_other_tokens:
+        fig, (ax_maze, ax_other) = fig_ax
+    else:
+        fig, ax_maze = fig_ax
 
     # add min and max in title
     mp_title: str|None = None if plain_figure else f"{attention.min() = }\n{attention.max() = }"
@@ -617,3 +615,83 @@ def plot_attention_final_token(
             output.append(head_output)
 
     return output
+
+def plot_attention_anim(
+	cache: "ActivationCache",
+	maze_id: int,
+	mazes: list[SolvedMaze],
+	mazes_tokens: list[list[str]],
+	head_id: tuple[int, int],
+	end_offset: int = -2,
+    fps: int = 2,
+):
+	"""plot an animation of a head's attention over the maze
+	
+	# Parameters:
+	 - `cache : ActivationCache`
+	    cache of activations from the model
+	 - `maze : SolvedMaze`   
+	    maze to plot
+	 - `maze_tokens : list[str]`   
+	    tokens fed to the model
+	 - `head_id : tuple[int, int]`   
+	    (head_layer, head_index) of the head we want to plot
+	 - `end_offset : int`   
+	    offset from the end of the stream, -2 for not including `<PATH_END>` token
+	   (defaults to `-2`)
+	"""	
+	from celluloid import Camera
+
+	maze: SolvedMaze = mazes[maze_id]
+	maze_tokens: list[str] = mazes_tokens[maze_id]
+
+	head_layer, head_index = head_id
+
+	head_cache: Float[np.ndarray, "n_mazes seq_len seq_len"] = cache[f'blocks.{head_layer}.attn.hook_attn_scores'][:, head_index, :, :].cpu().numpy()
+
+	maze_tokens: list[str] = maze_tokens
+
+	path_idx_start: int = maze_tokens.index(SPECIAL_TOKENS.PATH_START)
+	path_idx = path_idx_start
+
+	fig, ax = plt.subplots(figsize=(5, 5))
+	mazeplot = None
+	camera = Camera(fig)
+
+	while path_idx < len(maze_tokens) + end_offset:
+		path_idx += 1
+
+		token_attn: Float[np.ndarray, "subseq_len"] = head_cache[
+			maze_id, 
+			-(len(maze_tokens) - path_idx + 1),
+			-len(maze_tokens):,
+		]
+		
+		token_attn = torch.softmax(
+			torch.from_numpy(token_attn),
+			dim=-1,
+		).cpu().numpy()
+
+		target_token: str = maze_tokens[path_idx]
+
+		mazeplot, _, _ = mazeplot_attention(
+			maze=maze,
+			tokens_context=maze_tokens[:path_idx],
+			target=target_token,
+			attention=token_attn,
+			# colormap_center=0.0,
+			cmap="Blues",
+			plain_figure=True,
+			show_other_tokens=False,
+			colormap_max=0.5,
+			fig_ax=(fig, ax),
+			# hide_colorbar=path_idx > path_idx_start + 1,
+			hide_colorbar=False,
+			mazeplot=mazeplot,
+		)
+		camera.snap()
+
+	animation = camera.animate()
+	fname_base: str = f"figures/attn_m{maze_id}_H{head_index}L{head_layer}"
+	animation.save(f"{fname_base}.gif", fps=fps)
+	animation.save(f"{fname_base}.mp4", fps=fps)
