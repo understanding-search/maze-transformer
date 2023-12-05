@@ -2,13 +2,13 @@
 import typing
 from collections import defaultdict
 
-# Numerical Computing
-import numpy as np
-import torch
-
 # plotting
 import matplotlib.pyplot as plt
+
+# Numerical Computing
+import numpy as np
 import seaborn as sns
+import torch
 
 # Transformers
 from circuitsvis.attention import attention_heads
@@ -303,11 +303,7 @@ def mazeplot_attention(
             1 + int(show_other_tokens),
             1,
             figsize=(7, 7),
-            **(
-                dict(height_ratios=[7, 1])
-                if show_other_tokens
-                else dict()
-            ),
+            **(dict(height_ratios=[7, 1]) if show_other_tokens else dict()),
         )
 
     if show_other_tokens:
@@ -316,7 +312,9 @@ def mazeplot_attention(
         fig, ax_maze = fig_ax
 
     # add min and max in title
-    mp_title: str|None = None if plain_figure else f"{attention.min() = }\n{attention.max() = }"
+    mp_title: str | None = (
+        None if plain_figure else f"{attention.min() = }\n{attention.max() = }"
+    )
     mazeplot.plot(
         title=mp_title,
         fig_ax=(fig, ax_maze),
@@ -360,11 +358,11 @@ def mazeplot_attention(
 
 def plot_attn_dist_correlation(
     tokens_context: list[list[str]],
-    tokens_dist_to: list[str], # either current or target token for each maze
+    tokens_dist_to: list[str],  # either current or target token for each maze
     tokenizer: MazeTokenizer,
     attention: Float[np.ndarray, "n_mazes n_tokens"],
-    ax: plt.Axes|None = None,
-    respect_topology: bool = False, # manhattan distance if False
+    ax: plt.Axes | None = None,
+    respect_topology: bool = False,  # manhattan distance if False
     xlim: int = 10,
 ) -> plt.Axes:
     # print(attention.shape)
@@ -375,46 +373,49 @@ def plot_attn_dist_correlation(
         for tokens in tokens_context
     ]
     coords_dist_to: list[tuple[int, int]] = tokenizer.strings_to_coords(
-        tokens_dist_to, 
+        tokens_dist_to,
         when_noncoord="include",
     )
 
     attention_lst: list[Float[np.ndarray, "n_tokens"]] = [
-        a[-len(c):]
-        for i, (c, a) in enumerate(zip(coords_context, attention))
+        a[-len(c) :] for i, (c, a) in enumerate(zip(coords_context, attention))
     ]
     # compute the distances
     distances: list[Float[np.ndarray, "n_tokens"]] = list()
     if respect_topology:
         # convert context to maze, compute shortest path
         mazes: list[SolvedMaze] = [
-            SolvedMaze.from_tokens(tokens, maze_tokenizer=tokenizer) 
+            SolvedMaze.from_tokens(tokens, maze_tokenizer=tokenizer)
             for tokens in tokens_context
         ]
         distances = [
-            np.array([
-                (
-                    maze.find_shortest_path(coords_dist_to[idx], c).shape[0] - 1
-                    if not isinstance(c, str)
-                    else np.inf
-                )
-                for c in coords_context[idx]
-            ])
+            np.array(
+                [
+                    (
+                        maze.find_shortest_path(coords_dist_to[idx], c).shape[0] - 1
+                        if not isinstance(c, str)
+                        else np.inf
+                    )
+                    for c in coords_context[idx]
+                ]
+            )
             for idx, maze in enumerate(mazes)
         ]
     else:
         distances = [
-            np.array([
-                (
-                    np.sum(np.abs(np.array(coords_dist_to[idx]) - np.array(c)))
-                    if not isinstance(c, str)
-                    else np.inf
-                )
-                for c in coords_context[idx]
-            ])
+            np.array(
+                [
+                    (
+                        np.sum(np.abs(np.array(coords_dist_to[idx]) - np.array(c)))
+                        if not isinstance(c, str)
+                        else np.inf
+                    )
+                    for c in coords_context[idx]
+                ]
+            )
             for idx in range(len(coords_context))
         ]
-    
+
     # plot
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 3))
@@ -428,16 +429,16 @@ def plot_attn_dist_correlation(
 
     # print(f"{dists_plot.shape = }, {attn_plot.shape = }")
     # print(f"{dists_plot.dtype = }, {attn_plot.dtype = }")
-    
+
     sns.violinplot(
         x=dists_plot,
         y=attn_plot,
         ax=ax,
         color=sns.color_palette()[0],
         # bw_adjust=10.0,
-        # bw_method="silverman", 
+        # bw_method="silverman",
         bw=2.0,
-        scale="count", 
+        scale="count",
         cut=0,
         # jitter=True,
         # alpha=0.5,
@@ -477,7 +478,7 @@ def plot_attention_final_token(
     mazeplot_attn_cmap: str = "RdBu",
     show_all: bool = True,
     print_fmt: str = "terminal",
-    plotshow_func: typing.Callable[[str], None]|None = None,
+    plotshow_func: typing.Callable[[str], None] | None = None,
 ) -> list[dict]:
     # str, # head info
     # str|None, # colored tokens text
@@ -503,11 +504,11 @@ def plot_attention_final_token(
         # process attention, getting the last token attention and maybe softmaxing
         if softmax_attention:
             attn = torch.softmax(
-                torch.tensor(attn_presoftmax[:,-1]),
+                torch.tensor(attn_presoftmax[:, -1]),
                 dim=-1,
             ).numpy()
         else:
-            attn = attn_presoftmax[:,-1]
+            attn = attn_presoftmax[:, -1]
 
         # set up attn dist corr figure
         if plot_attn_dist_corr:
@@ -526,7 +527,9 @@ def plot_attention_final_token(
                 )
                 ax.set_title(k)
                 if plotshow_func is not None:
-                    plotshow_func(f"attn_dist_corr-{'topology' if respect_topology else 'lattice'}-{k}")
+                    plotshow_func(
+                        f"attn_dist_corr-{'topology' if respect_topology else 'lattice'}-{k}"
+                    )
                 else:
                     plt.show()
 
@@ -586,7 +589,7 @@ def plot_attention_final_token(
                     target=targets[i],
                     attention=v_final[-n_tokens_prompt:],
                     fig_ax=(
-                        mazes_fig, 
+                        mazes_fig,
                         mazes_ax[i] if mazeplot_simplified else mazes_ax[:, i],
                     ),
                     colormap_center=maze_colormap_center,
@@ -616,82 +619,91 @@ def plot_attention_final_token(
 
     return output
 
+
 def plot_attention_anim(
-	cache: "ActivationCache",
-	maze_id: int,
-	mazes: list[SolvedMaze],
-	mazes_tokens: list[list[str]],
-	head_id: tuple[int, int],
-	end_offset: int = -2,
+    cache: "ActivationCache",
+    maze_id: int,
+    mazes: list[SolvedMaze],
+    mazes_tokens: list[list[str]],
+    head_id: tuple[int, int],
+    end_offset: int = -2,
     fps: int = 2,
 ):
-	"""plot an animation of a head's attention over the maze
-	
-	# Parameters:
-	 - `cache : ActivationCache`
-	    cache of activations from the model
-	 - `maze : SolvedMaze`   
-	    maze to plot
-	 - `maze_tokens : list[str]`   
-	    tokens fed to the model
-	 - `head_id : tuple[int, int]`   
-	    (head_layer, head_index) of the head we want to plot
-	 - `end_offset : int`   
-	    offset from the end of the stream, -2 for not including `<PATH_END>` token
-	   (defaults to `-2`)
-	"""	
-	from celluloid import Camera
+    """plot an animation of a head's attention over the maze
 
-	maze: SolvedMaze = mazes[maze_id]
-	maze_tokens: list[str] = mazes_tokens[maze_id]
+    # Parameters:
+     - `cache : ActivationCache`
+        cache of activations from the model
+     - `maze : SolvedMaze`
+        maze to plot
+     - `maze_tokens : list[str]`
+        tokens fed to the model
+     - `head_id : tuple[int, int]`
+        (head_layer, head_index) of the head we want to plot
+     - `end_offset : int`
+        offset from the end of the stream, -2 for not including `<PATH_END>` token
+       (defaults to `-2`)
+    """
+    from celluloid import Camera
 
-	head_layer, head_index = head_id
+    maze: SolvedMaze = mazes[maze_id]
+    maze_tokens: list[str] = mazes_tokens[maze_id]
 
-	head_cache: Float[np.ndarray, "n_mazes seq_len seq_len"] = cache[f'blocks.{head_layer}.attn.hook_attn_scores'][:, head_index, :, :].cpu().numpy()
+    head_layer, head_index = head_id
 
-	maze_tokens: list[str] = maze_tokens
+    head_cache: Float[np.ndarray, "n_mazes seq_len seq_len"] = (
+        cache[f"blocks.{head_layer}.attn.hook_attn_scores"][:, head_index, :, :]
+        .cpu()
+        .numpy()
+    )
 
-	path_idx_start: int = maze_tokens.index(SPECIAL_TOKENS.PATH_START)
-	path_idx = path_idx_start
+    maze_tokens: list[str] = maze_tokens
 
-	fig, ax = plt.subplots(figsize=(5, 5))
-	mazeplot = None
-	camera = Camera(fig)
+    path_idx_start: int = maze_tokens.index(SPECIAL_TOKENS.PATH_START)
+    path_idx = path_idx_start
 
-	while path_idx < len(maze_tokens) + end_offset:
-		path_idx += 1
+    fig, ax = plt.subplots(figsize=(5, 5))
+    mazeplot = None
+    camera = Camera(fig)
 
-		token_attn: Float[np.ndarray, "subseq_len"] = head_cache[
-			maze_id, 
-			-(len(maze_tokens) - path_idx + 1),
-			-len(maze_tokens):,
-		]
-		
-		token_attn = torch.softmax(
-			torch.from_numpy(token_attn),
-			dim=-1,
-		).cpu().numpy()
+    while path_idx < len(maze_tokens) + end_offset:
+        path_idx += 1
 
-		target_token: str = maze_tokens[path_idx]
+        token_attn: Float[np.ndarray, "subseq_len"] = head_cache[
+            maze_id,
+            -(len(maze_tokens) - path_idx + 1),
+            -len(maze_tokens) :,
+        ]
 
-		mazeplot, _, _ = mazeplot_attention(
-			maze=maze,
-			tokens_context=maze_tokens[:path_idx],
-			target=target_token,
-			attention=token_attn,
-			# colormap_center=0.0,
-			cmap="Blues",
-			plain_figure=True,
-			show_other_tokens=False,
-			colormap_max=0.5,
-			fig_ax=(fig, ax),
-			# hide_colorbar=path_idx > path_idx_start + 1,
-			hide_colorbar=False,
-			mazeplot=mazeplot,
-		)
-		camera.snap()
+        token_attn = (
+            torch.softmax(
+                torch.from_numpy(token_attn),
+                dim=-1,
+            )
+            .cpu()
+            .numpy()
+        )
 
-	animation = camera.animate()
-	fname_base: str = f"figures/attn_m{maze_id}_H{head_index}L{head_layer}"
-	animation.save(f"{fname_base}.gif", fps=fps)
-	animation.save(f"{fname_base}.mp4", fps=fps)
+        target_token: str = maze_tokens[path_idx]
+
+        mazeplot, _, _ = mazeplot_attention(
+            maze=maze,
+            tokens_context=maze_tokens[:path_idx],
+            target=target_token,
+            attention=token_attn,
+            # colormap_center=0.0,
+            cmap="Blues",
+            plain_figure=True,
+            show_other_tokens=False,
+            colormap_max=0.5,
+            fig_ax=(fig, ax),
+            # hide_colorbar=path_idx > path_idx_start + 1,
+            hide_colorbar=False,
+            mazeplot=mazeplot,
+        )
+        camera.snap()
+
+    animation = camera.animate()
+    fname_base: str = f"figures/attn_m{maze_id}_H{head_index}L{head_layer}"
+    animation.save(f"{fname_base}.gif", fps=fps)
+    animation.save(f"{fname_base}.mp4", fps=fps)

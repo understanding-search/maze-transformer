@@ -11,7 +11,7 @@ def load_model_with_test_data(
     dataset_cfg_source: MazeDatasetConfig | None = None,
     n_examples: int | None = 128,
     verbose: bool = True,
-) -> tuple[ZanjHookedTransformer, MazeDataset|None]:
+) -> tuple[ZanjHookedTransformer, MazeDataset | None]:
     model_path = Path(model_path)
 
     # load model

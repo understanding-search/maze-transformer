@@ -6,14 +6,6 @@ import numpy as np
 import torch
 from jaxtyping import Float, Int
 
-# muutils
-from muutils.mlutils import chunks
-from muutils.statcounter import StatCounter
-
-# TransformerLens
-from transformer_lens import HookedTransformer
-from transformer_lens import utils as tl_utils
-
 # maze dataset
 from maze_dataset import (
     SPECIAL_TOKENS,
@@ -22,6 +14,7 @@ from maze_dataset import (
     MazeDatasetConfig,
     SolvedMaze,
 )
+from maze_dataset.tokenization import MazeTokenizer
 from maze_dataset.tokenization.token_utils import (
     WhenMissing,
     get_context_tokens,
@@ -29,8 +22,14 @@ from maze_dataset.tokenization.token_utils import (
     remove_padding_from_token_str,
     strings_to_coords,
 )
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
 
+# muutils
+from muutils.mlutils import chunks
+from muutils.statcounter import StatCounter
+
+# TransformerLens
+from transformer_lens import HookedTransformer
+from transformer_lens import utils as tl_utils
 
 from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.tokenizer import HuggingMazeTokenizer
@@ -119,13 +118,13 @@ def predict_maze_paths(
     data_cfg: MazeDatasetConfig,
     model: HookedTransformer,
     # Note: The start coord is included in the model input, so max_new_tokens is how many tokens can be predicted AFTER the start. This function returns the full paths, including start coord, so in general the max returned path length is max_new_tokens + 1
-    max_new_tokens: int|None = 8,
+    max_new_tokens: int | None = 8,
     smart_max_new_tokens: bool = False,
     verbose: bool = False,
     when_noncoord: WhenMissing = "skip",
     temperature: float = 0.0,
-    batch_size: int|None = None,
-) -> list[list[str|tuple[int, int]]]:
+    batch_size: int | None = None,
+) -> list[list[str | tuple[int, int]]]:
     """given the model and a batch of context tokens, make predictions for the path"""
 
     # check types
@@ -146,13 +145,14 @@ def predict_maze_paths(
 
     maze_tokenizer: MazeTokenizer = model.config.maze_tokenizer
 
-    contexts_lists: list[list[str]] = [get_context_tokens(tokens) for tokens in tokens_batch]
+    contexts_lists: list[list[str]] = [
+        get_context_tokens(tokens) for tokens in tokens_batch
+    ]
     contexts_strings: list[str] = [" ".join(tokens) for tokens in contexts_lists]
     contexts_tokens: list[list[int]] = [
-        maze_tokenizer.encode(x)
-        for x in contexts_lists
+        maze_tokenizer.encode(x) for x in contexts_lists
     ]
-    
+
     predictions_out: list[list[str]] = list()
 
     generate_kwargs: dict = dict(
@@ -165,14 +165,14 @@ def predict_maze_paths(
         generate_kwargs["temperature"] = temperature
     else:
         generate_kwargs["top_k"] = 1
-    
+
     if batch_size is not None:
         # tensor, pad, and batch the tokens
         contexts_tensored: list[Int[torch.Tensor, "batch pos"]] = pad_and_batch_tensors(
             contexts_tokens=contexts_tokens,
             batch_size=batch_size,
             padding_idx=maze_tokenizer.padding_token_index,
-            padding_dir="left", # TODO: read this from model, but it breaks for the RandomBaseline
+            padding_dir="left",  # TODO: read this from model, but it breaks for the RandomBaseline
         )
 
         # print(f"{len(contexts_tensored) = }")
@@ -182,17 +182,14 @@ def predict_maze_paths(
         for batch in contexts_tensored:
             if smart_max_new_tokens:
                 max_new_tokens = model.cfg.n_ctx - batch.shape[1] - 1
-            
+
             predictions: torch.Tensor = model.generate(
                 batch,
                 max_new_tokens=max_new_tokens,
                 **generate_kwargs,
             )
 
-            predictions_out.extend([
-                maze_tokenizer.decode(x) 
-                for x in predictions
-            ])
+            predictions_out.extend([maze_tokenizer.decode(x) for x in predictions])
 
     else:
         # pass string prompts one at a time
@@ -208,16 +205,17 @@ def predict_maze_paths(
 
             predictions_out.append(prediction.split(" "))
 
-
     # turn the predicted tokens into paths
-    paths: list[list[str|tuple[int, int]]] = []
+    paths: list[list[str | tuple[int, int]]] = []
     for pred_tokens in predictions_out:
-        # get the sequence from the path_start to the first path_end 
+        # get the sequence from the path_start to the first path_end
         # (since the latter is also our EOS token)
         path_start_idx: int = pred_tokens.index(SPECIAL_TOKENS.PATH_START)
         path_end_idx: int
         try:
-            path_end_idx = pred_tokens.index(SPECIAL_TOKENS.PATH_END, path_start_idx) + 1
+            path_end_idx = (
+                pred_tokens.index(SPECIAL_TOKENS.PATH_END, path_start_idx) + 1
+            )
         except ValueError:
             path_end_idx = len(pred_tokens)
         path_tokens: list[str] = pred_tokens[path_start_idx:path_end_idx]

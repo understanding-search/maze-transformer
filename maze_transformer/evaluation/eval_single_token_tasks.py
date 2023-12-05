@@ -2,6 +2,7 @@
 
 # Numerical Computing
 from typing import NamedTuple
+
 import matplotlib.pyplot as plt
 import torch
 
@@ -14,6 +15,9 @@ from maze_dataset import MazeDataset
 from maze_dataset.tokenization import MazeTokenizer
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
 
+# TransformerLens imports
+from transformer_lens import ActivationCache
+
 # mechinterp stuff
 from maze_transformer.mechinterp.logit_attrib_task import (
     LOGIT_ATTRIB_TASKS,
@@ -23,10 +27,6 @@ from maze_transformer.mechinterp.logit_attrib_task import (
 # model stuff
 from maze_transformer.training.config import ZanjHookedTransformer
 
-# TransformerLens imports
-from transformer_lens import ActivationCache
-
-
 TaskPrompt = NamedTuple(
     "TaskPrompt",
     [
@@ -35,10 +35,11 @@ TaskPrompt = NamedTuple(
     ],
 )
 
+
 @serializable_dataclass(kw_only=True)
 class TaskEvalResult(SerializableDataclass):
     logits: Float[torch.Tensor, "samples seq_len d_vocab"]
-    cache: ActivationCache|None
+    cache: ActivationCache | None
     last_tok_logits: Float[torch.Tensor, "samples d_vocab"]
     predicted_tokens: list[str]
     predicted_correct: Bool[torch.Tensor, "samples"]
@@ -56,25 +57,23 @@ def get_task_prompts_targets(
 
     return {task_name: task(dataset_tokens) for task_name, task in tasks.items()}
 
+
 def eval_model_task(
     model: ZanjHookedTransformer,
     task: TaskPrompt,
     do_cache: bool = False,
 ) -> TaskEvalResult:
-    
     maze_tokenizer: MazeTokenizer = model.config.maze_tokenizer
 
     prompts_joined: list[str] = [" ".join(prompt) for prompt in task.prompts]
-    
+
     if do_cache:
         logits, cache = model.run_with_cache(prompts_joined)
     else:
         logits = model(prompts_joined)
         cache = None
-    
-    predicted_tokens=maze_tokenizer.decode(
-        logits[:, -1, :].argmax(dim=-1).tolist()
-    )
+
+    predicted_tokens = maze_tokenizer.decode(logits[:, -1, :].argmax(dim=-1).tolist())
 
     return TaskEvalResult(
         logits=logits,
@@ -82,19 +81,16 @@ def eval_model_task(
         last_tok_logits=logits[:, -1, :].cpu(),
         predicted_tokens=predicted_tokens,
         predicted_correct=torch.tensor(
-            [
-                pred == target
-                for pred, target in zip(predicted_tokens, task.targets)
-            ]
+            [pred == target for pred, target in zip(predicted_tokens, task.targets)]
         ),
     )
+
 
 def eval_model_across_tasks(
     model: ZanjHookedTransformer,
     task_prompts: dict[str, TaskPrompt],
     do_cache: bool = False,
 ) -> dict[str, TaskEvalResult]:
-    
     return {
         task_name: eval_model_task(model, task, do_cache=do_cache)
         for task_name, task in task_prompts.items()

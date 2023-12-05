@@ -1,8 +1,8 @@
 import datetime
 import json
+import typing
 from pathlib import Path
 from typing import Literal
-import typing
 
 import einops
 import matplotlib.pyplot as plt
@@ -126,15 +126,18 @@ def plot_direct_logit_attribution(
     answer_tokens: Int[torch.Tensor, "n_mazes"],
     do_neurons: bool = False,
     show: bool = True,
-    layer_index_normalization: typing.Callable[[float, int], float]|None = lambda contrib, layer_idx: contrib,
+    layer_index_normalization: typing.Callable[[float, int], float]
+    | None = lambda contrib, layer_idx: contrib,
 ) -> tuple[plt.Figure, plt.Axes, dict[str, Float[np.ndarray, "layer head/neuron"]]]:
     """compute, process, and plot direct logit attribution
 
-    Layer index normalization allows us to process the contribution according to the layer index. 
+    Layer index normalization allows us to process the contribution according to the layer index.
     by default, its the identity map for contribs:
-    `layer_index_normalization: typing.Callable[[float, int], float]|None = lambda contrib, layer_idx: contrib`    
+    `layer_index_normalization: typing.Callable[[float, int], float]|None = lambda contrib, layer_idx: contrib`
     """
-    dla_data: dict[str, Float[np.ndarray, "layer head/neuron"]] = compute_direct_logit_attribution(
+    dla_data: dict[
+        str, Float[np.ndarray, "layer head/neuron"]
+    ] = compute_direct_logit_attribution(
         model=model,
         cache=cache,
         answer_tokens=answer_tokens,

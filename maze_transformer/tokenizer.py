@@ -68,7 +68,6 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         # utils.py:1075, in get_tokenizer_with_bos(tokenizer)
         # -> 1075 pretrained_model_name_or_path = init_kwargs.pop("name_or_path")
         self.init_kwargs["name_or_path"] = self.name_or_path
-        
 
         assert isinstance(
             seq_len_max, int

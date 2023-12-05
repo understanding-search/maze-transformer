@@ -35,7 +35,7 @@ def plot_predicted_paths(
     dataset_tokens = dataset.as_tokens(model.config.maze_tokenizer)[:n_mazes]
 
     # predict
-    predictions: list[list[str|tuple[int, int]]] = predict_maze_paths(
+    predictions: list[list[str | tuple[int, int]]] = predict_maze_paths(
         tokens_batch=dataset_tokens,
         data_cfg=dataset.cfg,
         model=model,
@@ -49,13 +49,8 @@ def plot_predicted_paths(
         for x in predictions:
             print(" ".join([str(t) for t in x]))
 
-    predictions_filtered: list[list[tuple[int,int]]] = [
-        [
-            token 
-            for token in path 
-            if not isinstance(token, str)
-        ]
-        for path in predictions
+    predictions_filtered: list[list[tuple[int, int]]] = [
+        [token for token in path if not isinstance(token, str)] for path in predictions
     ]
 
     # fig, axs = plt.subplots(1, n_mazes, figsize=(10, 10 * n_mazes))
@@ -75,7 +70,7 @@ def plot_predicted_paths(
         ax_idx = i // row_length, i % row_length
         ax = axs[ax_idx] if n_rows > 1 else axs[i]
         mp: MazePlot = MazePlot(maze).add_predicted_path(
-            predictions_filtered[i], 
+            predictions_filtered[i],
             path_fmt=predicted_path_fmt,
         )
         mp.plot(fig_ax=(fig, ax))

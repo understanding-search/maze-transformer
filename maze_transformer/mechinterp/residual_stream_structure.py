@@ -218,6 +218,7 @@ def plot_pca_colored(
 
     return fig, ax
 
+
 def abs_dot_product(u, v):
     return np.abs(np.dot(u, v))
 
@@ -383,11 +384,12 @@ def plot_distance_grid(
 
     return fig, axs, cbar_ax
 
+
 def plot_distance_subgrid(
     grid_distances: np.ndarray,
     shape: tuple[int, int],
     show: bool = True,
-    vbounds: tuple[float, float]|None = None,
+    vbounds: tuple[float, float] | None = None,
     ignore_self_distances: bool = True,
     cmap: str = "viridis",
     figsize: tuple[float, float] = (20, 20),
@@ -402,7 +404,9 @@ def plot_distance_subgrid(
     subgrid_shape = (min(shape[0], n), min(shape[1], n))
 
     # Select random positions from the grid maintaining order
-    selected_indices = np.sort(np.random.choice(range(n), size=subgrid_shape[0], replace=False))
+    selected_indices = np.sort(
+        np.random.choice(range(n), size=subgrid_shape[0], replace=False)
+    )
 
     # Create subgrid keeping the order
     subgrid_distances = grid_distances[np.ix_(selected_indices, selected_indices)]
@@ -420,7 +424,9 @@ def plot_distance_subgrid(
         axs = np.array([[axs]])
 
     cbar_ax = None
-    for idx, (i, j) in enumerate(itertools.product(range(subgrid_shape[0]), range(subgrid_shape[1]))):
+    for idx, (i, j) in enumerate(
+        itertools.product(range(subgrid_shape[0]), range(subgrid_shape[1]))
+    ):
         # TODO: broken if n_cols > n_rows???
         ax = axs[i, j]
         cax = ax.matshow(
@@ -437,12 +443,13 @@ def plot_distance_subgrid(
         ax.grid(False)
 
     # Shared colorbar for the subgrid
-    colorbar_ax = fig.colorbar(cax, ax=axs.ravel().tolist(), orientation='vertical')
+    colorbar_ax = fig.colorbar(cax, ax=axs.ravel().tolist(), orientation="vertical")
 
     if show:
         plt.show()
 
     return fig, axs, colorbar_ax
+
 
 def plot_distance_correlation(
     distance_grid: Float[np.ndarray, "n n n n"],

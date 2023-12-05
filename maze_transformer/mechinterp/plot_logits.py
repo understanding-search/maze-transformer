@@ -1,9 +1,9 @@
 # Numerical Computing
 import matplotlib.pyplot as plt
-from maze_dataset import CoordTup
 import numpy as np
 import torch
-from jaxtyping import Float, Int, Bool
+from jaxtyping import Bool, Float, Int
+from maze_dataset import CoordTup
 
 # Our Code
 from maze_dataset.tokenization import MazeTokenizer
@@ -13,19 +13,21 @@ _DEFAULT_SUBPLOTS_KWARGS: dict = dict(
     height_ratios=[3, 1],
 )
 
+
 def plot_logit_histograms(
     last_tok_logits: Float[torch.Tensor, "n_mazes d_vocab"],
     target_idxs: Int[torch.Tensor, "n_mazes"],
-    token_groups: Bool[torch.Tensor, "n_mazes d_vocab"]|None = None,
+    token_groups: Bool[torch.Tensor, "n_mazes d_vocab"] | None = None,
     show_all_other_tokens: bool = True,
     n_bins: int = 50,
-    ax: plt.Axes|None = None,
+    ax: plt.Axes | None = None,
     density: bool = True,
     logy: bool = False,
 ) -> plt.Axes:
-    n_mazes: int; d_vocab: int
+    n_mazes: int
+    d_vocab: int
     n_mazes, d_vocab = last_tok_logits.shape
-    
+
     if ax is None:
         fig, ax = plt.subplots(1, 1)
 
@@ -65,7 +67,7 @@ def plot_logit_histograms(
         bins=bins,
         label="correct tokens",
         alpha=0.5,
-        hatch='/',
+        hatch="/",
     )
     for group_name, group_logits in token_groups_logits.items():
         ax.hist(
@@ -81,6 +83,7 @@ def plot_logit_histograms(
 
     return ax
 
+
 def get_baseline_incorrect_group(
     prompts: list[list[str]],
     tokenizer: MazeTokenizer,
@@ -91,22 +94,21 @@ def get_baseline_incorrect_group(
     """
     n_mazes: int = len(prompts)
     d_vocab: int = tokenizer._vocab_size
-    
-    correct_steps: list[CoordTup|str] = list()
-    incorrect_steps: list[CoordTup|str] = list()
-    
+
+    correct_steps: list[CoordTup | str] = list()
+    incorrect_steps: list[CoordTup | str] = list()
+
     for p in prompts:
         corr_s, incor_s = baseline.get_valid_next_steps(p)
         correct_steps.append(corr_s)
         incorrect_steps.append(incor_s)
 
-    incorrect_mask: Bool[torch.Tensor, "n_mazes d_vocab"] = torch.zeros(n_mazes, d_vocab, dtype=torch.bool)
+    incorrect_mask: Bool[torch.Tensor, "n_mazes d_vocab"] = torch.zeros(
+        n_mazes, d_vocab, dtype=torch.bool
+    )
 
     for i, (corr_s, incor_s) in enumerate(zip(correct_steps, incorrect_steps)):
-        incorrect_mask[
-            i, 
-            tokenizer.encode(tokenizer.coords_to_strings(incor_s))
-        ] = True
+        incorrect_mask[i, tokenizer.encode(tokenizer.coords_to_strings(incor_s))] = True
 
     return incorrect_mask
 
@@ -125,7 +127,8 @@ def plot_logits(
 ) -> tuple[plt.Figure, tuple[plt.Axes, plt.Axes]]:
     # set up figure
     # --------------------------------------------------
-    n_mazes: int; d_vocab: int
+    n_mazes: int
+    d_vocab: int
     n_mazes, d_vocab = last_tok_logits.shape
     if subplots_kwargs is None:
         subplots_kwargs = _DEFAULT_SUBPLOTS_KWARGS
