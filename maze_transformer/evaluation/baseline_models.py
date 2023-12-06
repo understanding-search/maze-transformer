@@ -236,7 +236,7 @@ class RandomBaseline(HookedTransformer):
                     )
                     for i in range(context.shape[0])
                 ]
-        
+
         # convert input to a list of tokens
         tokens: list[str] = self._process_context(context)
 

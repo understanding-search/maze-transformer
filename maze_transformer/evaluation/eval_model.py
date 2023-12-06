@@ -183,7 +183,7 @@ def predict_maze_paths(
             if smart_max_new_tokens:
                 max_new_tokens = model.cfg.n_ctx - batch.shape[1] - 1
 
-            predictions: torch.Tensor|list[str]|list[list[str]] = model.generate(
+            predictions: torch.Tensor | list[str] | list[list[str]] = model.generate(
                 batch,
                 max_new_tokens=max_new_tokens,
                 **generate_kwargs,
@@ -198,7 +198,9 @@ def predict_maze_paths(
                 elif isinstance(predictions[0], list):
                     predictions_out.extend(predictions)
             else:
-                raise TypeError(f"Unexpected type for predictions: {type(predictions)}\n{predictions = }")
+                raise TypeError(
+                    f"Unexpected type for predictions: {type(predictions)}\n{predictions = }"
+                )
 
     else:
         # pass string prompts one at a time
