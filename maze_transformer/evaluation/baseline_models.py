@@ -205,7 +205,7 @@ class RandomBaseline(HookedTransformer):
     ) -> list[str]:
         tokens: list[str]
         if isinstance(context, torch.Tensor):
-            tokens = self.to_str_tokens(context)
+            tokens = self.to_str_tokens(context, prepend_bos=False)
         elif isinstance(context, list):
             if all(isinstance(x, str) for x in context):
                 tokens = context
@@ -226,6 +226,17 @@ class RandomBaseline(HookedTransformer):
         max_new_tokens: int,
         **_,
     ) -> str:
+        # hack for more than one batch
+        if isinstance(context, torch.Tensor):
+            if context.ndim == 2:
+                return [
+                    self.generate(
+                        context[i],
+                        max_new_tokens,
+                    )
+                    for i in range(context.shape[0])
+                ]
+        
         # convert input to a list of tokens
         tokens: list[str] = self._process_context(context)
 
