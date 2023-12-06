@@ -13,7 +13,7 @@ python = ">=3.10,<3.13"
 maze-dataset = "^0.4.5"
 # transformers
 torch = ">=1.13.1"
-transformer-lens = "^1.6.1"
+transformer-lens = "1.6.1"
 transformers = "4.33.3" # PreTrainedTokenizer internals changed in 4.34 and it breaks things :(
 # utils
 muutils = "^0.5.4"
