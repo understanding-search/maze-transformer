@@ -251,6 +251,7 @@ def mazeplot_attention(
     colormap_center: None | float | typing.Literal["median", "mean"] = None,
     colormap_max: None | float = None,
     hide_colorbar: bool = False,
+    cbar_height_factor: float = 0.97,
 ) -> tuple[MazePlot, plt.Figure, plt.Axes]:
     # storing attention
     node_values: Float[np.ndarray, "grid_n grid_n"] = np.zeros(maze.grid_shape)
@@ -318,6 +319,22 @@ def mazeplot_attention(
     mazeplot.plot(
         title=mp_title,
         fig_ax=(fig, ax_maze),
+    )
+
+    # adjust the height of the colorbar
+    # TODO: move this to MazePlot
+    pos = mazeplot.cbar_ax.get_position()
+    new_height: float = pos.height * cbar_height_factor
+    new_y0: float = pos.y0 + (pos.height - new_height) / 2
+    mazeplot.cbar_ax.set_position([pos.x0, new_y0, pos.width, new_height])
+    # add a title to the colorbar, vertically and to the side
+    mazeplot.cbar_ax.text(
+        5.0,
+        0.5,
+        "Attention",
+        rotation=90,
+        verticalalignment="center",
+        transform=mazeplot.cbar_ax.transAxes,
     )
 
     if plain_figure:
@@ -628,6 +645,7 @@ def plot_attention_anim(
     head_id: tuple[int, int],
     end_offset: int = -2,
     fps: int = 2,
+    figsize: tuple[float, float] = (7, 7),
 ):
     """plot an animation of a head's attention over the maze
 
@@ -662,7 +680,7 @@ def plot_attention_anim(
     path_idx_start: int = maze_tokens.index(SPECIAL_TOKENS.PATH_START)
     path_idx = path_idx_start
 
-    fig, ax = plt.subplots(figsize=(5, 5))
+    fig, ax = plt.subplots(figsize=figsize)
     mazeplot = None
     camera = Camera(fig)
 
