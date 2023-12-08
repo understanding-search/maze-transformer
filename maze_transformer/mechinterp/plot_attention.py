@@ -323,19 +323,20 @@ def mazeplot_attention(
 
     # adjust the height of the colorbar
     # TODO: move this to MazePlot
-    pos = mazeplot.cbar_ax.get_position()
-    new_height: float = pos.height * cbar_height_factor
-    new_y0: float = pos.y0 + (pos.height - new_height) / 2
-    mazeplot.cbar_ax.set_position([pos.x0, new_y0, pos.width, new_height])
-    # add a title to the colorbar, vertically and to the side
-    mazeplot.cbar_ax.text(
-        5.0,
-        0.5,
-        "Attention",
-        rotation=90,
-        verticalalignment="center",
-        transform=mazeplot.cbar_ax.transAxes,
-    )
+    if mazeplot.cbar_ax is not None:
+        pos = mazeplot.cbar_ax.get_position()
+        new_height: float = pos.height * cbar_height_factor
+        new_y0: float = pos.y0 + (pos.height - new_height) / 2
+        mazeplot.cbar_ax.set_position([pos.x0, new_y0, pos.width, new_height])
+        # add a title to the colorbar, vertically and to the side
+        mazeplot.cbar_ax.text(
+            5.0,
+            0.5,
+            "Attention",
+            rotation=90,
+            verticalalignment="center",
+            transform=mazeplot.cbar_ax.transAxes,
+        )
 
     if plain_figure:
         # remove axis ticks
