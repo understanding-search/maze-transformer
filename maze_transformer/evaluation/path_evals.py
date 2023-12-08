@@ -2,7 +2,15 @@ import typing
 import warnings
 
 import numpy as np
-from maze_dataset import Coord, CoordArray, CoordTup, LatticeMaze
+from jaxtyping import Bool, Int
+from maze_dataset import (
+    SPECIAL_TOKENS,
+    Coord,
+    CoordArray,
+    CoordTup,
+    LatticeMaze,
+    SolvedMaze,
+)
 from muutils.mlutils import register_method
 
 # pylint: disable=unused-argument
@@ -193,3 +201,50 @@ class PathEvals:
         pred_shift_L = prediction[:-1]
         distance_between_nodes = pred_shift_R - pred_shift_L
         return np.linalg.norm(distance_between_nodes, axis=1).mean()
+
+
+# TODO: split these up into path evals / rollout evals / etc. see https://github.com/understanding-search/maze-transformer/issues/200
+def rollout_evals(
+    predictions: list[str],
+    mazes: list[SolvedMaze],
+) -> dict[str, float]:
+    n_mazes: int = len(predictions)
+    output: dict[str, float] = dict()
+
+    # raw tokens evals
+    final_is_path_end: Bool[np.ndarray, "n_mazes"] = np.array(
+        [np.all(path[-1] == SPECIAL_TOKENS.PATH_END) for path in predictions]
+    )
+    output["correct EOS"] = np.mean(final_is_path_end)
+    num_noncoord_tokens_in_generation: Int[np.ndarray, "n_mazes"] = np.array(
+        [len([t for t in path if isinstance(t, str)]) for path in predictions]
+    )
+    output["mean invalid tokens"] = np.mean(
+        np.abs(num_noncoord_tokens_in_generation - 2)
+    )
+    output["percent with invalid tokens"] = 1 - np.mean(
+        num_noncoord_tokens_in_generation == 2
+    )
+
+    # path evals
+    predictions_np: list[CoordArray] = [
+        np.array([coord for coord in path if not isinstance(coord, str)])
+        for i, path in enumerate(predictions)
+    ]
+
+    exact_correct: Bool[np.ndarray, "n_mazes"] = np.zeros(n_mazes, dtype=bool)
+    valid_path: Bool[np.ndarray, "n_mazes"] = np.zeros(n_mazes, dtype=bool)
+    target_correct: Bool[np.ndarray, "n_mazes"] = np.zeros(n_mazes, dtype=bool)
+
+    for i, (p, m) in enumerate(zip(predictions_np, mazes)):
+        exact_correct[i] = (
+            np.all(p == m.solution) if p.shape == m.solution.shape else False
+        )
+        valid_path[i] = m.is_valid_path(p)
+        target_correct[i] = np.all(p[-1] == m.end_pos)
+
+    output["exactly correct rollouts"] = np.mean(exact_correct)
+    output["valid rollouts"] = np.mean(valid_path)
+    output["rollouts with target reached"] = np.mean(target_correct)
+
+    return output

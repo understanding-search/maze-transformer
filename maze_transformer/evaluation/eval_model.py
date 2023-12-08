@@ -4,7 +4,9 @@ from typing import cast
 
 import numpy as np
 import torch
-from jaxtyping import Float
+from jaxtyping import Float, Int
+
+# maze dataset
 from maze_dataset import (
     SPECIAL_TOKENS,
     CoordTup,
@@ -12,6 +14,7 @@ from maze_dataset import (
     MazeDatasetConfig,
     SolvedMaze,
 )
+from maze_dataset.tokenization import MazeTokenizer
 from maze_dataset.tokenization.token_utils import (
     WhenMissing,
     get_context_tokens,
@@ -19,8 +22,12 @@ from maze_dataset.tokenization.token_utils import (
     remove_padding_from_token_str,
     strings_to_coords,
 )
+
+# muutils
 from muutils.mlutils import chunks
 from muutils.statcounter import StatCounter
+
+# TransformerLens
 from transformer_lens import HookedTransformer
 from transformer_lens import utils as tl_utils
 
@@ -28,6 +35,7 @@ from maze_transformer.evaluation.path_evals import PathEvalFunction, PathEvals
 from maze_transformer.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.config import ConfigHolder
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
+from maze_transformer.utils.padding import pad_and_batch_tensors
 
 # pylint: disable=protected-access
 
@@ -110,11 +118,13 @@ def predict_maze_paths(
     data_cfg: MazeDatasetConfig,
     model: HookedTransformer,
     # Note: The start coord is included in the model input, so max_new_tokens is how many tokens can be predicted AFTER the start. This function returns the full paths, including start coord, so in general the max returned path length is max_new_tokens + 1
-    max_new_tokens: int = 8,
+    max_new_tokens: int | None = 8,
+    smart_max_new_tokens: bool = False,
     verbose: bool = False,
     when_noncoord: WhenMissing = "skip",
     temperature: float = 0.0,
-) -> list[str | list[tuple[int, int]]]:
+    batch_size: int | None = None,
+) -> list[list[str | tuple[int, int]]]:
     """given the model and a batch of context tokens, make predictions for the path"""
 
     # check types
@@ -128,38 +138,103 @@ def predict_maze_paths(
         isinstance(x, str) for tokens in tokens_batch for x in tokens
     ), f"tokens_batch must be a list of lists of strings, got {[type(x) for tokens in tokens_batch for x in tokens] = }"
 
-    # predict some tokens
-    prediction_batch: list[list[str]] = list()
-    for tokens in tokens_batch:
-        # context is string
-        context: str = " ".join(get_context_tokens(tokens))
-        # predict tokens
-        prediction: str = model.generate(
-            context,
-            eos_token_id=model.tokenizer._tokenizer_map[SPECIAL_TOKENS.PATH_END],
-            stop_at_eos=True,
-            max_new_tokens=max_new_tokens,
-            verbose=verbose,
-            temperature=temperature,
-            # use_past_kv_cache=False,
+    if max_new_tokens is None:
+        assert (
+            smart_max_new_tokens
+        ), "if max_new_tokens is None, smart_max_new_tokens must be True"
+
+    maze_tokenizer: MazeTokenizer = model.config.maze_tokenizer
+
+    contexts_lists: list[list[str]] = [
+        get_context_tokens(tokens) for tokens in tokens_batch
+    ]
+    contexts_strings: list[str] = [" ".join(tokens) for tokens in contexts_lists]
+    contexts_tokens: list[list[int]] = [
+        maze_tokenizer.encode(x) for x in contexts_lists
+    ]
+
+    predictions_out: list[list[str]] = list()
+
+    generate_kwargs: dict = dict(
+        eos_token_id=model.tokenizer._tokenizer_map[SPECIAL_TOKENS.PATH_END],
+        stop_at_eos=True,
+        verbose=verbose,
+        # return_type="str",
+    )
+    if temperature != 0.0:
+        generate_kwargs["temperature"] = temperature
+    else:
+        generate_kwargs["top_k"] = 1
+
+    if batch_size is not None:
+        # tensor, pad, and batch the tokens
+        contexts_tensored: list[Int[torch.Tensor, "batch pos"]] = pad_and_batch_tensors(
+            contexts_tokens=contexts_tokens,
+            batch_size=batch_size,
+            padding_idx=maze_tokenizer.padding_token_index,
+            padding_dir="left",  # TODO: read this from model, but it breaks for the RandomBaseline
         )
-        assert isinstance(
-            prediction, str
-        ), f"prediction must be a string, got '{type(prediction)=}'\n{prediction = }"
-        # convert to strings
-        prediction_batch.append(prediction.split(" "))
+
+        # print(f"{len(contexts_tensored) = }")
+        # print(f"{[x.shape for x in contexts_tensored]}")
+        # print(f"{contexts_tensored = }")
+
+        for batch in contexts_tensored:
+            if smart_max_new_tokens:
+                max_new_tokens = model.cfg.n_ctx - batch.shape[1] - 1
+
+            predictions: torch.Tensor | list[str] | list[list[str]] = model.generate(
+                batch,
+                max_new_tokens=max_new_tokens,
+                **generate_kwargs,
+            )
+
+            if isinstance(predictions, torch.Tensor):
+                predictions_out.extend([maze_tokenizer.decode(x) for x in predictions])
+            elif isinstance(predictions, list):
+                # assume same type throughout
+                if isinstance(predictions[0], str):
+                    predictions_out.extend([x.split(" ") for x in predictions])
+                elif isinstance(predictions[0], list):
+                    predictions_out.extend(predictions)
+            else:
+                raise TypeError(
+                    f"Unexpected type for predictions: {type(predictions)}\n{predictions = }"
+                )
+
+    else:
+        # pass string prompts one at a time
+        for i, context in enumerate(contexts_strings):
+            if smart_max_new_tokens:
+                max_new_tokens = model.cfg.n_ctx - len(contexts_lists[i]) - 1
+
+            prediction: str = model.generate(
+                context,
+                max_new_tokens=max_new_tokens,
+                **generate_kwargs,
+            )
+
+            predictions_out.append(prediction.split(" "))
 
     # turn the predicted tokens into paths
-    paths: list[list[tuple[int, int]]] = []
-    for pred_tokens in prediction_batch:
-        path_tokens: list[str] = get_path_tokens(pred_tokens, trim_end=True)
+    paths: list[list[str | tuple[int, int]]] = []
+    for pred_tokens in predictions_out:
+        # get the sequence from the path_start to the first path_end
+        # (since the latter is also our EOS token)
+        path_start_idx: int = pred_tokens.index(SPECIAL_TOKENS.PATH_START)
+        path_end_idx: int
+        try:
+            path_end_idx = (
+                pred_tokens.index(SPECIAL_TOKENS.PATH_END, path_start_idx) + 1
+            )
+        except ValueError:
+            path_end_idx = len(pred_tokens)
+        path_tokens: list[str] = pred_tokens[path_start_idx:path_end_idx]
         path_coords: list[str | CoordTup] = strings_to_coords(
             path_tokens,
             when_noncoord=when_noncoord,
         )
-        # This is the correct type when using "skip"
-        if when_noncoord == "skip":
-            paths.append(cast(list[tuple[int, int]], path_coords))
+        paths.append(path_coords)
 
     return paths
 
@@ -209,7 +284,7 @@ def evaluate_model(
 
     if dataset_tokens is None:
         dataset_tokens = dataset.as_tokens(
-            model.zanj_model_config.maze_tokenizer, join_tokens_individual_maze=False
+            model.config.maze_tokenizer, join_tokens_individual_maze=False
         )
     else:
         assert len(dataset) == len(

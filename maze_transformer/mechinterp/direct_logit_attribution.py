@@ -1,5 +1,6 @@
 import datetime
 import json
+import typing
 from pathlib import Path
 from typing import Literal
 
@@ -39,6 +40,7 @@ def compute_direct_logit_attribution(
     model: ZanjHookedTransformer,
     cache: ActivationCache,
     answer_tokens: Int[torch.Tensor, "n_mazes"],
+    do_neurons: bool = False,
 ) -> dict[Literal["heads", "neurons"], Float[np.ndarray, "layer index"]]:
     n_layers: int = model.zanj_model_config.model_cfg.n_layers
     n_heads: int = model.zanj_model_config.model_cfg.n_heads
@@ -83,55 +85,83 @@ def compute_direct_logit_attribution(
     print(f"{per_head_logit_diffs.shape = }")
 
     # per neuron
-    per_neuron_residual, neuron_labels = cache.stack_neuron_results(
-        layer=-1,
-        pos_slice=-1,
-        return_labels=True,
-    )
+    if do_neurons:
+        per_neuron_residual, neuron_labels = cache.stack_neuron_results(
+            layer=-1,
+            pos_slice=-1,
+            return_labels=True,
+        )
 
-    per_neuron_logit_diffs = residual_stack_to_logit_diff(
-        residual_stack=per_neuron_residual,
-        cache=cache,
-        logit_diff_directions=diff_direction,
-    )
+        per_neuron_logit_diffs = residual_stack_to_logit_diff(
+            residual_stack=per_neuron_residual,
+            cache=cache,
+            logit_diff_directions=diff_direction,
+        )
 
-    print(f"{per_neuron_residual.shape = }")
-    print(f"{per_neuron_logit_diffs.shape = }")
+        print(f"{per_neuron_residual.shape = }")
+        print(f"{per_neuron_logit_diffs.shape = }")
 
-    per_neuron_logit_diffs = einops.rearrange(
-        per_neuron_logit_diffs,
-        "(layer neuron_index) -> layer neuron_index",
-        layer=n_layers,
-        neuron_index=mlp_dim,
-    )
+        per_neuron_logit_diffs = einops.rearrange(
+            per_neuron_logit_diffs,
+            "(layer neuron_index) -> layer neuron_index",
+            layer=n_layers,
+            neuron_index=mlp_dim,
+        )
 
-    print(f"{per_neuron_logit_diffs.shape = }")
+        print(f"{per_neuron_logit_diffs.shape = }")
 
     # return
-    return dict(
-        heads=per_head_logit_diffs.to("cpu").numpy(),
-        neurons=per_neuron_logit_diffs.to("cpu").numpy(),
-    )
+    if do_neurons:
+        return dict(
+            heads=per_head_logit_diffs.to("cpu").numpy(),
+            neurons=per_neuron_logit_diffs.to("cpu").numpy(),
+        )
+    else:
+        return dict(heads=per_head_logit_diffs.to("cpu").numpy())
 
 
 def plot_direct_logit_attribution(
     model: ZanjHookedTransformer,
     cache: ActivationCache,
     answer_tokens: Int[torch.Tensor, "n_mazes"],
+    do_neurons: bool = False,
     show: bool = True,
-) -> tuple[plt.Figure, plt.Axes, dict[str, Float[np.ndarray, "layer head"]],]:
-    dla_data: dict[str, torch.Tensor] = compute_direct_logit_attribution(
+    layer_index_normalization: typing.Callable[[float, int], float]
+    | None = lambda contrib, layer_idx: contrib,
+) -> tuple[plt.Figure, plt.Axes, dict[str, Float[np.ndarray, "layer head/neuron"]]]:
+    """compute, process, and plot direct logit attribution
+
+    Layer index normalization allows us to process the contribution according to the layer index.
+    by default, its the identity map for contribs:
+    `layer_index_normalization: typing.Callable[[float, int], float]|None = lambda contrib, layer_idx: contrib`
+    """
+    dla_data: dict[
+        str, Float[np.ndarray, "layer head/neuron"]
+    ] = compute_direct_logit_attribution(
         model=model,
         cache=cache,
         answer_tokens=answer_tokens,
+        do_neurons=do_neurons,
     )
-    dla_heads: Float[np.ndarray, "layer head"] = dla_data["heads"]
-    dla_neurons: Float[np.ndarray, "layer neuron"] = dla_data["neurons"]
+    if layer_index_normalization is not None:
+        dla_data = {
+            k: np.array(
+                [
+                    layer_index_normalization(contrib, layer_idx)
+                    for layer_idx, contrib in enumerate(v)
+                ]
+            )
+            for k, v in dla_data.items()
+        }
 
+    dla_heads: Float[np.ndarray, "layer head"] = dla_data["heads"]
     extval_heads: float = np.max(np.abs(dla_heads))
-    extval_neurons: float = np.max(np.abs(dla_neurons))
     fig_heads, ax_heads = plt.subplots(figsize=(5, 5))
-    fig_neurons, ax_neurons = plt.subplots(figsize=(20, 5))
+
+    if do_neurons:
+        dla_neurons: Float[np.ndarray, "layer neuron"] = dla_data["neurons"]
+        extval_neurons: float = np.max(np.abs(dla_neurons))
+        fig_neurons, ax_neurons = plt.subplots(figsize=(20, 5))
 
     # heads
     ax_heads.imshow(dla_heads, cmap="RdBu", vmin=-extval_heads, vmax=extval_heads)
@@ -143,26 +173,29 @@ def plot_direct_logit_attribution(
     )
 
     # neurons
-    # don't enforce aspect ratio, no blending
-    ax_neurons.imshow(
-        dla_neurons,
-        cmap="RdBu",
-        vmin=-extval_neurons,
-        vmax=extval_neurons,
-        aspect="auto",
-        interpolation="none",
-    )
-    ax_neurons.set_xlabel("Neuron")
-    ax_neurons.set_ylabel("Layer")
-    plt.colorbar(ax_neurons.get_images()[0], ax=ax_neurons)
-    ax_neurons.set_title(
-        f"Logit Difference from each neuron\n{model.zanj_model_config.name}"
-    )
+    if do_neurons:
+        ax_neurons.imshow(
+            dla_neurons,
+            cmap="RdBu",
+            vmin=-extval_neurons,
+            vmax=extval_neurons,
+            aspect="auto",
+            interpolation="none",
+        )
+        ax_neurons.set_xlabel("Neuron")
+        ax_neurons.set_ylabel("Layer")
+        plt.colorbar(ax_neurons.get_images()[0], ax=ax_neurons)
+        ax_neurons.set_title(
+            f"Logit Difference from each neuron\n{model.zanj_model_config.name}"
+        )
 
     if show:
         plt.show()
 
-    return (fig_heads, fig_neurons), (ax_heads, ax_neurons), dla_data
+    if do_neurons:
+        return (fig_heads, fig_neurons), (ax_heads, ax_neurons), dla_data
+    else:
+        return fig_heads, ax_heads, dla_data
 
 
 def _output_codeblock(

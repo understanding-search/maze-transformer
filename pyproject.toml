@@ -10,16 +10,17 @@ repository = "https://github.com/understanding-search/maze-transformer"
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 # dataset
-maze-dataset = "^0.4.2"
+maze-dataset = "^0.4.5"
 # transformers
 torch = ">=1.13.1"
-transformer-lens = "^1.6.1"
+transformer-lens = "1.6.1"
 transformers = "4.33.3" # PreTrainedTokenizer internals changed in 4.34 and it breaks things :(
 # utils
-muutils = "^0.5.3"
+muutils = "^0.5.5"
 zanj = "^0.2.0"
 wandb = "^0.13.5" # note: TransformerLens forces us to use 0.13.5
 fire = "^0.5.0"
+typing-extensions = "^4.8.0"
 # plotting
 matplotlib = "^3.7.0"
 plotly = "^5.13.1"

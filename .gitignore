@@ -6,6 +6,7 @@ wandb
 tests/_temp/**
 tests/**/_temp/**
 notebooks/data/**
+notebooks/plots/**
 
 .coverage
 htmlcov/

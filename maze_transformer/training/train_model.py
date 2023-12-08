@@ -42,6 +42,8 @@ def train_model(
     cfg_names: typing.Sequence[str] | None = None,
     do_generate_dataset: bool = False,
     dataset_verbose: bool = False,
+    dataset: MazeDataset | None = None,
+    allow_dataset_override: bool = False,
     device: torch.device | None = None,
     help: bool = False,
     **kwargs,
@@ -104,12 +106,26 @@ def train_model(
     logger.progress("Summary logged, getting dataset")
 
     # load dataset
-    dataset: MazeDataset = MazeDataset.from_config(
-        cfg=cfg.dataset_cfg,
-        do_generate=do_generate_dataset,
-        local_base_path=base_path,
-        verbose=dataset_verbose,
-    )
+    if dataset is None:
+        dataset = MazeDataset.from_config(
+            cfg=cfg.dataset_cfg,
+            do_generate=do_generate_dataset,
+            local_base_path=base_path,
+            verbose=dataset_verbose,
+        )
+    else:
+        if dataset.cfg == cfg.dataset_cfg:
+            logger.progress(f"passed dataset has matching config, using that")
+        else:
+            if allow_dataset_override:
+                logger.progress(
+                    f"passed dataset has different config than cfg.dataset_cfg, but allow_dataset_override is True, so using passed dataset"
+                )
+            else:
+                raise ValueError(
+                    f"dataset has different config than cfg.dataset_cfg, and allow_dataset_override is False"
+                )
+
     logger.progress(f"finished getting training dataset with {len(dataset)} samples")
     # validation dataset, if applicable
     val_dataset: MazeDataset | None = None

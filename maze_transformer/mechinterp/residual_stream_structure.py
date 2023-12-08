@@ -1,6 +1,7 @@
 import itertools
 from typing import NamedTuple
 
+import matplotlib.colors as mplcolors
 import matplotlib.pyplot as plt
 
 # numerical
@@ -218,6 +219,10 @@ def plot_pca_colored(
     return fig, ax
 
 
+def abs_dot_product(u, v):
+    return np.abs(np.dot(u, v))
+
+
 def compute_distances_and_correlation(
     embedding_matrix: Float[np.ndarray, "d_vocab d_model"],
     tokenizer: MazeTokenizer,
@@ -232,13 +237,16 @@ def compute_distances_and_correlation(
         [embedding_matrix[v] for v in coord_tokens_ids.values()]
     )
 
+    if embedding_metric in ("dot", "abs_dot"):
+        embedding_metric = abs_dot_product
+
     # Calculate the pairwise distances in embedding space
     embedding_distances: Float[np.ndarray, "n_coord_tokens d_model"] = pdist(
         coord_embeddings,
         metric=embedding_metric,
     )
     # normalize the distance by the maximum distance
-    embedding_distances /= embedding_distances.max()
+    # embedding_distances /= embedding_distances.max()
 
     # Convert the distances to a square matrix
     embedding_distances_matrix: Float[
@@ -331,28 +339,116 @@ def plot_distance_grid(
     grid_distances: Float[np.ndarray, "n n n n"],
     embedding_metric: str,
     show: bool = True,
-) -> tuple[plt.Figure, plt.Axes]:
+    vbounds: tuple[float, float] | None = None,
+    cmap: str = "viridis",
+    ignore_self_distances: bool = True,
+    figsize: tuple[float, float] = (20, 20),
+) -> tuple[plt.Figure, plt.Axes, plt.Axes]:
     n: int = grid_distances.shape[0]
-    # print(n)
-    # print(tokenizer.coordinate_tokens_coords)
-    fig, axs = plt.subplots(n, n, figsize=(20, 20))
 
-    for i in range(n):
-        for j in range(n):
-            ax = axs[i, j]
-            cax = ax.matshow(grid_distances[i, j], cmap="viridis", interpolation="none")
-            ax.plot(j, i, "rx")
-            ax.set_title(f"from ({i},{j})")
-            # fully remove both major and minor gridlines
-            ax.grid(False)
+    # remove the self distances
+    if ignore_self_distances:
+        for i, j in itertools.product(range(n), range(n)):
+            grid_distances[i, j, i, j] = np.nan
+
+    if vbounds is None:
+        # calculate bounds ignoring nans
+        vbounds = (np.nanmin(grid_distances), np.nanmax(grid_distances))
+
+    print(f"{vbounds = }")
+    norm = mplcolors.Normalize(vmin=vbounds[0], vmax=vbounds[1])
+
+    fig, axs = plt.subplots(n, n, figsize=figsize)
+
+    # cbar_ax = fig.add_axes([0.91, 0.15, 0.02, 0.7])
+    cbar_ax = None
+    for i, j in itertools.product(range(n), range(n)):
+        ax = axs[i, j]
+        cax = ax.matshow(
+            grid_distances[i, j],
+            cmap=cmap,
+            interpolation="none",
+            norm=norm,
+        )
+        ax.plot(j, i, "rx")
+        ax.set_title(f"from ({i},{j})")
+        # fully remove both major and minor gridlines
+        ax.grid(False)
 
     fig.suptitle(f"{embedding_metric} distances grid")
-    plt.colorbar(cax, ax=axs.ravel().tolist())
+    colorbar_ax = fig.colorbar(cax, ax=axs.ravel().tolist())
+    # fig.colorbar(axs.ravel().tolist(), ax=cbar_ax)
 
     if show:
         plt.show()
 
-    return fig, axs
+    return fig, axs, cbar_ax
+
+
+def plot_distance_subgrid(
+    grid_distances: np.ndarray,
+    shape: tuple[int, int],
+    show: bool = True,
+    vbounds: tuple[float, float] | None = None,
+    ignore_self_distances: bool = True,
+    cmap: str = "viridis",
+    figsize: tuple[float, float] = (20, 20),
+) -> tuple[plt.Figure, plt.Axes, plt.Axes]:
+    n: int = grid_distances.shape[0]
+
+    # remove the self distances
+    if ignore_self_distances:
+        for i, j in itertools.product(range(n), range(n)):
+            grid_distances[i, j, i, j] = np.nan
+
+    subgrid_shape = (min(shape[0], n), min(shape[1], n))
+
+    # Select random positions from the grid maintaining order
+    selected_indices = np.sort(
+        np.random.choice(range(n), size=subgrid_shape[0], replace=False)
+    )
+
+    # Create subgrid keeping the order
+    subgrid_distances = grid_distances[np.ix_(selected_indices, selected_indices)]
+
+    if vbounds is None:
+        # Calculate bounds ignoring nans
+        vbounds = (np.nanmin(subgrid_distances), np.nanmax(subgrid_distances))
+
+    norm = mplcolors.Normalize(vmin=vbounds[0], vmax=vbounds[1])
+
+    fig, axs = plt.subplots(*subgrid_shape, figsize=figsize)
+
+    # In case we have a 1x1 subgrid, ensure axs is iterable
+    if subgrid_shape == (1, 1):
+        axs = np.array([[axs]])
+
+    cbar_ax = None
+    for idx, (i, j) in enumerate(
+        itertools.product(range(subgrid_shape[0]), range(subgrid_shape[1]))
+    ):
+        # TODO: broken if n_cols > n_rows???
+        ax = axs[i, j]
+        cax = ax.matshow(
+            subgrid_distances[i, j],
+            cmap=cmap,
+            interpolation="none",
+            norm=norm,
+        )
+        ax.plot(selected_indices[j], selected_indices[i], "rx")
+        # Remove titles, ticks and labels
+        ax.set_title("")
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.grid(False)
+
+    # Shared colorbar for the subgrid
+    colorbar_ax = fig.colorbar(cax, ax=axs.ravel().tolist(), orientation="vertical")
+
+    if show:
+        plt.show()
+
+    return fig, axs, colorbar_ax
 
 
 def plot_distance_correlation(
