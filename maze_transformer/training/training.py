@@ -6,8 +6,8 @@ import torch
 from jaxtyping import Float
 from maze_dataset import MazeDataset, SolvedMaze
 from maze_dataset.tokenization import MazeTokenizer
-from muutils.statcounter import StatCounter
 from muutils.mlutils import pprint_summary
+from muutils.statcounter import StatCounter
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
 from zanj import ZANJ
@@ -33,7 +33,7 @@ def get_dataloader(
             logger.progress(msg)
         else:
             print(msg)
-    
+
     if len(dataset) == 0:
         raise ValueError(f"Dataset is empty: {len(dataset) = }")
     log_progress(f"Loaded {len(dataset)} sequences")
@@ -67,8 +67,7 @@ def train(
     zanj: ZANJ | None = None,
     model: ZanjHookedTransformer | None = None,
 ) -> ZanjHookedTransformer:
-    
-    def log(msg: str | dict, log_type: str = 'progress', **kwargs):
+    def log(msg: str | dict, log_type: str = "progress", **kwargs):
         # Convenience function to let training routine work whether or not
         # logger exists
         if logger:
@@ -79,12 +78,12 @@ def train(
                 pprint_summary(msg)
             else:
                 print(msg)
-    
+
     # initialize
     # ==============================
     if zanj is None:
         zanj = ZANJ()
-    
+
     # init model & optimizer
     if model is None:
         log(f"Initializing model")
@@ -93,14 +92,14 @@ def train(
     else:
         log("Using existing model")
 
-    log({"device": str(device), "model.device": model.cfg.device}, log_type='summary')
+    log({"device": str(device), "model.device": model.cfg.device}, log_type="summary")
 
     log("Initializing optimizer")
     optimizer: torch.optim.Optimizer = cfg.train_cfg.optimizer(
         model.parameters(),
         **cfg.train_cfg.optimizer_kwargs,
     )
-    log(dict(model_n_params=model.cfg.n_params), log_type='summary')
+    log(dict(model_n_params=model.cfg.n_params), log_type="summary")
 
     # add wandb run url to model
     if logger:
@@ -140,7 +139,7 @@ def train(
         }
     log(
         {"n_batches": n_batches, "n_samples": n_samples, "intervals": intervals},
-        log_type='summary'
+        log_type="summary",
     )
     log(
         f"will train for {n_batches} batches, {evals_enabled=}, with intervals: {intervals}"
@@ -186,12 +185,10 @@ def train(
                         max_new_tokens=cfg.train_cfg.evals_max_new_tokens,
                     )
                     metrics.update(scores)
-        log(metrics, log_type='log_metric_hist')
+        log(metrics, log_type="log_metric_hist")
 
         if iteration % intervals["print_loss"] == 0:
-            log(
-                f"iteration {iteration}/{n_batches}: loss={loss.item():.3f}"
-            )
+            log(f"iteration {iteration}/{n_batches}: loss={loss.item():.3f}")
 
         del loss
 
@@ -207,7 +204,7 @@ def train(
             zanj.save(model, model_save_path)
             log(
                 model_save_path,
-                log_type = 'upload_model',
+                log_type="upload_model",
                 aliases=["latest", f"iter-{iteration}"],
             )
 
@@ -216,7 +213,7 @@ def train(
     final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final_zanj
     log(f"Saving final model to {final_model_path.as_posix()}")
     zanj.save(model, final_model_path)
-    log(final_model_path, log_type='upload_model', aliases=["latest", "final"])
+    log(final_model_path, log_type="upload_model", aliases=["latest", "final"])
 
     log("Done training!")
 

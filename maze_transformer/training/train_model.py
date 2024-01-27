@@ -59,7 +59,7 @@ def train_model(
         - model config names: {model_cfg_names}
         - train config names: {train_cfg_names}
     """
-    USES_LOGGER : bool = (wandb_project is not None)
+    USES_LOGGER: bool = wandb_project is not None
 
     if help:
         print(train_model.__doc__)
@@ -87,17 +87,17 @@ def train_model(
 
     # set up logger
     logger_cfg_dict = dict(
-            logger_cfg={
-                "output_dir": output_path.as_posix(),
-                "cfg.name": cfg.name,
-                "data_cfg.name": cfg.dataset_cfg.name,
-                "train_cfg.name": cfg.train_cfg.name,
-                "model_cfg.name": cfg.model_cfg.name,
-                "cfg_summary": cfg.summary(),
-                "cfg": cfg.serialize(),
-            },
-        )
-    
+        logger_cfg={
+            "output_dir": output_path.as_posix(),
+            "cfg.name": cfg.name,
+            "data_cfg.name": cfg.dataset_cfg.name,
+            "train_cfg.name": cfg.train_cfg.name,
+            "model_cfg.name": cfg.model_cfg.name,
+            "cfg_summary": cfg.summary(),
+            "cfg": cfg.serialize(),
+        },
+    )
+
     # Set up logger if wanb project is specified
     if USES_LOGGER:
         logger: WandbLogger = WandbLogger.create(
@@ -108,8 +108,8 @@ def train_model(
         logger.progress("Initialized logger")
     else:
         logger = None
-    
-    def log(msg: str | dict, log_type: str = 'progress', **kwargs):
+
+    def log(msg: str | dict, log_type: str = "progress", **kwargs):
         # Convenience function to let training routine work whether or not
         # logger exists
         if logger:
@@ -121,7 +121,7 @@ def train_model(
             else:
                 print(msg)
 
-    log(logger_cfg_dict, log_type='summary')
+    log(logger_cfg_dict, log_type="summary")
     log("Summary logged, getting dataset")
 
     # load dataset
@@ -137,15 +137,15 @@ def train_model(
             log(f"passed dataset has matching config, using that")
         else:
             if allow_dataset_override:
-                log(f"passed dataset has different config than cfg.dataset_cfg, but allow_dataset_override is True, so using passed dataset")
+                log(
+                    f"passed dataset has different config than cfg.dataset_cfg, but allow_dataset_override is True, so using passed dataset"
+                )
             else:
                 raise ValueError(
                     f"dataset has different config than cfg.dataset_cfg, and allow_dataset_override is False"
                 )
 
-    log(
-        f"finished getting training dataset with {len(dataset)} samples"
-    )
+    log(f"finished getting training dataset with {len(dataset)} samples")
 
     # validation dataset, if applicable
     val_dataset: MazeDataset | None = None
@@ -178,9 +178,7 @@ def train_model(
                 local_base_path=base_path,
                 verbose=dataset_verbose,
             )
-            log(
-                f"got custom validation dataset with {len(val_dataset)} samples"
-            )
+            log(f"got custom validation dataset with {len(val_dataset)} samples")
 
     # get dataloader and then train
     dataloader: DataLoader = get_dataloader(dataset, cfg, logger)
