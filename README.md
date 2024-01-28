@@ -68,6 +68,20 @@ Most of the functionality is demonstrated in the ipython notebooks in the `noteb
   * Restart VSCode
   * In VSCode, select the python interpreter located in `maze-transformer/.venv/bin` as your juptyer kernel
 
+## Instructions for Conda users
+
+* Create a new Conda environment: `conda create -n mazetransformer python=3.10 poetry`
+* Activate the environment: `conda activate mazetransformer`
+* Update poetry and install dev dependencies
+   ```
+   poetry self update
+   poetry config virtualenvs.in-project true
+   poetry install --with dev
+   ```
+* Run unit, integration, and notebook tests
+    ```
+    make test
+    ```
 
 ## Testing & Static analysis
 

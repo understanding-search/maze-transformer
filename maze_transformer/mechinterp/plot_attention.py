@@ -289,9 +289,9 @@ def mazeplot_attention(
         node_values=node_values,
         color_map=cmap,
         target_token_coord=target_coord,
-        preceeding_tokens_coords=[final_prompt_coord]
-        if final_prompt_coord is not None
-        else None,
+        preceeding_tokens_coords=(
+            [final_prompt_coord] if final_prompt_coord is not None else None
+        ),
         colormap_center=colormap_center_val,
         colormap_max=colormap_max,
         hide_colorbar=hide_colorbar,
