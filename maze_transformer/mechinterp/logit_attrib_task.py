@@ -22,7 +22,8 @@ TaskSetup = typing.NamedTuple(
 class DLAProtocol(typing.Protocol):
     """should take a dataset's tokens, and return a tuple of (prompts, targets)"""
 
-    def __call__(self, dataset_tokens: list[list[str]], **kwargs) -> TaskSetup: ...
+    def __call__(self, dataset_tokens: list[list[str]], **kwargs) -> TaskSetup:
+        ...
 
 
 class DLAProtocolFixed(typing.Protocol):
@@ -31,7 +32,8 @@ class DLAProtocolFixed(typing.Protocol):
     this variant signifies it's ready to be used -- no keyword arguments are needed
     """
 
-    def __call__(self, dataset_tokens: list[list[str]]) -> TaskSetup: ...
+    def __call__(self, dataset_tokens: list[list[str]]) -> TaskSetup:
+        ...
 
 
 def token_after_fixed_start_token(

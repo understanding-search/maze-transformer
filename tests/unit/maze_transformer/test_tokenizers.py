@@ -82,11 +82,11 @@ def test_tokenization_encoding(
 )
 def test_to_ascii(tok_mode):
     # Check that the ascii encoding works for multiple different inputs
-    maze_str_tokens: list[str] = (
-        """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
+    maze_str_tokens: list[
+        str
+    ] = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
     (2,2) <--> (2,1) ; (2,0) <--> (2,1) ; (0,2) <--> (1,2) ; (0,0) <--> (1,0) ; (0,2) <--> (0,1) ;
     <ADJLIST_END> <ORIGIN_START> (0,0) <ORIGIN_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
-    )
 
     target: list[str] = [
         "#######",

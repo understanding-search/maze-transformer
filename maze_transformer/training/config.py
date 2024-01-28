@@ -214,9 +214,7 @@ class TrainConfig(SerializableDataclass):
                         )
 
         except ValueError as e:
-            _debug_vals: str = (
-                f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=},\n{self.intervals=},\n{self.intervals_count=}"
-            )
+            _debug_vals: str = f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=},\n{self.intervals=},\n{self.intervals_count=}"
             raise ValueError(f"{_debug_vals}\ntriggered error:\n{e}") from e
 
         # disable if set to 0 or negative
@@ -659,9 +657,12 @@ class ZanjHookedTransformer(ConfiguredModel[ConfigHolder], HookedTransformer):
             self.zanj_model_config.model_cfg.weight_processing["are_layernorms_folded"]
             or fold_ln
         )
-        self.zanj_model_config.model_cfg.weight_processing["are_weights_processed"] = (
-            self.zanj_model_config.model_cfg.weight_processing["are_weights_processed"]
-            or (not recover_exact)
+        self.zanj_model_config.model_cfg.weight_processing[
+            "are_weights_processed"
+        ] = self.zanj_model_config.model_cfg.weight_processing[
+            "are_weights_processed"
+        ] or (
+            not recover_exact
         )
 
         self.load_and_process_state_dict(
