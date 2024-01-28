@@ -235,9 +235,9 @@ class TrainConfig(SerializableDataclass):
         # actually return the intervals
         if mod_batch_size:
             return {
-                k: (
-                    max(1, v // self.batch_size) if isinstance(v, int) else v
-                )  # if float, leave it as is since its float("inf")
+                k: max(1, v // self.batch_size)
+                if isinstance(v, int)
+                else v  # if float, leave it as is since its float("inf")
                 for k, v in intervals_new.items()
             }
         else:
@@ -459,11 +459,9 @@ class ConfigHolder(SerializableDataclass):
             "model_cfg": self.model_cfg.summary(),
             "train_cfg": self.train_cfg.summary(),
             "pretrainedtokenizer_kwargs": self.pretrainedtokenizer_kwargs,
-            "maze_tokenizer": (
-                self.maze_tokenizer.summary()
-                if self.maze_tokenizer is not None
-                else None
-            ),
+            "maze_tokenizer": self.maze_tokenizer.summary()
+            if self.maze_tokenizer is not None
+            else None,
         }
 
     @property

@@ -1,7 +1,6 @@
 """
 test loading of old style models
 """
-
 import json
 
 import pytest

@@ -68,11 +68,9 @@ def process_tokens_for_pca(tokenizer: MazeTokenizer) -> list[TokenPlottingInfo]:
             tokenizer.token_arr,
             tokens_coords,
             [
-                (
-                    coordinate_to_color(coord, max_val=max_coord)
-                    if isinstance(coord, tuple)
-                    else (0.0, 1.0, 0.0)
-                )
+                coordinate_to_color(coord, max_val=max_coord)
+                if isinstance(coord, tuple)
+                else (0.0, 1.0, 0.0)
                 for coord in tokens_coords
             ],
         )

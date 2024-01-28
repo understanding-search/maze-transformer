@@ -5,7 +5,6 @@ Test that loading the model and configuration works
     a HookedTransformer with folding etc., as they would be from
     just applying the model to the input
 """
-
 import warnings
 from pathlib import Path
 

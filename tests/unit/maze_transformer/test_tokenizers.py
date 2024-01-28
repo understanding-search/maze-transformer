@@ -4,7 +4,6 @@ as the original tokenizer (i.e. just using the token map in cfg)
 
 We may want a separate set of tests for different tokenization schemes
 """
-
 from itertools import product
 
 import torch
