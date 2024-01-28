@@ -1,13 +1,18 @@
+# misc
+wandb
 .vscode/
+
+# generated data/plots
 data/**
 notebooks/data/**
-models/
-wandb
-tests/_temp/**
-tests/**/_temp/**
-notebooks/data/**
+notebooks/figures/**
 notebooks/plots/**
 
+# testing temp files
+tests/_temp/**
+tests/**/_temp/**
+
+# coverage
 .coverage
 htmlcov/
 
