@@ -68,9 +68,11 @@ def process_tokens_for_pca(tokenizer: MazeTokenizer) -> list[TokenPlottingInfo]:
             tokenizer.token_arr,
             tokens_coords,
             [
-                coordinate_to_color(coord, max_val=max_coord)
-                if isinstance(coord, tuple)
-                else (0.0, 1.0, 0.0)
+                (
+                    coordinate_to_color(coord, max_val=max_coord)
+                    if isinstance(coord, tuple)
+                    else (0.0, 1.0, 0.0)
+                )
                 for coord in tokens_coords
             ],
         )
@@ -249,9 +251,9 @@ def compute_distances_and_correlation(
     # embedding_distances /= embedding_distances.max()
 
     # Convert the distances to a square matrix
-    embedding_distances_matrix: Float[
-        np.ndarray, "n_coord_tokens n_coord_tokens"
-    ] = squareform(embedding_distances)
+    embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"] = (
+        squareform(embedding_distances)
+    )
 
     # Calculate the correlation between the embedding and coordinate distances
     coordinate_coordinates: Float[np.ndarray, "n_coord_tokens 2"] = np.array(
