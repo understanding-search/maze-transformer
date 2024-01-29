@@ -6,7 +6,6 @@ import torch
 from jaxtyping import Float
 from maze_dataset import MazeDataset, SolvedMaze
 from maze_dataset.tokenization import MazeTokenizer
-from muutils.mlutils import pprint_summary
 from muutils.statcounter import StatCounter
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
@@ -25,19 +24,12 @@ def collate_batch(batch: list[SolvedMaze], maze_tokenizer: MazeTokenizer) -> lis
 
 
 def get_dataloader(
-    dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger | None
+    dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
 ) -> DataLoader:
-    def log_progress(msg):
-        # Convenience function for deciding whether to use logger or not
-        if logger:
-            logger.progress(msg)
-        else:
-            print(msg)
-
     if len(dataset) == 0:
         raise ValueError(f"Dataset is empty: {len(dataset) = }")
-    log_progress(f"Loaded {len(dataset)} sequences")
-    log_progress("Creating dataloader")
+    logger.progress(f"Loaded {len(dataset)} sequences")
+    logger.progress("Creating dataloader")
     try:
         dataloader: DataLoader = DataLoader(
             dataset,
@@ -67,18 +59,6 @@ def train(
     zanj: ZANJ | None = None,
     model: ZanjHookedTransformer | None = None,
 ) -> ZanjHookedTransformer:
-    def log(msg: str | dict, log_type: str = "progress", **kwargs):
-        # Convenience function to let training routine work whether or not
-        # logger exists
-        if logger:
-            log_fn = getattr(logger, log_type)
-            log_fn(msg, **kwargs)
-        else:
-            if type(msg) == dict:
-                pprint_summary(msg)
-            else:
-                print(msg)
-
     # initialize
     # ==============================
     if zanj is None:
@@ -86,26 +66,25 @@ def train(
 
     # init model & optimizer
     if model is None:
-        log(f"Initializing model")
+        logger.progress(f"Initializing model")
         model: ZanjHookedTransformer = cfg.create_model_zanj()
         model.to(device)
     else:
-        log("Using existing model")
+        logger.progress("Using existing model")
 
-    log({"device": str(device), "model.device": model.cfg.device}, log_type="summary")
+    logger.summary({"device": str(device), "model.device": model.cfg.device})
 
-    log("Initializing optimizer")
+    logger.progress("Initializing optimizer")
     optimizer: torch.optim.Optimizer = cfg.train_cfg.optimizer(
         model.parameters(),
         **cfg.train_cfg.optimizer_kwargs,
     )
-    log(dict(model_n_params=model.cfg.n_params), log_type="summary")
+    logger.summary(dict(model_n_params=model.cfg.n_params))
 
     # add wandb run url to model
-    if logger:
-        model.training_records = {
-            "wandb_url": logger.url,
-        }
+    model.training_records = {
+        "wandb_url": logger.url,
+    }
 
     # figure out whether to run evals, and validation dataset
     evals_enabled: bool = cfg.train_cfg.validation_dataset_cfg is not None
@@ -137,11 +116,10 @@ def train(
             key: value if not key.startswith("eval") else float("inf")
             for key, value in intervals.items()
         }
-    log(
-        {"n_batches": n_batches, "n_samples": n_samples, "intervals": intervals},
-        log_type="summary",
+    logger.summary(
+        {"n_batches": n_batches, "n_samples": n_samples, "intervals": intervals}
     )
-    log(
+    logger.progress(
         f"will train for {n_batches} batches, {evals_enabled=}, with intervals: {intervals}"
     )
 
@@ -150,7 +128,7 @@ def train(
     # start up training
     # ==============================
     model.train()
-    log("Starting training")
+    logger.progress("Starting training")
 
     for iteration, batch in enumerate(dataloader):
         # forward pass
@@ -175,7 +153,7 @@ def train(
         if evals_enabled:
             for interval_key, evals_dict in PathEvals.PATH_EVALS_MAP.items():
                 if iteration % intervals[interval_key] == 0:
-                    log(f"Running evals: {interval_key}")
+                    logger.progress(f"Running evals: {interval_key}")
                     scores: dict[str, StatCounter] = evaluate_model(
                         model=model,
                         dataset=val_dataset,
@@ -185,10 +163,12 @@ def train(
                         max_new_tokens=cfg.train_cfg.evals_max_new_tokens,
                     )
                     metrics.update(scores)
-        log(metrics, log_type="log_metric_hist")
+        logger.log_metric_hist(metrics)
 
         if iteration % intervals["print_loss"] == 0:
-            log(f"iteration {iteration}/{n_batches}: loss={loss.item():.3f}")
+            logger.progress(
+                f"iteration {iteration}/{n_batches}: loss={loss.item():.3f}"
+            )
 
         del loss
 
@@ -200,21 +180,19 @@ def train(
                 / TRAIN_SAVE_FILES.checkpoints
                 / TRAIN_SAVE_FILES.model_checkpt_zanj(iteration)
             )
-            log(f"Saving model checkpoint to {model_save_path.as_posix()}")
+            logger.progress(f"Saving model checkpoint to {model_save_path.as_posix()}")
             zanj.save(model, model_save_path)
-            log(
-                model_save_path,
-                log_type="upload_model",
-                aliases=["latest", f"iter-{iteration}"],
+            logger.upload_model(
+                model_save_path, aliases=["latest", f"iter-{iteration}"]
             )
 
     # save the final model
     # ==============================
     final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final_zanj
-    log(f"Saving final model to {final_model_path.as_posix()}")
+    logger.progress(f"Saving final model to {final_model_path.as_posix()}")
     zanj.save(model, final_model_path)
-    log(final_model_path, log_type="upload_model", aliases=["latest", "final"])
+    logger.upload_model(final_model_path, aliases=["latest", "final"])
 
-    log("Done training!")
+    logger.progress("Done training!")
 
     return model
