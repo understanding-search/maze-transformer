@@ -1,5 +1,5 @@
 # Avoid circular import from training/config.py
-from typing import TYPE_CHECKING, Sequence  # need Union as "a" | "b" doesn't work
+from typing import TYPE_CHECKING, Dict, Sequence  # need Union as "a" | "b" doesn't work
 
 import torch
 from maze_dataset import SPECIAL_TOKENS, LatticeMaze
@@ -24,9 +24,6 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     unk_token: str = "<UNK>"
 
     vocab_size: int = 0
-    additional_special_tokens: list[str] = [
-        x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS.PADDING]
-    ]
 
     # Overwrite class attributes
     # as of https://github.com/neelnanda-io/TransformerLens/pull/344 this gets overwritten to "right" on `HookedTransformer.__init__()`
@@ -84,13 +81,12 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         vocab[self.unk_token] = len(vocab)
         self.vocab: dict[str, int] = vocab
 
-        self.added_tokens_encoder: dict[str, int] = vocab
-        self.added_tokens_decoder: dict[int, str] = {
-            i: token for token, i in vocab.items()
-        }
+        special_tokens = list(SPECIAL_TOKENS.values())
+        normal_tokens = [x for x in token_arr if x not in special_tokens]
+        self._add_tokens(normal_tokens)
+        self._add_tokens(special_tokens, special_tokens=True)
 
-        self.unique_no_split_tokens = token_arr
-        self._create_trie(self.unique_no_split_tokens)
+        self.unique_no_split_tokens = token_arr # Trie is updated automatically?
 
         # IDs specified during construction
         self.bos_token_id: int = self.added_tokens_encoder[self.bos_token]
@@ -103,6 +99,13 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         I.e. a single example should be a continuous string
             "a b c d e f" not ["a", "b", "c", "d", "e", "f"]
         """
+        #! Placeholder until we find out why the transformer tokenizer trie is returning ' ' as tokens
+        if isinstance(text, list):
+            if isinstance(text[0], str):
+                text = [t.replace(" ", "") for t in text]
+        elif isinstance(text, str):
+            text = text.replace(' ','') 
+
         try:
             return super().__call__(text, **kwargs)
         except (NotImplementedError, ValueError) as e:
@@ -119,6 +122,8 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     def _convert_token_to_id(self, token: str) -> int:
         if token in self.vocab:
             return self.vocab[token]
+        elif token==" ": # for some reason transformers trie now returns ' ' as tokens
+            return None
         else:
             raise ValueError(f"Token not in vocab: '{token}'")
 
@@ -151,3 +156,9 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence, self._maze_tokenizer)
         return MazePlot(lattice_maze).to_ascii()
+    
+    def get_vocab(self) -> Dict[str, int]:
+        print("Getting vocab")
+        if hasattr(self, "vocab"):
+            return self.vocab
+        return {}
