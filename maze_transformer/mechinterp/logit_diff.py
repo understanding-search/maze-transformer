@@ -91,7 +91,7 @@ def logit_diff_residual_stream(
     ] = model.tokens_to_residual_directions(vocab_tensor)
     # get embedding of answer tokens
     answer_residual_directions = vocab_residual_directions[tokens_correct]
-    # get the directional difference between logits and corrent and logits on {all other tokens, comparison tokens}
+    # get the directional difference between logits and correct and logits on {all other tokens, comparison tokens}
     logit_diff_directions: Float[torch.Tensor, "samples d_model"]
     if tokens_compare_to is None:
         logit_diff_directions = (

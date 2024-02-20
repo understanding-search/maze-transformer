@@ -330,7 +330,7 @@ def mazeplot_attention(
         mazeplot.cbar_ax.set_position([pos.x0, new_y0, pos.width, new_height])
         # add a title to the colorbar, vertically and to the side
         mazeplot.cbar_ax.text(
-            5.0,
+            6.0,
             0.5,
             "Attention",
             rotation=90,

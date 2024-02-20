@@ -7,7 +7,7 @@ import torch
 from maze_dataset import MazeDataset, MazeDatasetConfig
 from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
-from muutils.mlutils import get_device
+from muutils.mlutils import get_device, pprint_summary
 from torch.utils.data import DataLoader
 
 from maze_transformer.training.config import (
@@ -36,7 +36,7 @@ class TrainingResult(SerializableDataclass):
 
 def train_model(
     base_path: str | Path,
-    wandb_project: Union[WandbProject, str],
+    wandb_project: Union[WandbProject, str] | None,
     cfg: ConfigHolder | None = None,
     cfg_file: str | Path | None = None,
     cfg_names: typing.Sequence[str] | None = None,
@@ -59,6 +59,8 @@ def train_model(
         - model config names: {model_cfg_names}
         - train config names: {train_cfg_names}
     """
+    USES_LOGGER: bool = wandb_project is not None
+
     if help:
         print(train_model.__doc__)
         return
@@ -84,26 +86,43 @@ def train_model(
     (output_path / TRAIN_SAVE_FILES.checkpoints).mkdir(parents=True)
 
     # set up logger
-    logger: WandbLogger = WandbLogger.create(
-        config=cfg.serialize(),
-        project=wandb_project,
-        job_type=WandbJobType.TRAIN_MODEL,
+    logger_cfg_dict = dict(
+        logger_cfg={
+            "output_dir": output_path.as_posix(),
+            "cfg.name": cfg.name,
+            "data_cfg.name": cfg.dataset_cfg.name,
+            "train_cfg.name": cfg.train_cfg.name,
+            "model_cfg.name": cfg.model_cfg.name,
+            "cfg_summary": cfg.summary(),
+            "cfg": cfg.serialize(),
+        },
     )
-    logger.progress("Initialized logger")
-    logger.summary(
-        dict(
-            logger_cfg={
-                "output_dir": output_path.as_posix(),
-                "cfg.name": cfg.name,
-                "data_cfg.name": cfg.dataset_cfg.name,
-                "train_cfg.name": cfg.train_cfg.name,
-                "model_cfg.name": cfg.model_cfg.name,
-                "cfg_summary": cfg.summary(),
-                "cfg": cfg.serialize(),
-            },
+
+    # Set up logger if wanb project is specified
+    if USES_LOGGER:
+        logger: WandbLogger = WandbLogger.create(
+            config=cfg.serialize(),
+            project=wandb_project,
+            job_type=WandbJobType.TRAIN_MODEL,
         )
-    )
-    logger.progress("Summary logged, getting dataset")
+        logger.progress("Initialized logger")
+    else:
+        logger = None
+
+    def log(msg: str | dict, log_type: str = "progress", **kwargs):
+        # Convenience function to let training routine work whether or not
+        # logger exists
+        if logger:
+            log_fn = getattr(logger, log_type)
+            log_fn(msg, **kwargs)
+        else:
+            if type(msg) == dict:
+                pprint_summary(msg)
+            else:
+                print(msg)
+
+    log(logger_cfg_dict, log_type="summary")
+    log("Summary logged, getting dataset")
 
     # load dataset
     if dataset is None:
@@ -115,10 +134,10 @@ def train_model(
         )
     else:
         if dataset.cfg == cfg.dataset_cfg:
-            logger.progress(f"passed dataset has matching config, using that")
+            log(f"passed dataset has matching config, using that")
         else:
             if allow_dataset_override:
-                logger.progress(
+                log(
                     f"passed dataset has different config than cfg.dataset_cfg, but allow_dataset_override is True, so using passed dataset"
                 )
             else:
@@ -126,7 +145,8 @@ def train_model(
                     f"dataset has different config than cfg.dataset_cfg, and allow_dataset_override is False"
                 )
 
-    logger.progress(f"finished getting training dataset with {len(dataset)} samples")
+    log(f"finished getting training dataset with {len(dataset)} samples")
+
     # validation dataset, if applicable
     val_dataset: MazeDataset | None = None
     if cfg.train_cfg.validation_dataset_cfg is not None:
@@ -148,7 +168,7 @@ def train_model(
             dataset.mazes = dataset.mazes[: split_dataset_sizes[0]]
             dataset.update_self_config()
             val_dataset.update_self_config()
-            logger.progress(
+            log(
                 f"got validation dataset by splitting training dataset into {len(dataset)} train and {len(val_dataset)} validation samples"
             )
         elif isinstance(cfg.train_cfg.validation_dataset_cfg, MazeDatasetConfig):
@@ -158,14 +178,12 @@ def train_model(
                 local_base_path=base_path,
                 verbose=dataset_verbose,
             )
-            logger.progress(
-                f"got custom validation dataset with {len(val_dataset)} samples"
-            )
+            log(f"got custom validation dataset with {len(val_dataset)} samples")
 
     # get dataloader and then train
     dataloader: DataLoader = get_dataloader(dataset, cfg, logger)
 
-    logger.progress("finished dataloader, passing to train()")
+    log("finished dataloader, passing to train()")
     trained_model: ZanjHookedTransformer = train(
         cfg=cfg,
         dataloader=dataloader,
