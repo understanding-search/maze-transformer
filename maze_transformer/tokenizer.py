@@ -1,6 +1,7 @@
 # Avoid circular import from training/config.py
-from typing import TYPE_CHECKING, Dict, Sequence  # need Union as "a" | "b" doesn't work
+from typing import TYPE_CHECKING, Dict, Sequence, Tuple  # need Union as "a" | "b" doesn't work
 
+import os
 import torch
 from maze_dataset import SPECIAL_TOKENS, LatticeMaze
 from maze_dataset.plotting import MazePlot
@@ -159,7 +160,13 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence, self._maze_tokenizer)
         return MazePlot(lattice_maze).to_ascii()
-    
+
+    def save_vocabulary(self, save_directory: str, filename_prefix: str | None = None) -> Tuple[str]:
+        fname = filename_prefix+'_vocab.txt' if filename_prefix else 'vocab.txt'
+        with open(os.path.join(save_directory, fname), 'w') as f:
+            f.write(''.join(list(self.vocab)))
+        return (fname,)
+            
     def get_vocab(self) -> Dict[str, int]:
         print("Getting vocab")
         if hasattr(self, "vocab"):
