@@ -215,6 +215,7 @@ class RandomBaseline(HookedTransformer):
                 )
         elif isinstance(context, str):
             tokens = self.tokenizer.tokenize(context)
+            assert '' not in tokens and ' ' not in tokens, "Tokenizer error, split `context` includes bad token strings."
         else:
             raise TypeError(f"Expected list[str], str, or tensor, got {type(context)}")
 

@@ -119,6 +119,8 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     def _tokenize(self, text: str, **kwargs) -> list[str]:
         assert len(kwargs) == 0, f"kwargs not supported: {kwargs}"
+        if text == " ":  # In transformers ^4.34, this input is passed. 
+            return []  # Necessary to maintain output of `PreTrainedTokenizer.tokenize` from transformers <=4.33
 
         return text.split(" ")
 

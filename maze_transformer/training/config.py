@@ -473,7 +473,7 @@ class ConfigHolder(SerializableDataclass):
         """get a tokenizer via a pretrainedtokenizer_kwargs, or a hugging maze tokenizer"""
         if self._tokenizer is None:
             if self.pretrainedtokenizer_kwargs is not None:
-                return PreTrainedTokenizer(**self.pretrainedtokenizer_kwargs)
+                raise ValueError("Obsolete tokenizer initialization, caller should revise `ConfigHolder` initialization.")
             elif self.maze_tokenizer is not None:
                 return HuggingMazeTokenizer(
                     seq_len_max=self.dataset_cfg.seq_len_max,
@@ -486,8 +486,7 @@ class ConfigHolder(SerializableDataclass):
                 )
             else:
                 raise ValueError("no tokenizer specified")
-        else:
-            return self._tokenizer
+        return self._tokenizer
 
     @cached_property
     def hooked_transformer_cfg(self) -> HookedTransformerConfig:
