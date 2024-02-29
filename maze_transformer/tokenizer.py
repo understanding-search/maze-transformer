@@ -102,13 +102,6 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         I.e. a single example should be a continuous string
             "a b c d e f" not ["a", "b", "c", "d", "e", "f"]
         """
-        #! Placeholder until we find out why the transformer tokenizer trie is returning ' ' as tokens
-        if isinstance(text, list):
-            if isinstance(text[0], str):
-                text = [t.replace(" ", "") for t in text]
-        elif isinstance(text, str):
-            text = text.replace(' ','') 
-
         try:
             return super().__call__(text, **kwargs)
         except (NotImplementedError, ValueError) as e:
@@ -163,7 +156,6 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         return MazePlot(lattice_maze).to_ascii()
     
     def get_vocab(self) -> Dict[str, int]:
-        print("Getting vocab")
         if hasattr(self, "vocab"):
             return self.vocab
         return {}
