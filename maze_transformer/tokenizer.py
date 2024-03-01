@@ -89,7 +89,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         self._add_tokens(normal_tokens)
         self._add_tokens(special_tokens, special_tokens=True)
 
-        self.unique_no_split_tokens = token_arr # Trie is updated automatically?
+        self.unique_no_split_tokens = token_arr  # Trie is updated automatically?
 
         # IDs specified during construction
         self.bos_token_id: int = self.added_tokens_encoder[self.bos_token]
@@ -112,15 +112,19 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     def _tokenize(self, text: str, **kwargs) -> list[str]:
         assert len(kwargs) == 0, f"kwargs not supported: {kwargs}"
-        if text == " ":  # In transformers ^4.34, this input is passed. 
-            return []  # Necessary to maintain output of `PreTrainedTokenizer.tokenize` from transformers <=4.33
+        if text == " ":  # In transformers ^4.34, this input is passed.
+            return (
+                []
+            )  # Necessary to maintain output of `PreTrainedTokenizer.tokenize` from transformers <=4.33
 
         return text.split(" ")
 
     def _convert_token_to_id(self, token: str) -> int:
         if token in self.vocab:
             return self.vocab[token]
-        elif token==" ": # for some reason transformers trie now returns ' ' as tokens
+        elif (
+            token == " "
+        ):  # for some reason transformers trie now returns ' ' as tokens
             return None
         else:
             raise ValueError(f"Token not in vocab: '{token}'")
@@ -154,7 +158,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence, self._maze_tokenizer)
         return MazePlot(lattice_maze).to_ascii()
-    
+
     def get_vocab(self) -> Dict[str, int]:
         if hasattr(self, "vocab"):
             return self.vocab

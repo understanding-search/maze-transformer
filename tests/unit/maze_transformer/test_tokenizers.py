@@ -4,11 +4,11 @@ as the original tokenizer (i.e. just using the token map in cfg)
 
 We may want a separate set of tests for different tokenization schemes
 """
-from itertools import product
 from collections import Counter
+from itertools import product
 
 import torch
-from maze_dataset import MazeDatasetConfig, SolvedMaze, LatticeMaze
+from maze_dataset import MazeDatasetConfig, SolvedMaze
 from maze_dataset.generation import get_maze_with_solution
 from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
 from pytest import mark, param
@@ -123,8 +123,9 @@ def test_to_ascii(tok_mode):
     [
         param(
             maze_ascii,
-            tok_mode, 
-            id=f"{tok_mode.name}_{(len(maze_ascii[0])-1)//2}x{(len(maze_ascii[0])-1)//2}")
+            tok_mode,
+            id=f"{tok_mode.name}_{(len(maze_ascii[0])-1)//2}x{(len(maze_ascii[0])-1)//2}",
+        )
         for maze_ascii, tok_mode in product(
             [
                 [
@@ -158,36 +159,37 @@ def test_to_ascii(tok_mode):
                     "# # # ####### ##### #",
                     "#   #               #",
                     "#####################",
-                ]
+                ],
             ],
             [
                 TokenizationMode.AOTP_UT_uniform,
                 TokenizationMode.AOTP_UT_rasterized,
-            ]
+            ],
         )
     ],
 )
 def test_maze_to_tokens_roundtrip(maze_ascii: list[str], tok_mode: TokenizationMode):
     def get_token_regions(toks: list[str]):
-        adj_list_start, adj_list_end = toks.index('<ADJLIST_START>')+1 ,tokens.index('<ADJLIST_END>')
+        adj_list_start, adj_list_end = toks.index("<ADJLIST_START>") + 1, tokens.index(
+            "<ADJLIST_END>"
+        )
         adj_list = toks[adj_list_start:adj_list_end]
         non_adj_list = toks[:adj_list_start] + toks[adj_list_end:]
         return adj_list, non_adj_list
-    
+
     ascii_str = "\n".join(maze_ascii)
     maze = SolvedMaze.from_ascii(ascii_str)
     tokenizer = MazeTokenizer(tokenization_mode=tok_mode)
     tokens = maze.as_tokens(tokenizer)
     adj_list, non_adj_list = get_token_regions(tokens)
-    
+
     maze_roundtrip = SolvedMaze.from_tokens(tokens, tokenizer)
     tokens_roundtrip = maze_roundtrip.as_tokens(tokenizer)
     adj_list_rt, non_adj_list_rt = get_token_regions(tokens)
-    
+
     assert maze == maze_roundtrip
     assert non_adj_list_rt == non_adj_list
     assert Counter(adj_list) == Counter(adj_list_rt)
-    
 
 
 @mark.parametrize(

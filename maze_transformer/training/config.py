@@ -473,7 +473,9 @@ class ConfigHolder(SerializableDataclass):
         """get a tokenizer via a pretrainedtokenizer_kwargs, or a hugging maze tokenizer"""
         if self._tokenizer is None:
             if self.pretrainedtokenizer_kwargs is not None:
-                raise ValueError("Obsolete tokenizer initialization, caller should revise `ConfigHolder` initialization.")
+                raise ValueError(
+                    "Obsolete tokenizer initialization, caller should revise `ConfigHolder` initialization."
+                )
             elif self.maze_tokenizer is not None:
                 return HuggingMazeTokenizer(
                     seq_len_max=self.dataset_cfg.seq_len_max,
