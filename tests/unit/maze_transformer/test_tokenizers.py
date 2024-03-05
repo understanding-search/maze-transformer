@@ -5,7 +5,6 @@ as the original tokenizer (i.e. just using the token map in cfg)
 We may want a separate set of tests for different tokenization schemes
 """
 
-from collections import Counter
 from itertools import product
 
 import torch
@@ -118,7 +117,6 @@ def test_to_ascii(tok_mode):
         cfg_holder.tokenizer.to_ascii(token_ids).splitlines() == target
     ), "ASCII encoding from token ids failed"
 
- 
 
 @mark.parametrize(
     "tok_mode",
