@@ -125,7 +125,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         elif (
             token == " "
         ):  # for some reason transformers trie now returns ' ' as tokens
-            return None
+            raise ValueError(f"Found a space token in `_convert_token_to_id`: '{token}'")
         else:
             raise ValueError(f"Token not in vocab: '{token}'")
 
