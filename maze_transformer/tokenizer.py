@@ -1,5 +1,5 @@
 # Avoid circular import from training/config.py
-from typing import TYPE_CHECKING, Dict, Sequence  # need Union as "a" | "b" doesn't work
+from typing import TYPE_CHECKING, Sequence  # need Union as "a" | "b" doesn't work
 
 import torch
 from maze_dataset import SPECIAL_TOKENS, LatticeMaze
@@ -159,7 +159,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         lattice_maze = LatticeMaze.from_tokens(str_sequence, self._maze_tokenizer)
         return MazePlot(lattice_maze).to_ascii()
 
-    def get_vocab(self) -> Dict[str, int]:
+    def get_vocab(self) -> dict[str, int]:
         if hasattr(self, "vocab"):
             return self.vocab
         return {}
