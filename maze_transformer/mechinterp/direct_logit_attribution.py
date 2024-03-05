@@ -136,13 +136,13 @@ def plot_direct_logit_attribution(
     by default, its the identity map for contribs:
     `layer_index_normalization: typing.Callable[[float, int], float]|None = lambda contrib, layer_idx: contrib`
     """
-    dla_data: dict[str, Float[np.ndarray, "layer head/neuron"]] = (
-        compute_direct_logit_attribution(
-            model=model,
-            cache=cache,
-            answer_tokens=answer_tokens,
-            do_neurons=do_neurons,
-        )
+    dla_data: dict[
+        str, Float[np.ndarray, "layer head/neuron"]
+    ] = compute_direct_logit_attribution(
+        model=model,
+        cache=cache,
+        answer_tokens=answer_tokens,
+        do_neurons=do_neurons,
     )
     if layer_index_normalization is not None:
         dla_data = {

@@ -20,10 +20,12 @@ class TRAIN_SAVE_FILES:
     config_holder: str = "config.json"
     checkpoints: str = "checkpoints"
     log: str = "log.jsonl"
-    model_checkpt_zanj: Callable[[int], str] = (
-        lambda iteration: f"model.iter_{iteration}.zanj"
-    )
+    model_checkpt_zanj: Callable[
+        [int], str
+    ] = lambda iteration: f"model.iter_{iteration}.zanj"
     model_final_zanj: str = "model.final.zanj"
-    model_run_dir: Callable[[ConfigHolder], str] = (
+    model_run_dir: Callable[
+        [ConfigHolder], str
+    ] = (
         lambda cfg: f"{sanitize_fname(cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
     )
