@@ -87,7 +87,7 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         special_tokens = list(SPECIAL_TOKENS.values())
         normal_tokens = [x for x in token_arr if x not in special_tokens]
         self._add_tokens(normal_tokens)
-        self._add_tokens(special_tokens, special_tokens=True)
+        self._add_tokens(special_tokens)
 
         self.unique_no_split_tokens = token_arr  # Trie is updated automatically?
 
