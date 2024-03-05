@@ -23,8 +23,7 @@ class PathEvalFunction(typing.Protocol):
         maze: LatticeMaze | None = None,
         solution: CoordArray | None = None,
         prediction: CoordArray | None = None,
-    ) -> float:
-        ...
+    ) -> float: ...
 
 
 def path_as_segments_iter(path: CoordArray) -> typing.Iterable[tuple]:
