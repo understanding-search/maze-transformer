@@ -81,8 +81,9 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
         # We are having to do evil things here
         vocab: dict[str, int] = {token: i for i, token in enumerate(token_arr)}
-        vocab[self.unk_token] = len(vocab)
-        self.vocab: dict[str, int] = vocab
+        if self.unk_token not in vocab:  # maze-dataset >=X.X.X includes <UNK> already
+            vocab[self.unk_token] = len(vocab)
+            self.vocab: dict[str, int] = vocab
 
         special_tokens = list(SPECIAL_TOKENS.values())
         normal_tokens = [x for x in token_arr if x not in special_tokens]
