@@ -15,8 +15,8 @@ from maze_dataset.tokenization.token_utils import (
     get_origin_tokens,
     get_path_tokens,
     get_target_tokens,
-    strings_to_coords,
 )
+from maze_dataset.tokenization.util import strings_to_coords
 from transformer_lens import HookedTransformer
 
 from maze_transformer.training.config import ConfigHolder
