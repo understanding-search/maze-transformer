@@ -10,7 +10,7 @@ repository = "https://github.com/understanding-search/maze-transformer"
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 # dataset
-maze-dataset = "^0.4.5"
+maze-dataset = "^0.5.2"
 # transformers
 torch = ">=1.13.1"
 transformer-lens = "1.14.0"
