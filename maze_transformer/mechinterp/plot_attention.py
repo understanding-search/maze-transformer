@@ -19,7 +19,7 @@ from maze_dataset.plotting import MazePlot
 from maze_dataset.plotting.plot_tokens import plot_colored_text
 from maze_dataset.plotting.print_tokens import color_tokens_cmap
 from maze_dataset.tokenization import MazeTokenizer
-from maze_dataset.tokenization.token_utils import coord_str_to_tuple_noneable
+from maze_dataset.tokenization.util import coord_str_to_tuple_noneable
 
 # Utilities
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass

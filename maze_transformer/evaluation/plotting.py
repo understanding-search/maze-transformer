@@ -32,7 +32,7 @@ def plot_predicted_paths(
     if n_mazes is None:
         n_mazes = len(dataset)
 
-    dataset_tokens = dataset.as_tokens(model.config.maze_tokenizer)[:n_mazes]
+    dataset_tokens = dataset.as_tokens(model.tokenizer._maze_tokenizer)[:n_mazes]
 
     # predict
     predictions: list[list[str | tuple[int, int]]] = predict_maze_paths(
