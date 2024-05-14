@@ -123,7 +123,8 @@ def train_model(
                 )
             else:
                 raise ValueError(
-                    f"dataset has different config than cfg.dataset_cfg, and allow_dataset_override is False"
+                    f"dataset has different config than cfg.dataset_cfg, and allow_dataset_override is False",
+                    f"{dataset.cfg.diff(cfg.dataset_cfg)}"
                 )
 
     logger.progress(f"finished getting training dataset with {len(dataset)} samples")
