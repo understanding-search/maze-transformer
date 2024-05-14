@@ -13,7 +13,7 @@ python = ">=3.10,<3.13"
 maze-dataset = "^0.5.2"
 # transformers
 torch = ">=1.13.1"
-transformer-lens = "1.14.0"
+transformer-lens = "^1.14.0"
 transformers = ">=4.34" # Dependency in transformer-lens 1.14.0
 # utils
 muutils = "^0.5.5"
