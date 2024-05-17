@@ -11,7 +11,7 @@ from maze_dataset import (
     LatticeMaze,
     SolvedMaze,
 )
-from maze_dataset.tokenization.token_utils import (
+from maze_dataset.token_utils import (
     get_origin_tokens,
     get_path_tokens,
     get_target_tokens,

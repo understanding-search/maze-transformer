@@ -15,7 +15,7 @@ from maze_dataset import (
     SolvedMaze,
 )
 from maze_dataset.tokenization import MazeTokenizer
-from maze_dataset.tokenization.token_utils import (
+from maze_dataset.token_utils import (
     WhenMissing,
     get_context_tokens,
     get_path_tokens,

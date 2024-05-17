@@ -12,7 +12,7 @@ from jaxtyping import Float
 # maze_dataset
 from maze_dataset.constants import _SPECIAL_TOKENS_ABBREVIATIONS
 from maze_dataset.tokenization import MazeTokenizer
-from maze_dataset.tokenization.token_utils import strings_to_coords
+from maze_dataset.token_utils import strings_to_coords
 
 # scipy
 from scipy.spatial.distance import pdist, squareform
