@@ -46,13 +46,13 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     def __init__(
         self,
         seq_len_max: int,
-        maze_tokenizer: MazeTokenizerModular,
+        maze_tokenizer: MazeTokenizer | MazeTokenizerModular,
         **kwargs,
     ) -> None:
         """extension of PreTrainedTokenizer for mazes. takes maximum sequence length and maze_tokenizer. also, kwargs are passed to super `PreTrainedTokenizer`"""
         super().__init__(max_len=seq_len_max, **kwargs)
 
-        self._maze_tokenizer: MazeTokenizerModular = maze_tokenizer
+        self._maze_tokenizer: MazeTokenizer | MazeTokenizerModular = maze_tokenizer
         token_arr: list[str] = maze_tokenizer.token_arr
         self._token_arr: list[str] = token_arr
         self._seq_len_max: int = seq_len_max

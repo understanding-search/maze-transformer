@@ -143,7 +143,7 @@ def predict_maze_paths(
             smart_max_new_tokens
         ), "if max_new_tokens is None, smart_max_new_tokens must be True"
 
-    maze_tokenizer: MazeTokenizerModular = model.config.maze_tokenizer
+    maze_tokenizer: MazeTokenizer | MazeTokenizerModular = model.config.maze_tokenizer
 
     contexts_lists: list[list[str]] = [
         get_context_tokens(tokens) for tokens in tokens_batch

@@ -2,20 +2,21 @@ import numpy as np
 import pytest
 from maze_dataset import SPECIAL_TOKENS, SolvedMaze, utils
 from maze_dataset.generation import get_maze_with_solution
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode, MazeTokenizerModular
 
 
 @pytest.mark.parametrize(
-    "tok_mode",
+    "tokenizer",
     [
-        pytest.param(tok_mode, id=tok_mode.name)
-        for tok_mode in (
-            TokenizationMode.AOTP_UT_rasterized,
-            TokenizationMode.AOTP_UT_uniform,
+        pytest.param(tokenizer, id=tokenizer.name)
+        for tokenizer in (
+            TokenizationMode.AOTP_UT_rasterized.to_legacy_tokenizer(),
+            TokenizationMode.AOTP_UT_uniform.to_legacy_tokenizer(),
+            MazeTokenizerModular()
         )
     ],
 )
-def test_coordinate_system(tok_mode: TokenizationMode):
+def test_coordinate_system(tokenizer: MazeTokenizer | MazeTokenizerModular):
     """
     Check that the adj_list created by as_tokens() uses the same coordinate system as the LatticeMaze adj_list.
 
@@ -30,10 +31,7 @@ def test_coordinate_system(tok_mode: TokenizationMode):
         [f"({c[0]},{c[1]})" for c in conn] for conn in maze_adj_list
     ]
 
-    tok: MazeTokenizer = MazeTokenizer(
-        tokenization_mode=tok_mode, max_grid_size=maze_size
-    )
-    tokenized_maze: list[str] = solved_maze.as_tokens(tok)
+    tokenized_maze: list[str] = solved_maze.as_tokens(tokenizer)
 
     tokenizer_adj_list = tokenized_maze[
         tokenized_maze.index(SPECIAL_TOKENS.ADJLIST_START)
