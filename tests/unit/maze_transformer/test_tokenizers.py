@@ -10,7 +10,7 @@ from itertools import product
 import torch
 from maze_dataset import MazeDatasetConfig, SolvedMaze
 from maze_dataset.generation import get_maze_with_solution
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode, MazeTokenizerModular
 from pytest import mark, param
 from transformer_lens import HookedTransformer
 

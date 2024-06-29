@@ -14,7 +14,7 @@ from maze_dataset import (
     MazeDatasetConfig,
     SolvedMaze,
 )
-from maze_dataset.tokenization import MazeTokenizer
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 from maze_dataset.token_utils import (
     WhenMissing,
     get_context_tokens,
@@ -143,7 +143,7 @@ def predict_maze_paths(
             smart_max_new_tokens
         ), "if max_new_tokens is None, smart_max_new_tokens must be True"
 
-    maze_tokenizer: MazeTokenizer = model.config.maze_tokenizer
+    maze_tokenizer: MazeTokenizerModular = model.config.maze_tokenizer
 
     contexts_lists: list[list[str]] = [
         get_context_tokens(tokens) for tokens in tokens_batch

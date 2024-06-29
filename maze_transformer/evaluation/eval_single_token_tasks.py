@@ -12,7 +12,7 @@ from jaxtyping import Bool, Float
 # Our Code
 # dataset stuff
 from maze_dataset import MazeDataset
-from maze_dataset.tokenization import MazeTokenizer
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
 
 # TransformerLens imports
@@ -47,7 +47,7 @@ class TaskEvalResult(SerializableDataclass):
 
 def get_task_prompts_targets(
     dataset: MazeDataset,
-    maze_tokenizer: MazeTokenizer,
+    maze_tokenizer: MazeTokenizer | MazeTokenizerModular,
     tasks: dict[str, DLAProtocolFixed] = LOGIT_ATTRIB_TASKS,
 ) -> dict[str, TaskPrompt]:
     dataset_tokens: list[list[str]] = dataset.as_tokens(
@@ -63,7 +63,7 @@ def eval_model_task(
     task: TaskPrompt,
     do_cache: bool = False,
 ) -> TaskEvalResult:
-    maze_tokenizer: MazeTokenizer = model.config.maze_tokenizer
+    maze_tokenizer: MazeTokenizer | MazeTokenizerModular = model.config.maze_tokenizer
 
     prompts_joined: list[str] = [" ".join(prompt) for prompt in task.prompts]
 
