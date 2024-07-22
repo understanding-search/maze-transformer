@@ -39,6 +39,7 @@ class BaseGPTConfig(SerializableDataclass):
     d_model: int
     d_head: int
     n_layers: int
+    positional_embedding_type: str = serializable_field(default="positional")
 
     weight_processing: dict[str, bool] = serializable_field(
         default_factory=lambda: dict(
