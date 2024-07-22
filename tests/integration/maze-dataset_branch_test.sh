@@ -37,6 +37,7 @@ echo Installed maze-dataset#$BRANCH
 # poetry show maze-dataset
 POSIX_PATH=$(echo $(poetry env info --path)| sed 's/\\/\//g')
 echo "POSIX_PATH = $POSIX_PATH"
-echo "trying Linux on Windows" && source $(poetry env info --path)\\Scripts\\activate.ps1 || echo "trying linux activate" && source $POSIX_PATH/bin/activate
+echo "trying Linux on Windows" && source $POSIX_PATH/Scripts/activate.ps1 || echo "trying linux activate" && source $POSIX_PATH/bin/activate
+# echo "trying Linux on Windows" && source $(poetry env info --path)\\Scripts\\activate.ps1 || echo "trying linux activate" && source $POSIX_PATH/bin/activate
 cd ..
 poetry env info
