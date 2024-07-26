@@ -39,7 +39,10 @@ class BaseGPTConfig(SerializableDataclass):
     d_model: int
     d_head: int
     n_layers: int
-    positional_embedding_type: str
+    positional_embedding_type: str = serializable_field(
+        default="standard",
+        loading_fn=lambda data: data.get("positional_embedding_type", "standard"),
+    )
 
     weight_processing: dict[str, bool] = serializable_field(
         default_factory=lambda: dict(
@@ -277,7 +280,6 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         d_model=32,
         d_head=16,
         n_layers=4,
-        positional_embedding_type='standard',
     ),
     BaseGPTConfig(
         name="tuned-v1",
@@ -285,7 +287,6 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         d_model=384,
         d_head=64,
         n_layers=6,
-        positional_embedding_type='standard',
     ),
     BaseGPTConfig(
         name="gpt2-small",
@@ -293,7 +294,6 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         d_model=384,  # half of gpt2-small
         d_head=64,  # match gpt-2 small
         n_layers=12,  # half of gpt2-small
-        positional_embedding_type='standard',
     ),
     # this one is just for integration tests
     BaseGPTConfig(
@@ -302,7 +302,6 @@ _GPT_CONFIGS_LIST: list[BaseGPTConfig] = [
         d_model=8,
         d_head=4,
         n_layers=2,
-        positional_embedding_type='standard',
     ),
 ]
 
