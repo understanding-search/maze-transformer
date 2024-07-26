@@ -10,7 +10,7 @@ from typing import Any, Type
 import torch
 from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
 from maze_dataset.dataset.dataset import GPTDatasetConfig
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode, MazeTokenizerModular
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 from muutils.dictmagic import kwargs_to_nested_dict
 from muutils.json_serialize import (
     JSONitem,
@@ -389,7 +389,9 @@ def _load_maze_tokenizer(data: dict) -> MazeTokenizerModular:
     """load the maze tokenizer, including vocab size from a legacy config"""
     if "maze_tokenizer" in data:
         # new style tokenizer
-        return MazeTokenizerModular.from_legacy(load_item_recursive(data["maze_tokenizer"], path=tuple("maze_tokenizer")))
+        return MazeTokenizerModular.from_legacy(
+            load_item_recursive(data["maze_tokenizer"], path=tuple("maze_tokenizer"))
+        )
     else:
         if "token_arr" in data["dataset_cfg"]:
             output: MazeTokenizerModular = MazeTokenizerModular()

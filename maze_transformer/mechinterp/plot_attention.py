@@ -18,8 +18,8 @@ from maze_dataset import CoordTup, MazeDataset, MazeDatasetConfig, SolvedMaze
 from maze_dataset.plotting import MazePlot
 from maze_dataset.plotting.plot_tokens import plot_colored_text
 from maze_dataset.plotting.print_tokens import color_tokens_cmap
-from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 from maze_dataset.token_utils import coord_str_to_tuple_noneable
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 
 # Utilities
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass

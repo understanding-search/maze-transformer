@@ -1,7 +1,11 @@
 import numpy as np
 import pytest
 from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode, MazeTokenizerModular
+from maze_dataset.tokenization import (
+    MazeTokenizer,
+    MazeTokenizerModular,
+    TokenizationMode,
+)
 
 from maze_transformer.evaluation.baseline_models import RandomBaseline
 from maze_transformer.evaluation.eval_model import predict_maze_paths
@@ -11,8 +15,12 @@ from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, Conf
 @pytest.mark.parametrize(
     "tokenizer",
     [
-        pytest.param(TokenizationMode.AOTP_UT_rasterized.to_legacy_tokenizer(), id="rasterized"),
-        pytest.param(TokenizationMode.AOTP_UT_uniform.to_legacy_tokenizer(), id="uniform"),
+        pytest.param(
+            TokenizationMode.AOTP_UT_rasterized.to_legacy_tokenizer(), id="rasterized"
+        ),
+        pytest.param(
+            TokenizationMode.AOTP_UT_uniform.to_legacy_tokenizer(), id="uniform"
+        ),
         pytest.param(MazeTokenizerModular(), id="MazeTokenizerModular"),
     ],
 )

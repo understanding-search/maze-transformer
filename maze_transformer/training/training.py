@@ -19,7 +19,9 @@ from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbLogger
 
 
-def collate_batch(batch: list[SolvedMaze], maze_tokenizer: MazeTokenizer | MazeTokenizerModular) -> list[str]:
+def collate_batch(
+    batch: list[SolvedMaze], maze_tokenizer: MazeTokenizer | MazeTokenizerModular
+) -> list[str]:
     return [" ".join(maze.as_tokens(maze_tokenizer)) for maze in batch]
 
 

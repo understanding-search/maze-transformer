@@ -11,8 +11,8 @@ from jaxtyping import Float
 
 # maze_dataset
 from maze_dataset.constants import _SPECIAL_TOKENS_ABBREVIATIONS
-from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 from maze_dataset.token_utils import strings_to_coords
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 
 # scipy
 from scipy.spatial.distance import pdist, squareform
@@ -52,7 +52,9 @@ TokenPlottingInfo = NamedTuple(
 )
 
 
-def process_tokens_for_pca(tokenizer: MazeTokenizer | MazeTokenizerModular) -> list[TokenPlottingInfo]:
+def process_tokens_for_pca(
+    tokenizer: MazeTokenizer | MazeTokenizerModular,
+) -> list[TokenPlottingInfo]:
     tokens_coords: list[str | tuple[int, int]] = strings_to_coords(
         tokenizer.token_arr, when_noncoord="include"
     )

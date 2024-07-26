@@ -11,7 +11,11 @@ import torch
 from maze_dataset import MazeDatasetConfig, SolvedMaze
 from maze_dataset.generation import get_maze_with_solution
 from maze_dataset.testing_utils import LEGACY_AND_EQUIVALENT_TOKENIZERS
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode, MazeTokenizerModular
+from maze_dataset.tokenization import (
+    MazeTokenizer,
+    MazeTokenizerModular,
+    TokenizationMode,
+)
 from pytest import mark, param
 from transformer_lens import HookedTransformer
 
@@ -49,7 +53,9 @@ def test_tokenization_encoding(
         return
 
     # check that tokenizer map is as expected
-    token_to_index: dict[str, int] = {token: i for i, token in enumerate(tokenizer.token_arr)}
+    token_to_index: dict[str, int] = {
+        token: i for i, token in enumerate(tokenizer.token_arr)
+    }
     assert token_to_index == tokenizer.tokenizer_map, "Tokenization mismatch"
 
     # round trip tokenize
@@ -77,7 +83,7 @@ def test_tokenization_encoding(
         for tokenizer in [
             MazeTokenizer(tokenization_mode=TokenizationMode.AOTP_UT_uniform),
             MazeTokenizer(tokenization_mode=TokenizationMode.AOTP_UT_rasterized),
-            MazeTokenizerModular()
+            MazeTokenizerModular(),
         ]
     ],
 )
@@ -126,7 +132,9 @@ def test_to_ascii(tokenizer: MazeTokenizer | MazeTokenizerModular):
         param(MazeTokenizerModular(), id="MazeTokenizerModular(UT())"),
     ],
 )
-def test_tokenizer_inside_hooked_transformer(tokenizer: MazeTokenizer | MazeTokenizerModular):
+def test_tokenizer_inside_hooked_transformer(
+    tokenizer: MazeTokenizer | MazeTokenizerModular,
+):
     cfg_holder = ConfigHolder(
         train_cfg=None,
         dataset_cfg=MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1),
@@ -267,7 +275,9 @@ PAD_PLACEHOLDER = -1
         ),
     ],
 )
-def test_pad_sequence_param(inp, expected, tokenizer: MazeTokenizer | MazeTokenizerModular):
+def test_pad_sequence_param(
+    inp, expected, tokenizer: MazeTokenizer | MazeTokenizerModular
+):
     cfg_holder: ConfigHolder = ConfigHolder(
         train_cfg=None,
         dataset_cfg=MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1),

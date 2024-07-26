@@ -1,13 +1,21 @@
 import pytest
 from maze_dataset import SPECIAL_TOKENS, MazeDataset, MazeDatasetConfig
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode, MazeTokenizerModular
+from maze_dataset.tokenization import (
+    MazeTokenizer,
+    MazeTokenizerModular,
+    TokenizationMode,
+)
 
 
 @pytest.mark.parametrize(
     "tokenizer",
     [
-        pytest.param(TokenizationMode.AOTP_UT_rasterized.to_legacy_tokenizer(), id="rasterized"),
-        pytest.param(TokenizationMode.AOTP_UT_uniform.to_legacy_tokenizer(), id="uniform"),
+        pytest.param(
+            TokenizationMode.AOTP_UT_rasterized.to_legacy_tokenizer(), id="rasterized"
+        ),
+        pytest.param(
+            TokenizationMode.AOTP_UT_uniform.to_legacy_tokenizer(), id="uniform"
+        ),
         pytest.param(MazeTokenizerModular(), id="MazeTokenizerModular"),
     ],
 )

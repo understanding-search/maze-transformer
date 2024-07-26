@@ -2,7 +2,11 @@ import numpy as np
 import pytest
 from maze_dataset import SPECIAL_TOKENS, SolvedMaze, utils
 from maze_dataset.generation import get_maze_with_solution
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode, MazeTokenizerModular
+from maze_dataset.tokenization import (
+    MazeTokenizer,
+    MazeTokenizerModular,
+    TokenizationMode,
+)
 
 
 @pytest.mark.parametrize(
@@ -12,7 +16,7 @@ from maze_dataset.tokenization import MazeTokenizer, TokenizationMode, MazeToken
         for tokenizer in (
             TokenizationMode.AOTP_UT_rasterized.to_legacy_tokenizer(),
             TokenizationMode.AOTP_UT_uniform.to_legacy_tokenizer(),
-            MazeTokenizerModular()
+            MazeTokenizerModular(),
         )
     ],
 )

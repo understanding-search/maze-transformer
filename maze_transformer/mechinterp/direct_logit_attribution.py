@@ -226,7 +226,9 @@ def create_report(
     # model and tokenizer
     if not isinstance(model, ZanjHookedTransformer):
         model = ZanjHookedTransformer.read(model)
-    tokenizer: MazeTokenizer | MazeTokenizerModular = model.zanj_model_config.maze_tokenizer
+    tokenizer: MazeTokenizer | MazeTokenizerModular = (
+        model.zanj_model_config.maze_tokenizer
+    )
 
     # dataset cfg
     if dataset_cfg_source is None:
