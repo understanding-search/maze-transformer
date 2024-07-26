@@ -15,7 +15,7 @@ class WandbProject(Enum):
     UNDERSTANDING_SEARCH = "understanding-search"
     DEMO_NOTEBOOKS = "demo-notebooks"
     INTEGRATION_TESTS = "integration-tests"
-    __LOCAL = "local"
+    _LOCAL = "local"
 
 
 class WandbJobType(Enum):
@@ -44,7 +44,7 @@ class WandbLogger:
         )
 
         run: Run
-        run_is_local: bool = project == WandbProject.__LOCAL
+        run_is_local: bool = project == WandbProject._LOCAL
         if not run_is_local:
             try:
                 run = wandb.init(
