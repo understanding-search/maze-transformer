@@ -32,7 +32,9 @@ from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
             id=f"{tokenizer.name.split('_')[-1]},g{grid_size},m{grid_size_max}",
         )
         for tokenizer, grid_size, grid_size_max in product(
-            LEGACY_AND_EQUIVALENT_TOKENIZERS, [3, 4], [3, 4, 5, 6, 10, 50]
+            LEGACY_AND_EQUIVALENT_TOKENIZERS,
+            [3, 4],
+            [3, 4, 5, 6, 10, 50],
         )
     ],
 )
@@ -42,7 +44,8 @@ def test_tokenization_encoding(
     # create maze and tokenizer
     solved_maze: SolvedMaze = get_maze_with_solution("gen_dfs", (3, 3))
     if isinstance(tokenizer, MazeTokenizer):
-        tokenizer = MazeTokenizer(tokenizer.tokenization_mode, max_grid_size=grid_size)
+        print(f"{tokenizer.tokenization_mode = }, {grid_size_max = }")
+        tokenizer = MazeTokenizer(tokenizer.tokenization_mode, max_grid_size=grid_size_max)
 
     # convert to strings
     maze_str_tokens: list[str] = solved_maze.as_tokens(tokenizer)
