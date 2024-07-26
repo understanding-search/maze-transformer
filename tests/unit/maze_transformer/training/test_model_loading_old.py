@@ -33,7 +33,7 @@ def test_model_loading_notrain(temp_dir):
     # Load model manually without folding
     with open(temp_dir / "config.json", "r") as f:
         cfgholder_loaded = ConfigHolder.load(json.load(f))
-    model_state_dict = torch.load(temp_dir / "model.pt")
+    model_state_dict = torch.load(temp_dir / "model.pt", weights_only=True)
     model_loaded = cfgholder_loaded.create_model()
     model_loaded.load_state_dict(model_state_dict)
 
