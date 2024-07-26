@@ -2278,7 +2278,7 @@ traitlets = "*"
 
 [[package]]
 name = "maze-dataset"
-version = "0.5.5"
+version = "0.6.0"
 description = ""
 optional = false
 python-versions = "^3.10.6"
@@ -2301,7 +2301,7 @@ zanj = "^0.3.1"
 type = "git"
 url = "https://github.com/understanding-search/maze-dataset.git"
 reference = "tokenizer-overhaul-integration"
-resolved_reference = "0c16cd61c916203ea4503ba437ed866c72b2c1a5"
+resolved_reference = "2c19e57e1d8e1e67e0b1187983429f898d01b642"
 
 [[package]]
 name = "mdurl"
