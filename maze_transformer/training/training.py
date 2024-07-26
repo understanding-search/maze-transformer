@@ -1,3 +1,4 @@
+from typing import Callable
 import warnings
 from functools import partial
 from pathlib import Path
@@ -24,12 +25,12 @@ def collate_batch(batch: list[SolvedMaze], maze_tokenizer: MazeTokenizer) -> lis
 
 
 def get_dataloader(
-    dataset: MazeDataset, cfg: ConfigHolder, logger: WandbLogger
+    dataset: MazeDataset, cfg: ConfigHolder, logger: Callable
 ) -> DataLoader:
     if len(dataset) == 0:
         raise ValueError(f"Dataset is empty: {len(dataset) = }")
-    logger.progress(f"Loaded {len(dataset)} sequences")
-    logger.progress("Creating dataloader")
+    logger(f"Loaded {len(dataset)} sequences")
+    logger("Creating dataloader")
     try:
         dataloader: DataLoader = DataLoader(
             dataset,
@@ -52,7 +53,7 @@ def get_dataloader(
 def train(
     cfg: ConfigHolder,
     dataloader: DataLoader,
-    logger: WandbLogger,
+    logger: Callable,
     output_dir: Path,
     device: torch.device,
     val_dataset: MazeDataset | None = None,
@@ -66,24 +67,24 @@ def train(
 
     # init model & optimizer
     if model is None:
-        logger.progress(f"Initializing model")
+        logger(f"Initializing model")
         model: ZanjHookedTransformer = cfg.create_model_zanj()
         model.to(device)
     else:
-        logger.progress("Using existing model")
+        logger("Using existing model")
 
-    logger.summary({"device": str(device), "model.device": model.cfg.device})
+    logger({"device": str(device), "model.device": model.cfg.device})
 
-    logger.progress("Initializing optimizer")
+    logger("Initializing optimizer")
     optimizer: torch.optim.Optimizer = cfg.train_cfg.optimizer(
         model.parameters(),
         **cfg.train_cfg.optimizer_kwargs,
     )
-    logger.summary(dict(model_n_params=model.cfg.n_params))
+    logger(dict(model_n_params=model.cfg.n_params))
 
     # add wandb run url to model
     model.training_records = {
-        "wandb_url": logger.url,
+        "wandb_url": getattr(logger, "url", None),
     }
 
     # figure out whether to run evals, and validation dataset
@@ -116,10 +117,10 @@ def train(
             key: value if not key.startswith("eval") else float("inf")
             for key, value in intervals.items()
         }
-    logger.summary(
+    logger(
         {"n_batches": n_batches, "n_samples": n_samples, "intervals": intervals}
     )
-    logger.progress(
+    logger(
         f"will train for {n_batches} batches, {evals_enabled=}, with intervals: {intervals}"
     )
 
@@ -128,7 +129,7 @@ def train(
     # start up training
     # ==============================
     model.train()
-    logger.progress("Starting training")
+    logger("Starting training")
 
     for iteration, batch in enumerate(dataloader):
         # forward pass
@@ -153,7 +154,7 @@ def train(
         if evals_enabled:
             for interval_key, evals_dict in PathEvals.PATH_EVALS_MAP.items():
                 if iteration % intervals[interval_key] == 0:
-                    logger.progress(f"Running evals: {interval_key}")
+                    logger(f"Running evals: {interval_key}")
                     scores: dict[str, StatCounter] = evaluate_model(
                         model=model,
                         dataset=val_dataset,
@@ -163,10 +164,10 @@ def train(
                         max_new_tokens=cfg.train_cfg.evals_max_new_tokens,
                     )
                     metrics.update(scores)
-        logger.log_metric_hist(metrics)
+        logger(metrics)
 
         if iteration % intervals["print_loss"] == 0:
-            logger.progress(
+            logger(
                 f"iteration {iteration}/{n_batches}: loss={loss.item():.3f}"
             )
 
@@ -180,19 +181,25 @@ def train(
                 / TRAIN_SAVE_FILES.checkpoints
                 / TRAIN_SAVE_FILES.model_checkpt_zanj(iteration)
             )
-            logger.progress(f"Saving model checkpoint to {model_save_path.as_posix()}")
+            logger(f"Saving model checkpoint to {model_save_path.as_posix()}")
             zanj.save(model, model_save_path)
-            logger.upload_model(
-                model_save_path, aliases=["latest", f"iter-{iteration}"]
-            )
+            try:
+                logger.upload_model(
+                    model_save_path, aliases=["latest", f"iter-{iteration}"]
+                )
+            except Exception as e:
+                logger(f"Failed to upload model: {e}")
 
     # save the final model
     # ==============================
     final_model_path: Path = output_dir / TRAIN_SAVE_FILES.model_final_zanj
-    logger.progress(f"Saving final model to {final_model_path.as_posix()}")
+    logger(f"Saving final model to {final_model_path.as_posix()}")
     zanj.save(model, final_model_path)
-    logger.upload_model(final_model_path, aliases=["latest", "final"])
+    try:
+        logger.upload_model(final_model_path, aliases=["latest", "final"])
+    except Exception as e:
+        logger(f"Failed to upload model: {e}")
 
-    logger.progress("Done training!")
+    logger("Done training!")
 
     return model

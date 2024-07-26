@@ -201,13 +201,13 @@ def train_model(
             log(f"got custom validation dataset with {len(val_dataset)} samples")
 
     # get dataloader and then train
-    dataloader: DataLoader = get_dataloader(dataset, cfg, logger)
+    dataloader: DataLoader = get_dataloader(dataset, cfg, log)
 
     log("finished dataloader, passing to train()")
     trained_model: ZanjHookedTransformer = train(
         cfg=cfg,
         dataloader=dataloader,
-        logger=logger,
+        logger=log,
         output_dir=output_path,
         device=device,
         val_dataset=val_dataset,

@@ -23,41 +23,6 @@ class WandbJobType(Enum):
     TRAIN_MODEL = "train-model"
 
 
-class LocalRunMock(Run):
-    def __init__(
-            self,
-            config: Dict[str, Any],
-            project: Union[WandbProject, str],
-            job_type: WandbJobType,
-        ):
-        self.dir: Path = Path("logs_local") / 
-        self.summary: dict = dict()
-        self.artifacts: list[Dict[Literal["type", "name", "path", "aliases"], None|str|list[str]]] = dict()
-
-    def log(self, data: Dict[str, Any], step=None, commit=True, sync=True) -> None:
-        pass
-
-    def log_artifact(
-            self,
-            type: Literal["dataset", "model"],
-            name: str|None = None,
-            path: str|Path|None = None,
-            aliases: list[str]|None = None,
-        ) -> None:
-        if isinstance(path, Path):
-            path = path.as_posix()
-
-        self.artifacts.append(dict(
-            type=type,
-            name=name,
-            path=path,
-            aliases=aliases,
-        ))
-
-    def get_url(self) -> str:
-        return "local run, not a url"
-
-
 
 class WandbLogger:
     def __init__(self, run: Run, run_is_local: bool = False):
@@ -96,11 +61,7 @@ class WandbLogger:
                     raise e
         
         if run_is_local:
-            run = LocalRunMock(
-                config=config, 
-                project=project, 
-                job_type=job_type,
-            )
+            raise NotImplementedError("Local run not implemented yet")
 
         logger: WandbLogger = WandbLogger(run, run_is_local=run_is_local)
         logger.progress(f"{config =}")
@@ -108,7 +69,7 @@ class WandbLogger:
 
     def upload_model(self, model_path: Path, aliases=None) -> None:
         if self._run_is_local:
-
+            raise NotImplementedError("Local run not implemented yet")
         else:
             artifact: Artifact = wandb.Artifact(name=wandb.run.id, type="model")
             artifact.add_file(str(model_path))
@@ -116,7 +77,7 @@ class WandbLogger:
 
     def upload_dataset(self, name: str, path: Path) -> None:
         if self._run_is_local:
-            
+            raise NotImplementedError("Local run not implemented yet")
         else:
             artifact: Artifact = wandb.Artifact(name=name, type="dataset")
             artifact.add_dir(local_path=str(path))
