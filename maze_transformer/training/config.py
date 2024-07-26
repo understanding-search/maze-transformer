@@ -28,6 +28,16 @@ from zanj.torchutil import ConfiguredModel, set_config_class
 from maze_transformer.tokenizer import HuggingMazeTokenizer
 
 
+# TODO: replace with muutils
+def dynamic_docstring(**doc_params):
+    def decorator(func):
+        if func.__doc__:
+            func.__doc__ = func.__doc__.format(**doc_params)
+        return func
+
+    return decorator
+
+
 @serializable_dataclass(kw_only=True, properties_to_serialize=["n_heads"])
 class BaseGPTConfig(SerializableDataclass):
     """
@@ -39,6 +49,10 @@ class BaseGPTConfig(SerializableDataclass):
     d_model: int
     d_head: int
     n_layers: int
+    positional_embedding_type: str = serializable_field(
+        default="standard",
+        loading_fn=lambda data: data.get("positional_embedding_type", "standard"),
+    )
 
     weight_processing: dict[str, bool] = serializable_field(
         default_factory=lambda: dict(
@@ -59,6 +73,7 @@ class BaseGPTConfig(SerializableDataclass):
             d_model=self.d_model,
             d_head=self.d_head,
             n_layers=self.n_layers,
+            positional_embedding_type=self.positional_embedding_type,
             weight_processing=self.weight_processing,
             n_heads=self.n_heads,
         )
@@ -214,7 +229,9 @@ class TrainConfig(SerializableDataclass):
                         )
 
         except ValueError as e:
-            _debug_vals: str = f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=},\n{self.intervals=},\n{self.intervals_count=}"
+            _debug_vals: str = (
+                f"{dataset_n_samples=}, {use_defaults_if_missing=}, {mod_batch_size=},\n{self.intervals=},\n{self.intervals_count=}"
+            )
             raise ValueError(f"{_debug_vals}\ntriggered error:\n{e}") from e
 
         # disable if set to 0 or negative
@@ -235,9 +252,9 @@ class TrainConfig(SerializableDataclass):
         # actually return the intervals
         if mod_batch_size:
             return {
-                k: max(1, v // self.batch_size)
-                if isinstance(v, int)
-                else v  # if float, leave it as is since its float("inf")
+                k: (
+                    max(1, v // self.batch_size) if isinstance(v, int) else v
+                )  # if float, leave it as is since its float("inf")
                 for k, v in intervals_new.items()
             }
         else:
@@ -459,9 +476,11 @@ class ConfigHolder(SerializableDataclass):
             "model_cfg": self.model_cfg.summary(),
             "train_cfg": self.train_cfg.summary(),
             "pretrainedtokenizer_kwargs": self.pretrainedtokenizer_kwargs,
-            "maze_tokenizer": self.maze_tokenizer.summary()
-            if self.maze_tokenizer is not None
-            else None,
+            "maze_tokenizer": (
+                self.maze_tokenizer.summary()
+                if self.maze_tokenizer is not None
+                else None
+            ),
         }
 
     @property
@@ -473,7 +492,9 @@ class ConfigHolder(SerializableDataclass):
         """get a tokenizer via a pretrainedtokenizer_kwargs, or a hugging maze tokenizer"""
         if self._tokenizer is None:
             if self.pretrainedtokenizer_kwargs is not None:
-                return PreTrainedTokenizer(**self.pretrainedtokenizer_kwargs)
+                raise ValueError(
+                    "Obsolete tokenizer initialization, caller should revise `ConfigHolder` initialization."
+                )
             elif self.maze_tokenizer is not None:
                 return HuggingMazeTokenizer(
                     seq_len_max=self.dataset_cfg.seq_len_max,
@@ -486,8 +507,7 @@ class ConfigHolder(SerializableDataclass):
                 )
             else:
                 raise ValueError("no tokenizer specified")
-        else:
-            return self._tokenizer
+        return self._tokenizer
 
     @cached_property
     def hooked_transformer_cfg(self) -> HookedTransformerConfig:
@@ -496,6 +516,7 @@ class ConfigHolder(SerializableDataclass):
             d_model=self.model_cfg.d_model,
             d_head=self.model_cfg.d_head,
             n_layers=self.model_cfg.n_layers,
+            positional_embedding_type=self.model_cfg.positional_embedding_type,
             n_ctx=self.dataset_cfg.seq_len_max,
             d_vocab=self.maze_tokenizer.vocab_size,
         )
@@ -517,6 +538,11 @@ class ConfigHolder(SerializableDataclass):
         return ZanjHookedTransformer(self)
 
     @classmethod
+    @dynamic_docstring(
+        dataset_cfg_names=str(list(MAZE_DATASET_CONFIGS.keys())),
+        model_cfg_names=str(list(GPT_CONFIGS.keys())),
+        train_cfg_names=str(list(TRAINING_CONFIGS.keys())),
+    )
     def get_config_multisource(
         cls,
         cfg: ConfigHolder | None = None,
@@ -525,18 +551,14 @@ class ConfigHolder(SerializableDataclass):
         kwargs_in: dict | None = None,
     ) -> ConfigHolder:
         """pass one of cfg object, file, or list of names. Any kwargs will be applied to the config object (and should start with 'cfg.')
-        
+
         cfg_names should be either `(dataset_cfg_name,model_cfg_name,train_cfg_name)` or the same with collective name at the end
 
         valid name keys:
             - dataset_cfg_name: {dataset_cfg_names}
             - model_cfg_name: {model_cfg_names}
             - train_cfg_name: {train_cfg_names}
-        """.format(
-            dataset_cfg_names=str(list(MAZE_DATASET_CONFIGS.keys())),
-            model_cfg_names=str(list(GPT_CONFIGS.keys())),
-            train_cfg_names=str(list(TRAINING_CONFIGS.keys())),
-        )
+        """
 
         config: ConfigHolder
         assert (
@@ -562,12 +584,19 @@ class ConfigHolder(SerializableDataclass):
                 name = f"multsrc_{dataset_cfg_name}_{model_cfg_name}_{train_cfg_name}"
             else:
                 dataset_cfg_name, model_cfg_name, train_cfg_name, name = cfg_names
-            config = ConfigHolder(
-                name=name,
-                dataset_cfg=MAZE_DATASET_CONFIGS[dataset_cfg_name],
-                model_cfg=GPT_CONFIGS[model_cfg_name],
-                train_cfg=TRAINING_CONFIGS[train_cfg_name],
-            )
+            try:
+                config = ConfigHolder(
+                    name=name,
+                    dataset_cfg=MAZE_DATASET_CONFIGS[dataset_cfg_name],
+                    model_cfg=GPT_CONFIGS[model_cfg_name],
+                    train_cfg=TRAINING_CONFIGS[train_cfg_name],
+                )
+            except KeyError as e:
+                raise KeyError(
+                    "tried to get a config that doesn't exist, check the names.\n",
+                    f"{dataset_cfg_name = }, {model_cfg_name = }, {train_cfg_name = }\n",
+                    ConfigHolder.get_config_multisource.__doc__,
+                ) from e
 
         else:
             raise ValueError(
@@ -655,12 +684,9 @@ class ZanjHookedTransformer(ConfiguredModel[ConfigHolder], HookedTransformer):
             self.zanj_model_config.model_cfg.weight_processing["are_layernorms_folded"]
             or fold_ln
         )
-        self.zanj_model_config.model_cfg.weight_processing[
-            "are_weights_processed"
-        ] = self.zanj_model_config.model_cfg.weight_processing[
-            "are_weights_processed"
-        ] or (
-            not recover_exact
+        self.zanj_model_config.model_cfg.weight_processing["are_weights_processed"] = (
+            self.zanj_model_config.model_cfg.weight_processing["are_weights_processed"]
+            or (not recover_exact)
         )
 
         self.load_and_process_state_dict(

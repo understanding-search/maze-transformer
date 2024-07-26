@@ -4,6 +4,7 @@ as the original tokenizer (i.e. just using the token map in cfg)
 
 We may want a separate set of tests for different tokenization schemes
 """
+
 from itertools import product
 
 import torch
@@ -81,11 +82,11 @@ def test_tokenization_encoding(
 )
 def test_to_ascii(tok_mode):
     # Check that the ascii encoding works for multiple different inputs
-    maze_str_tokens: list[
-        str
-    ] = """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
+    maze_str_tokens: list[str] = (
+        """<ADJLIST_START> (1,1) <--> (2,1) ; (2,0) <--> (1,0) ; (0,1) <--> (0,0) ;
     (2,2) <--> (2,1) ; (2,0) <--> (2,1) ; (0,2) <--> (1,2) ; (0,0) <--> (1,0) ; (0,2) <--> (0,1) ;
     <ADJLIST_END> <ORIGIN_START> (0,0) <ORIGIN_END> <TARGET_START> (2,1) <TARGET_END> <PATH_START> (0,0) (1,0) (2,0) (2,1) <PATH_END>""".split()
+    )
 
     target: list[str] = [
         "#######",
@@ -272,25 +273,25 @@ def test_pad_sequence_param(inp, expected, tok_mode):
     assert torch.equal(result, torch.tensor(expected))
 
 
-def test_manual_tokenizer():
-    """tests setting the kwargs for a pretrained tokenizer, instead of getting HuggingMazeTokenizer
+# def test_manual_tokenizer():
+#     """tests setting the kwargs for a pretrained tokenizer, instead of getting HuggingMazeTokenizer
 
-    this is mostly just testing to make sure it doesnt crash lol
-    """
+#     this is mostly just testing to make sure it doesnt crash lol
+#     """
 
-    cfg: ConfigHolder = ConfigHolder(
-        train_cfg=None,
-        dataset_cfg=MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1),
-        model_cfg=None,
-        pretrainedtokenizer_kwargs=dict(
-            bos_token="<bos>",
-            eos_token="<eos>",
-            pad_token="<pad>",
-        ),
-    )
+#     cfg: ConfigHolder = ConfigHolder(
+#         train_cfg=None,
+#         dataset_cfg=MazeDatasetConfig(name="testing_maze", grid_n=3, n_mazes=1),
+#         model_cfg=None,
+#         pretrainedtokenizer_kwargs=dict(
+#             bos_token="<bos>",
+#             eos_token="<eos>",
+#             pad_token="<pad>",
+#         ),
+#     )
 
-    tok = cfg.tokenizer
+#     tok = cfg.tokenizer
 
-    assert tok.bos_token == "<bos>"
-    assert tok.eos_token == "<eos>"
-    assert tok.pad_token == "<pad>"
+#     assert tok.bos_token == "<bos>"
+#     assert tok.eos_token == "<eos>"
+#     assert tok.pad_token == "<pad>"

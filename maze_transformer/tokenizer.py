@@ -24,9 +24,6 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
     unk_token: str = "<UNK>"
 
     vocab_size: int = 0
-    additional_special_tokens: list[str] = [
-        x for x in SPECIAL_TOKENS.values() if x not in [SPECIAL_TOKENS.PADDING]
-    ]
 
     # Overwrite class attributes
     # as of https://github.com/neelnanda-io/TransformerLens/pull/344 this gets overwritten to "right" on `HookedTransformer.__init__()`
@@ -68,6 +65,9 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         # utils.py:1075, in get_tokenizer_with_bos(tokenizer)
         # -> 1075 pretrained_model_name_or_path = init_kwargs.pop("name_or_path")
         self.init_kwargs["name_or_path"] = self.name_or_path
+        # utils.py:1075, in get_tokenizer_with_bos(tokenizer)
+        # -> 1078 add_bos_token = init_kwargs.pop("add_bos_token", None)
+        self.init_kwargs["add_bos_token"] = True
 
         assert isinstance(
             seq_len_max, int
@@ -84,13 +84,12 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
         vocab[self.unk_token] = len(vocab)
         self.vocab: dict[str, int] = vocab
 
-        self.added_tokens_encoder: dict[str, int] = vocab
-        self.added_tokens_decoder: dict[int, str] = {
-            i: token for token, i in vocab.items()
-        }
+        special_tokens = list(SPECIAL_TOKENS.values())
+        normal_tokens = [x for x in token_arr if x not in special_tokens]
+        self._add_tokens(normal_tokens)
+        self._add_tokens(special_tokens)
 
-        self.unique_no_split_tokens = token_arr
-        self._create_trie(self.unique_no_split_tokens)
+        self.unique_no_split_tokens = token_arr  # Trie is updated automatically?
 
         # IDs specified during construction
         self.bos_token_id: int = self.added_tokens_encoder[self.bos_token]
@@ -113,12 +112,22 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
     def _tokenize(self, text: str, **kwargs) -> list[str]:
         assert len(kwargs) == 0, f"kwargs not supported: {kwargs}"
+        if text == " ":  # In transformers ^4.34, this input is passed.
+            return (
+                []
+            )  # Necessary to maintain output of `PreTrainedTokenizer.tokenize` from transformers <=4.33
 
         return text.split(" ")
 
     def _convert_token_to_id(self, token: str) -> int:
         if token in self.vocab:
             return self.vocab[token]
+        elif (
+            token == " "
+        ):  # for some reason transformers trie now returns ' ' as tokens
+            raise ValueError(
+                f"Found a space token in `_convert_token_to_id`: '{token}'"
+            )
         else:
             raise ValueError(f"Token not in vocab: '{token}'")
 
@@ -151,3 +160,8 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
 
         lattice_maze = LatticeMaze.from_tokens(str_sequence, self._maze_tokenizer)
         return MazePlot(lattice_maze).to_ascii()
+
+    def get_vocab(self) -> dict[str, int]:
+        if hasattr(self, "vocab"):
+            return self.vocab
+        return {}

@@ -63,7 +63,7 @@ def eval_model_task(
     task: TaskPrompt,
     do_cache: bool = False,
 ) -> TaskEvalResult:
-    maze_tokenizer: MazeTokenizer = model.config.maze_tokenizer
+    maze_tokenizer: MazeTokenizer = model.tokenizer._maze_tokenizer
 
     prompts_joined: list[str] = [" ".join(prompt) for prompt in task.prompts]
 
