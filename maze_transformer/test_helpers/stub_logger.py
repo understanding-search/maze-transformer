@@ -10,6 +10,9 @@ class StubLogger(WandbLogger):
     def _log(self, *logs):
         self.logs.append(logs)
 
+    def __call__(self, *args, **kwargs) -> None:
+        self._log("StubLogger.__call__ called", args, kwargs)
+
     @classmethod
     def create(cls, *args, **kwargs) -> "StubLogger":
         logger = StubLogger()
@@ -17,19 +20,19 @@ class StubLogger(WandbLogger):
         return logger
 
     def upload_model(self, *args, **kwargs) -> None:
-        self._log("Model uploaded.", args, kwargs)
+        self._log("StubLogger.upload_model called", args, kwargs)
 
     def upload_dataset(self, *args, **kwargs) -> None:
-        self._log("Dataset uploaded.", args, kwargs)
+        self._log("StubLogger.upload_dataset called", args, kwargs)
 
     def log_metric(self, *args, **kwargs) -> None:
-        self._log("Metric logged.", args, kwargs)
+        self._log("StubLogger.log_metric called", args, kwargs)
 
     def log_metric_hist(self, *args, **kwargs) -> None:
-        self._log("Metric (Statcounter) logged.", args, kwargs)
+        self._log("StubLogger.log_metric_hist called", args, kwargs)
 
     def summary(self, *args, **kwargs) -> None:
-        self._log("Summary logged.", args, kwargs)
+        self._log("StubLogger.summary called", args, kwargs)
 
     def progress(self, message: str) -> None:
         msg: str = f"[INFO] - {message}"
