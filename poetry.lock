@@ -1036,12 +1036,12 @@ typing = ["typing-extensions (>=4.8)"]
 
 [[package]]
 name = "fire"
-version = "0.5.0"
+version = "0.6.0"
 description = "A library for automatically generating command line interfaces."
 optional = false
 python-versions = "*"
 files = [
-    {file = "fire-0.5.0.tar.gz", hash = "sha256:a6b0d49e98c8963910021f92bba66f65ab440da2982b78eb1bbf95a0a34aacc6"},
+    {file = "fire-0.6.0.tar.gz", hash = "sha256:54ec5b996ecdd3c0309c800324a0703d6da512241bc73b553db959d98de0aa66"},
 ]
 
 [package.dependencies]
@@ -2236,13 +2236,13 @@ traitlets = "*"
 
 [[package]]
 name = "maze-dataset"
-version = "0.5.4"
+version = "0.5.5"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "maze_dataset-0.5.4-py3-none-any.whl", hash = "sha256:68767bdfe7a631b9aadeebf73ef62fe2e809e8ad9e7f73184e4c5e4759a43446"},
-    {file = "maze_dataset-0.5.4.tar.gz", hash = "sha256:86ee7b7675b6cc578e4003c079071dbc18cea22d7d934ab62545d856cdeb2f97"},
+    {file = "maze_dataset-0.5.5-py3-none-any.whl", hash = "sha256:1b548820142ab5fafc558520876414560a57921ecc654f56d56e341241947868"},
+    {file = "maze_dataset-0.5.5.tar.gz", hash = "sha256:9a22e17c3d97ffbcff07ebd25c9e06d080aacf943affb0e8dc744d1507f83fbf"},
 ]
 
 [package.dependencies]
@@ -2250,10 +2250,10 @@ ipykernel = ">=6.22.0,<7.0.0"
 jaxtyping = ">=0.2.19,<0.3.0"
 jupyter = ">=1.0.0,<2.0.0"
 matplotlib = ">=3.7.0,<4.0.0"
-muutils = ">=0.5.12,<0.6.0"
+muutils = ">=0.6.1,<0.7.0"
 torch = ">=1.13.1"
 tqdm = ">=4.65.0,<5.0.0"
-zanj = ">=0.2.2,<0.3.0"
+zanj = ">=0.3.1,<0.4.0"
 
 [[package]]
 name = "mdurl"
@@ -2423,22 +2423,26 @@ dill = ">=0.3.7"
 
 [[package]]
 name = "muutils"
-version = "0.5.12"
-description = "A collection of miscellaneous python utilities"
+version = "0.6.7"
+description = "miscellaneous python utilities"
 optional = false
-python-versions = "<4.0,>=3.10"
+python-versions = "<4.0,>=3.8"
 files = [
-    {file = "muutils-0.5.12-py3-none-any.whl", hash = "sha256:e11bdd0643f630b5d425fee926cc577791628a4f931ab27d74b2aad2008bbe9a"},
-    {file = "muutils-0.5.12.tar.gz", hash = "sha256:bb7e1d24523549499cc6c4e11c51fed99f061ee05c14ebb1e81ef8c2034310d9"},
+    {file = "muutils-0.6.7-py3-none-any.whl", hash = "sha256:91cc352a16f701f00b476fd53d9d3f858d785cc6275faabd620d34150940712c"},
+    {file = "muutils-0.6.7.tar.gz", hash = "sha256:06d40f6e6c5390418b091a7326f7d78bc4470cc5741a13f4a4160c382f8c1eae"},
 ]
 
 [package.dependencies]
-jaxtyping = {version = ">=0.2.12,<0.3.0", optional = true, markers = "extra == \"array\""}
-numpy = {version = ">=1.22.4,<2.0.0", optional = true, markers = "extra == \"array\""}
-torch = {version = ">=1.13.1", optional = true, markers = "extra == \"array\""}
+jaxtyping = {version = ">=0.2.12,<0.3.0", optional = true, markers = "extra == \"array-nb-zanj\" or extra == \"array\" or extra == \"array-no-torch\""}
+numpy = {version = ">=1.26.4,<2.0.0", optional = true, markers = "python_version >= \"3.9\" and (extra == \"array-nb-zanj\" or extra == \"array\" or extra == \"array-no-torch\")"}
+torch = {version = ">=1.13.1", optional = true, markers = "extra == \"array-nb-zanj\" or extra == \"array\""}
 
 [package.extras]
-array = ["jaxtyping (>=0.2.12,<0.3.0)", "numpy (>=1.22.4,<2.0.0)", "torch (>=1.13.1)"]
+array = ["jaxtyping (>=0.2.12,<0.3.0)", "numpy (>=1.24.4,<2.0.0)", "numpy (>=1.26.4,<2.0.0)", "torch (>=1.13.1)"]
+array-nb-zanj = ["ipython (>=8.20.0,<9.0.0)", "jaxtyping (>=0.2.12,<0.3.0)", "numpy (>=1.24.4,<2.0.0)", "numpy (>=1.26.4,<2.0.0)", "torch (>=1.13.1)", "zanj (>=0.3.0,<0.4.0)"]
+array-no-torch = ["jaxtyping (>=0.2.12,<0.3.0)", "numpy (>=1.24.4,<2.0.0)", "numpy (>=1.26.4,<2.0.0)"]
+notebook = ["ipython (>=8.20.0,<9.0.0)"]
+zanj = ["zanj (>=0.3.0,<0.4.0)"]
 
 [[package]]
 name = "mypy-extensions"
@@ -4791,13 +4795,13 @@ test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,
 
 [[package]]
 name = "transformer-lens"
-version = "1.19.0"
+version = "2.2.2"
 description = "An implementation of transformers tailored for mechanistic interpretability."
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "transformer_lens-1.19.0-py3-none-any.whl", hash = "sha256:e9f8f8e804d2cd9099e6e62475f3a781bc9091516c5b2d0305c40df62dd7816c"},
-    {file = "transformer_lens-1.19.0.tar.gz", hash = "sha256:ff9c49fb14f09606131c59e8c9355965fc7c019b6de66518f816fe25f942a4c8"},
+    {file = "transformer_lens-2.2.2-py3-none-any.whl", hash = "sha256:81b091d23b914481dd40a6db05d5adff29202000159bcf1a0db0d68e07e6b1a9"},
+    {file = "transformer_lens-2.2.2.tar.gz", hash = "sha256:08682b80c051807ac10fb7590942a18ec7f9392c8b58c7debeaee3bec5975fbc"},
 ]
 
 [package.dependencies]
@@ -5343,17 +5347,18 @@ multidict = ">=4.0"
 
 [[package]]
 name = "zanj"
-version = "0.2.3"
+version = "0.3.1"
 description = "save and load complex objects to disk without pickling"
 optional = false
-python-versions = "<4.0,>=3.10"
+python-versions = "<4.0,>=3.8"
 files = [
-    {file = "zanj-0.2.3-py3-none-any.whl", hash = "sha256:4992eba4b7b48264da9a243922d69f9689c1d6b11e7915b49e84aeda61b43297"},
-    {file = "zanj-0.2.3.tar.gz", hash = "sha256:d0d45ddda07911723d2c2e57db84b1613b1498f66eb418af197d192c89fb87e9"},
+    {file = "zanj-0.3.1-py3-none-any.whl", hash = "sha256:9a8ea449f95c49ee8823499e79311332c5fcc05e9a2ab46d413db8593a554e3f"},
+    {file = "zanj-0.3.1.tar.gz", hash = "sha256:caedd60fc66174efb0dab5f757612114fb6157cd7c44200a4488bb65b0c8d9b1"},
 ]
 
 [package.dependencies]
-muutils = {version = ">=0.5.1,<0.7.0", extras = ["array"]}
+muutils = {version = ">=0.6.1,<0.7.0", extras = ["array"]}
+numpy = {version = ">=1.26.4,<2.0.0", markers = "python_version >= \"3.9\""}
 
 [package.extras]
 pandas = ["pandas (>=1.5.3)"]
@@ -5376,4 +5381,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "a36995e68d2b809182cc7fd00c13c4df7066f0aab71a30edf24a837822fb1ed6"
+content-hash = "16ffddad55477ef02aac9bf787e9e46c0fad0d65e0bc159f1385dd60c63ae1be"
