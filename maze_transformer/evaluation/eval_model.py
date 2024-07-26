@@ -284,7 +284,7 @@ def evaluate_model(
 
     if dataset_tokens is None:
         dataset_tokens = dataset.as_tokens(
-            model.config.maze_tokenizer, join_tokens_individual_maze=False
+            model.tokenizer._maze_tokenizer, join_tokens_individual_maze=False
         )
     else:
         assert len(dataset) == len(
