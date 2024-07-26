@@ -1,5 +1,5 @@
 from maze_dataset import MazeDatasetConfig
-from maze_dataset.tokenization import MazeTokenizer
+from maze_dataset.tokenization import MazeTokenizerModular
 
 from maze_transformer.training.config import BaseGPTConfig, ConfigHolder, TrainConfig
 
@@ -17,7 +17,7 @@ def test_cfg_post_init():
         ),
     )
 
-    assert isinstance(cfg.maze_tokenizer, MazeTokenizer)
+    assert isinstance(cfg.maze_tokenizer, MazeTokenizerModular)
     assert isinstance(cfg.maze_tokenizer.max_grid_size, int)
     assert cfg.maze_tokenizer.max_grid_size == 5
     assert isinstance(cfg.maze_tokenizer.vocab_size, int)

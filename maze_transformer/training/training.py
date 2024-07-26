@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 from jaxtyping import Float
 from maze_dataset import MazeDataset, SolvedMaze
-from maze_dataset.tokenization import MazeTokenizer
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 from muutils.statcounter import StatCounter
 from torch.utils.data import DataLoader
 from transformer_lens.HookedTransformer import SingleLoss
@@ -19,7 +19,7 @@ from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
 from maze_transformer.training.wandb_logger import WandbLogger
 
 
-def collate_batch(batch: list[SolvedMaze], maze_tokenizer: MazeTokenizer) -> list[str]:
+def collate_batch(batch: list[SolvedMaze], maze_tokenizer: MazeTokenizer | MazeTokenizerModular) -> list[str]:
     return [" ".join(maze.as_tokens(maze_tokenizer)) for maze in batch]
 
 

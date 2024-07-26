@@ -11,8 +11,8 @@ from jaxtyping import Float
 
 # maze_dataset
 from maze_dataset.constants import _SPECIAL_TOKENS_ABBREVIATIONS
-from maze_dataset.tokenization import MazeTokenizer
-from maze_dataset.tokenization.util import strings_to_coords
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
+from maze_dataset.token_utils import strings_to_coords
 
 # scipy
 from scipy.spatial.distance import pdist, squareform
@@ -52,7 +52,7 @@ TokenPlottingInfo = NamedTuple(
 )
 
 
-def process_tokens_for_pca(tokenizer: MazeTokenizer) -> list[TokenPlottingInfo]:
+def process_tokens_for_pca(tokenizer: MazeTokenizer | MazeTokenizerModular) -> list[TokenPlottingInfo]:
     tokens_coords: list[str | tuple[int, int]] = strings_to_coords(
         tokenizer.token_arr, when_noncoord="include"
     )
@@ -227,7 +227,7 @@ def abs_dot_product(u, v):
 
 def compute_distances_and_correlation(
     embedding_matrix: Float[np.ndarray, "d_vocab d_model"],
-    tokenizer: MazeTokenizer,
+    tokenizer: MazeTokenizer | MazeTokenizerModular,
     embedding_metric: str = "cosine",
     coordinate_metric: str = "euclidean",
     show: bool = True,
@@ -277,7 +277,7 @@ def compute_distances_and_correlation(
 
 def plot_distances_matrix(
     embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
-    tokenizer: MazeTokenizer,
+    tokenizer: MazeTokenizer | MazeTokenizerModular,
     embedding_metric: str,
     show: bool = True,
     **kwargs,
@@ -313,7 +313,7 @@ def plot_distances_matrix(
 
 def compute_grid_distances(
     embedding_distances_matrix: Float[np.ndarray, "n_coord_tokens n_coord_tokens"],
-    tokenizer: MazeTokenizer,
+    tokenizer: MazeTokenizer | MazeTokenizerModular,
 ) -> Float[np.ndarray, "n n n n"]:
     n: int = tokenizer.max_grid_size
     grid_distances: Float[np.ndarray, "n n n n"] = np.full((n, n, n, n), np.nan)

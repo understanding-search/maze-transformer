@@ -1,6 +1,6 @@
 import pytest
 from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode, MazeTokenizerModular
 
 from maze_transformer.test_helpers.stub_logger import StubLogger
 from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, ConfigHolder
@@ -8,20 +8,21 @@ from maze_transformer.training.training import get_dataloader
 
 
 @pytest.mark.parametrize(
-    "tok_mode",
+    "tokenizer",
     [
-        pytest.param(TokenizationMode.AOTP_UT_rasterized, id="rasterized"),
-        pytest.param(TokenizationMode.AOTP_UT_uniform, id="uniform"),
+        pytest.param(TokenizationMode.AOTP_UT_rasterized.to_legacy_tokenizer(), id="rasterized"),
+        pytest.param(TokenizationMode.AOTP_UT_uniform.to_legacy_tokenizer(), id="uniform"),
+        pytest.param(MazeTokenizerModular(), id="MazeTokenizerModular"),
     ],
 )
-def test_get_dataloader(tok_mode: TokenizationMode):
+def test_get_dataloader(tokenizer: MazeTokenizer | MazeTokenizerModular):
     dataset_config = MazeDatasetConfig(name="test", grid_n=3, n_mazes=5)
     dataset = MazeDataset.generate(dataset_config)
     config_holder: ConfigHolder = ConfigHolder(
         dataset_cfg=dataset_config,
         model_cfg=GPT_CONFIGS["tiny-v1"],
         train_cfg=TRAINING_CONFIGS["test-v1"],
-        maze_tokenizer=MazeTokenizer(tokenization_mode=tok_mode),
+        maze_tokenizer=tokenizer,
     )
     config_holder.train_cfg.batch_size = 5
     logger = StubLogger()

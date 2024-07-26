@@ -10,7 +10,7 @@ from typing import Any, Type
 import torch
 from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
 from maze_dataset.dataset.dataset import GPTDatasetConfig
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode, MazeTokenizerModular
 from muutils.dictmagic import kwargs_to_nested_dict
 from muutils.json_serialize import (
     JSONitem,
@@ -370,17 +370,14 @@ TRAINING_CONFIGS: dict[str, TrainConfig] = {
 }
 
 
-def _load_maze_tokenizer(data: dict) -> MazeTokenizer:
+def _load_maze_tokenizer(data: dict) -> MazeTokenizerModular:
     """load the maze tokenizer, including vocab size from a legacy config"""
     if "maze_tokenizer" in data:
         # new style tokenizer
-        return load_item_recursive(data["maze_tokenizer"], path=tuple("maze_tokenizer"))
+        return MazeTokenizerModular.from_legacy(load_item_recursive(data["maze_tokenizer"], path=tuple("maze_tokenizer")))
     else:
         if "token_arr" in data["dataset_cfg"]:
-            output: MazeTokenizer = MazeTokenizer(
-                tokenization_mode=TokenizationMode.AOTP_UT_rasterized,
-                max_grid_size=None,
-            )
+            output: MazeTokenizerModular = MazeTokenizerModular()
         else:
             raise ValueError("Could not find vocab size in legacy config")
 
@@ -405,7 +402,7 @@ class ConfigHolder(SerializableDataclass):
     pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
         default=None
     )
-    maze_tokenizer: MazeTokenizer | None = serializable_field(
+    maze_tokenizer: MazeTokenizer | MazeTokenizerModular | None = serializable_field(
         default_factory=lambda: None,
         loading_fn=_load_maze_tokenizer,
     )
@@ -434,8 +431,9 @@ class ConfigHolder(SerializableDataclass):
         return self.model_cfg.n_heads
 
     def _set_tok_gridsize_from_dataset(self):
-        self.maze_tokenizer.max_grid_size = self.dataset_cfg.max_grid_n
-        self.maze_tokenizer.clear_cache()
+        if isinstance(self.maze_tokenizer, MazeTokenizer):
+            self.maze_tokenizer.max_grid_size = self.dataset_cfg.max_grid_n
+            self.maze_tokenizer.clear_cache()
 
     def __post_init__(self):
         # fallback to default maze tokenizer if no kwargs are provided
@@ -443,10 +441,7 @@ class ConfigHolder(SerializableDataclass):
             if self.maze_tokenizer is None:
                 # TODO: is this the right default? maybe set it to AOTP_UT_rasterized
                 # since thats what legacy models are likely to be?
-                self.maze_tokenizer = MazeTokenizer(
-                    tokenization_mode=TokenizationMode.AOTP_UT_uniform,
-                    max_grid_size=None,
-                )
+                self.maze_tokenizer = MazeTokenizerModular()
 
         # update the config of the maze tokenizer if there is no grid size
         # since we need the token array for the vocab size of the model
