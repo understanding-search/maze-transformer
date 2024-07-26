@@ -2236,13 +2236,13 @@ traitlets = "*"
 
 [[package]]
 name = "maze-dataset"
-version = "0.5.5"
+version = "0.5.6"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "maze_dataset-0.5.5-py3-none-any.whl", hash = "sha256:1b548820142ab5fafc558520876414560a57921ecc654f56d56e341241947868"},
-    {file = "maze_dataset-0.5.5.tar.gz", hash = "sha256:9a22e17c3d97ffbcff07ebd25c9e06d080aacf943affb0e8dc744d1507f83fbf"},
+    {file = "maze_dataset-0.5.6-py3-none-any.whl", hash = "sha256:6013198a6efc253db04f9f39241bdfbbcc0b9724fad91d5bf06611790893985d"},
+    {file = "maze_dataset-0.5.6.tar.gz", hash = "sha256:ffdd559f843c5f77d37421edd94f88c6bd43569cd5b3162a7b98de60b26e376b"},
 ]
 
 [package.dependencies]
@@ -2250,7 +2250,7 @@ ipykernel = ">=6.22.0,<7.0.0"
 jaxtyping = ">=0.2.19,<0.3.0"
 jupyter = ">=1.0.0,<2.0.0"
 matplotlib = ">=3.7.0,<4.0.0"
-muutils = ">=0.6.1,<0.7.0"
+muutils = ">=0.6.7,<0.7.0"
 torch = ">=1.13.1"
 tqdm = ">=4.65.0,<5.0.0"
 zanj = ">=0.3.1,<0.4.0"
@@ -5381,4 +5381,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.13"
-content-hash = "16ffddad55477ef02aac9bf787e9e46c0fad0d65e0bc159f1385dd60c63ae1be"
+content-hash = "2f39a218130a10deefead7ff01f8083e876fabb201e9edca27354b41a20dabcb"

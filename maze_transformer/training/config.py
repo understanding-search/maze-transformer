@@ -28,6 +28,7 @@ from zanj.torchutil import ConfiguredModel, set_config_class
 from maze_transformer.tokenizer import HuggingMazeTokenizer
 
 
+# TODO: replace with muutils
 def dynamic_docstring(**doc_params):
     def decorator(func):
         if func.__doc__:
