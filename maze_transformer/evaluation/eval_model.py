@@ -19,9 +19,9 @@ from maze_dataset.token_utils import (
     get_context_tokens,
     get_path_tokens,
     remove_padding_from_token_str,
+    strings_to_coords,
 )
 from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
-from maze_dataset.token_utils import strings_to_coords
 from maze_dataset.utils import WhenMissing
 
 # muutils

@@ -45,7 +45,9 @@ def test_tokenization_encoding(
     solved_maze: SolvedMaze = get_maze_with_solution("gen_dfs", (3, 3))
     if isinstance(tokenizer, MazeTokenizer):
         print(f"{tokenizer.tokenization_mode = }, {grid_size_max = }")
-        tokenizer = MazeTokenizer(tokenizer.tokenization_mode, max_grid_size=grid_size_max)
+        tokenizer = MazeTokenizer(
+            tokenizer.tokenization_mode, max_grid_size=grid_size_max
+        )
 
     # convert to strings
     maze_str_tokens: list[str] = solved_maze.as_tokens(tokenizer)
