@@ -6,7 +6,6 @@ from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from maze_transformer.training.config import ConfigHolder
 
 
-@freeze
 class TRAIN_SAVE_FILES:
     """namespace for filenames/formats for saving training data"""
 
@@ -27,3 +26,6 @@ class TRAIN_SAVE_FILES:
     model_run_dir: Callable[[ConfigHolder], str] = (
         lambda cfg: f"{sanitize_fname(cfg.name)}_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
     )
+
+    def __setattr__(self, name, value):
+        raise AttributeError("TRAIN_SAVE_FILES is immutable")
