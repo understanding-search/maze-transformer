@@ -21,7 +21,7 @@ from maze_dataset.token_utils import (
     remove_padding_from_token_str,
 )
 from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
-from maze_dataset.tokenization.util import strings_to_coords
+from maze_dataset.token_utils import strings_to_coords
 from maze_dataset.utils import WhenMissing
 
 # muutils
