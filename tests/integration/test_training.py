@@ -14,6 +14,11 @@ from maze_transformer.training.training import get_dataloader, train
 from maze_transformer.training.wandb_logger import WandbJobType, WandbProject
 
 
+def test_train_save_files_frozen():
+    with pytest.raises(AttributeError):
+        TRAIN_SAVE_FILES.data_cfg = "new"
+
+
 @pytest.mark.usefixtures("temp_dir")
 def test_train_model_without_evals(temp_dir: Path):
     dataset = _create_dataset()

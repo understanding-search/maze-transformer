@@ -7,7 +7,7 @@ tests/_temp/**
 tests/**/_temp/**
 notebooks/data/**
 notebooks/plots/**
-# maze-dataset_test/**
+notebooks/figures/**
 
 .coverage
 htmlcov/
