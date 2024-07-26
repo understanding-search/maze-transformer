@@ -240,7 +240,10 @@ def rollout_evals(
             np.all(p == m.solution) if p.shape == m.solution.shape else False
         )
         valid_path[i] = m.is_valid_path(p)
-        target_correct[i] = np.all(p[-1] == m.end_pos)
+        if len(p) == 0:
+            target_correct[i] = False
+        else:
+            target_correct[i] = np.all(p[-1] == m.end_pos)
 
     output["exactly correct rollouts"] = np.mean(exact_correct)
     output["valid rollouts"] = np.mean(valid_path)

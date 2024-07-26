@@ -1,5 +1,6 @@
 import json
 import typing
+import warnings
 from pathlib import Path
 from typing import Union
 
@@ -122,9 +123,28 @@ def train_model(
                     f"passed dataset has different config than cfg.dataset_cfg, but allow_dataset_override is True, so using passed dataset"
                 )
             else:
-                raise ValueError(
-                    f"dataset has different config than cfg.dataset_cfg, and allow_dataset_override is False"
-                )
+                datasets_cfg_diff: dict = dataset.cfg.diff(cfg.dataset_cfg)
+                if datasets_cfg_diff == {
+                    "applied_filters": {
+                        "self": [
+                            {
+                                "name": "collect_generation_meta",
+                                "args": (),
+                                "kwargs": {},
+                            }
+                        ],
+                        "other": [],
+                    }
+                }:
+                    warnings.warn(
+                        f"dataset has different config than cfg.dataset_cfg, but the only difference is in applied_filters, so using passed dataset. This is due to fast dataset loading collecting generation metadata for performance reasons"
+                    )
+
+                else:
+                    raise ValueError(
+                        f"dataset has different config than cfg.dataset_cfg, and allow_dataset_override is False",
+                        f"{datasets_cfg_diff = }",
+                    )
 
     logger.progress(f"finished getting training dataset with {len(dataset)} samples")
     # validation dataset, if applicable
