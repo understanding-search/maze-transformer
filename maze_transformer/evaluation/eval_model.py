@@ -20,8 +20,9 @@ from maze_dataset.token_utils import (
     get_context_tokens,
     get_path_tokens,
     remove_padding_from_token_str,
-    strings_to_coords,
 )
+from maze_dataset.tokenization.util import strings_to_coords
+from maze_dataset.utils import WhenMissing
 
 # muutils
 from muutils.mlutils import chunks
@@ -284,7 +285,7 @@ def evaluate_model(
 
     if dataset_tokens is None:
         dataset_tokens = dataset.as_tokens(
-            model.config.maze_tokenizer, join_tokens_individual_maze=False
+            model.tokenizer._maze_tokenizer, join_tokens_individual_maze=False
         )
     else:
         assert len(dataset) == len(
