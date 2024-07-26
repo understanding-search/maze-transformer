@@ -29,7 +29,7 @@ from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
             tokenizer,
             grid_size,
             grid_size_max,
-            id=f"{tokenizer.name.split('_')[-1]},g{grid_size},m{grid_size_max}",
+            id=f"{tokenizer.name.split('_')[-1]}-g{grid_size}-m{grid_size_max}",
         )
         for tokenizer, grid_size, grid_size_max in product(
             LEGACY_AND_EQUIVALENT_TOKENIZERS,

@@ -387,16 +387,15 @@ TRAINING_CONFIGS: dict[str, TrainConfig] = {
 
 def _load_maze_tokenizer(data: dict) -> MazeTokenizerModular:
     """load the maze tokenizer, including vocab size from a legacy config"""
-    if "maze_tokenizer" in data:
-        # new style tokenizer
-        return MazeTokenizerModular.from_legacy(
-            load_item_recursive(data["maze_tokenizer"], path=tuple("maze_tokenizer"))
-        )
+    mt = data.get("maze_tokenizer", None)
+    if mt is not None:
+        fmt_str: str = mt.get("__format__", None)
+        if fmt_str == "MazeTokenizerModular(SerializableDataclass)":
+            return MazeTokenizerModular.load(mt)
+        elif fmt_str == "MazeTokenizer(SerializableDataclass)":
+            return MazeTokenizer.load(mt)
     else:
-        if "token_arr" in data["dataset_cfg"]:
-            output: MazeTokenizerModular = MazeTokenizerModular()
-        else:
-            raise ValueError("Could not find vocab size in legacy config")
+        raise ValueError("no maze tokenizer found in config")
 
 
 @serializable_dataclass(kw_only=True)
