@@ -446,7 +446,7 @@ class ConfigHolder(SerializableDataclass):
         # update the config of the maze tokenizer if there is no grid size
         # since we need the token array for the vocab size of the model
         if self.maze_tokenizer is not None:
-            if self.maze_tokenizer.max_grid_size is None:
+            if getattr(self.maze_tokenizer, "max_grid_size", None) is None:
                 self._set_tok_gridsize_from_dataset()
 
     def summary(self) -> str:

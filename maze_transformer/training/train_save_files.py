@@ -6,7 +6,7 @@ from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
 from maze_transformer.training.config import ConfigHolder
 
 
-@freeze
+# @freeze
 class TRAIN_SAVE_FILES:
     """namespace for filenames/formats for saving training data"""
 
