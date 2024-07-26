@@ -395,7 +395,7 @@ def _load_maze_tokenizer(data: dict) -> MazeTokenizerModular:
         elif fmt_str == "MazeTokenizer(SerializableDataclass)":
             return MazeTokenizer.load(mt)
     else:
-        raise ValueError("no maze tokenizer found in config")
+        return None
 
 
 @serializable_dataclass(kw_only=True)
