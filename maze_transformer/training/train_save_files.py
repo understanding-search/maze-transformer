@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Callable
 
-from muutils.misc import freeze, sanitize_fname  # type: ignore[import]
+from muutils.misc import sanitize_fname  # type: ignore[import]
 
 from maze_transformer.training.config import ConfigHolder
 

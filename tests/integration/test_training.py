@@ -18,6 +18,7 @@ def test_train_save_files_frozen():
     with pytest.raises(AttributeError):
         TRAIN_SAVE_FILES.data_cfg = "new"
 
+
 @pytest.mark.usefixtures("temp_dir")
 def test_train_model_without_evals(temp_dir: Path):
     dataset = _create_dataset()
