@@ -1,7 +1,7 @@
-from typing import Callable
 import warnings
 from functools import partial
 from pathlib import Path
+from typing import Callable
 
 import torch
 from jaxtyping import Float
@@ -17,7 +17,6 @@ from maze_transformer.evaluation.path_evals import PathEvals
 from maze_transformer.tokenizer import HuggingMazeTokenizer
 from maze_transformer.training.config import ConfigHolder, ZanjHookedTransformer
 from maze_transformer.training.train_save_files import TRAIN_SAVE_FILES
-from maze_transformer.training.wandb_logger import WandbLogger
 
 
 def collate_batch(batch: list[SolvedMaze], maze_tokenizer: MazeTokenizer) -> list[str]:
@@ -117,9 +116,7 @@ def train(
             key: value if not key.startswith("eval") else float("inf")
             for key, value in intervals.items()
         }
-    logger(
-        {"n_batches": n_batches, "n_samples": n_samples, "intervals": intervals}
-    )
+    logger({"n_batches": n_batches, "n_samples": n_samples, "intervals": intervals})
     logger(
         f"will train for {n_batches} batches, {evals_enabled=}, with intervals: {intervals}"
     )
@@ -167,9 +164,7 @@ def train(
         logger(metrics)
 
         if iteration % intervals["print_loss"] == 0:
-            logger(
-                f"iteration {iteration}/{n_batches}: loss={loss.item():.3f}"
-            )
+            logger(f"iteration {iteration}/{n_batches}: loss={loss.item():.3f}")
 
         del loss
 

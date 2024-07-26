@@ -4,7 +4,7 @@ import logging
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Union, Literal
+from typing import Any, Dict, Union
 
 import wandb
 from muutils.statcounter import StatCounter
@@ -23,7 +23,6 @@ class WandbJobType(Enum):
     TRAIN_MODEL = "train-model"
 
 
-
 class WandbLogger:
     def __init__(self, run: Run, run_is_local: bool = False):
         self._run: Run = run
@@ -31,9 +30,9 @@ class WandbLogger:
 
     @classmethod
     def create(
-        cls, 
-        config: Dict, 
-        project: Union[WandbProject, str], 
+        cls,
+        config: Dict,
+        project: Union[WandbProject, str],
         job_type: WandbJobType,
         local_fallback: bool = False,
     ) -> WandbLogger:
@@ -50,16 +49,20 @@ class WandbLogger:
             try:
                 run = wandb.init(
                     config=config,
-                    project=(project.value if isinstance(project, WandbProject) else project),
+                    project=(
+                        project.value if isinstance(project, WandbProject) else project
+                    ),
                     job_type=job_type.value,
                 )
             except Exception as e:
                 if local_fallback:
-                    logging.warning(f"Failed to initialize wandb run, falling back to local run: {e}")
+                    logging.warning(
+                        f"Failed to initialize wandb run, falling back to local run: {e}"
+                    )
                     run_is_local = True
                 else:
                     raise e
-        
+
         if run_is_local:
             raise NotImplementedError("Local run not implemented yet")
 
