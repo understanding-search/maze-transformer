@@ -2301,7 +2301,7 @@ zanj = "^0.3.1"
 type = "git"
 url = "https://github.com/understanding-search/maze-dataset.git"
 reference = "tokenizer-overhaul-integration"
-resolved_reference = "2c19e57e1d8e1e67e0b1187983429f898d01b642"
+resolved_reference = "19644d3c6b70bdcb5929ae2fee8fe1b5241445b7"
 
 [[package]]
 name = "mdurl"
