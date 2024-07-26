@@ -39,6 +39,10 @@ class BaseGPTConfig(SerializableDataclass):
     d_model: int
     d_head: int
     n_layers: int
+    positional_embedding_type: str = serializable_field(
+        default="standard",
+        loading_fn=lambda data: data.get("positional_embedding_type", "standard"),
+    )
 
     weight_processing: dict[str, bool] = serializable_field(
         default_factory=lambda: dict(
@@ -59,6 +63,7 @@ class BaseGPTConfig(SerializableDataclass):
             d_model=self.d_model,
             d_head=self.d_head,
             n_layers=self.n_layers,
+            positional_embedding_type=self.positional_embedding_type,
             weight_processing=self.weight_processing,
             n_heads=self.n_heads,
         )
@@ -501,6 +506,7 @@ class ConfigHolder(SerializableDataclass):
             d_model=self.model_cfg.d_model,
             d_head=self.model_cfg.d_head,
             n_layers=self.model_cfg.n_layers,
+            positional_embedding_type=self.model_cfg.positional_embedding_type,
             n_ctx=self.dataset_cfg.seq_len_max,
             d_vocab=self.maze_tokenizer.vocab_size,
         )

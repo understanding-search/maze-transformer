@@ -63,6 +63,7 @@ def _custom_serialized_config():
         "d_head": 1,
         "n_layers": 1,
         "n_heads": 1,
+        "positional_embedding_type": "standard",
         "weight_processing": {
             "are_layernorms_folded": False,
             "are_weights_processed": False,
