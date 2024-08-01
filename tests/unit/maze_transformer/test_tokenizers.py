@@ -133,11 +133,10 @@ def test_to_ascii(tokenizer: MazeTokenizer | MazeTokenizerModular):
     "tokenizer",
     [
         param(tokenizer, id=tokenizer.name)
-        for tokenizer in 
-        [
+        for tokenizer in [
             TokenizationMode.AOTP_UT_rasterized.to_legacy_tokenizer(),
             TokenizationMode.AOTP_UT_uniform.to_legacy_tokenizer(),
-            MazeTokenizerModular()
+            MazeTokenizerModular(),
         ]
     ],
 )

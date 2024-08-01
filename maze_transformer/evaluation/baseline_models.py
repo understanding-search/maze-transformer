@@ -11,13 +11,13 @@ from maze_dataset import (
     LatticeMaze,
     SolvedMaze,
 )
-from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 from maze_dataset.token_utils import (
     get_origin_tokens,
     get_path_tokens,
     get_target_tokens,
     strings_to_coords,
 )
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 from transformer_lens import HookedTransformer
 
 from maze_transformer.training.config import ConfigHolder
@@ -201,8 +201,9 @@ class RandomBaseline(HookedTransformer):
                 predictions, when_noncoord="include"
             )
         elif isinstance(self.tokenizer._maze_tokenizer, MazeTokenizerModular):
-                return self.tokenizer._maze_tokenizer.coords_to_strings(
-                predictions[:-1]) + [SPECIAL_TOKENS.PATH_END]
+            return self.tokenizer._maze_tokenizer.coords_to_strings(
+                predictions[:-1]
+            ) + [SPECIAL_TOKENS.PATH_END]
 
     def _process_context(
         self,
