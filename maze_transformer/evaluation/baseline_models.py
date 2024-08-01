@@ -11,6 +11,7 @@ from maze_dataset import (
     LatticeMaze,
     SolvedMaze,
 )
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 from maze_dataset.token_utils import (
     get_origin_tokens,
     get_path_tokens,
@@ -195,9 +196,13 @@ class RandomBaseline(HookedTransformer):
             if predictions[-1] == SPECIAL_TOKENS.PATH_END:
                 break
 
-        return self.tokenizer._maze_tokenizer.coords_to_strings(
-            predictions, when_noncoord="include"
-        )
+        if isinstance(self.tokenizer._maze_tokenizer, MazeTokenizer):
+            return self.tokenizer._maze_tokenizer.coords_to_strings(
+                predictions, when_noncoord="include"
+            )
+        elif isinstance(self.tokenizer._maze_tokenizer, MazeTokenizerModular):
+                return self.tokenizer._maze_tokenizer.coords_to_strings(
+                predictions[:-1]) + [SPECIAL_TOKENS.PATH_END]
 
     def _process_context(
         self,
