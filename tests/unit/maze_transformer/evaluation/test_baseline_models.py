@@ -1,7 +1,11 @@
 import numpy as np
 import pytest
 from maze_dataset import MazeDataset, MazeDatasetConfig, SolvedMaze
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+from maze_dataset.tokenization import (
+    MazeTokenizer,
+    MazeTokenizerModular,
+    TokenizationMode,
+)
 
 from maze_transformer.evaluation.baseline_models import RandomBaseline
 from maze_transformer.evaluation.eval_model import predict_maze_paths
@@ -9,13 +13,18 @@ from maze_transformer.training.config import GPT_CONFIGS, TRAINING_CONFIGS, Conf
 
 
 @pytest.mark.parametrize(
-    "tok_mode",
+    "tokenizer",
     [
-        pytest.param(TokenizationMode.AOTP_UT_rasterized, id="rasterized"),
-        pytest.param(TokenizationMode.AOTP_UT_uniform, id="uniform"),
+        pytest.param(
+            TokenizationMode.AOTP_UT_rasterized.to_legacy_tokenizer(), id="rasterized"
+        ),
+        pytest.param(
+            TokenizationMode.AOTP_UT_uniform.to_legacy_tokenizer(), id="uniform"
+        ),
+        pytest.param(MazeTokenizerModular(), id="MazeTokenizerModular"),
     ],
 )
-def test_random_baseline(tok_mode):
+def test_random_baseline(tokenizer: MazeTokenizer | MazeTokenizerModular):
     # Setup will be refactored in https://github.com/orgs/understanding-search/projects/1?pane=issue&itemId=22504590
     # Disk interactions can be removed after https://github.com/understanding-search/maze-transformer/issues/113
     # First create a dataset and train a model
@@ -23,7 +32,7 @@ def test_random_baseline(tok_mode):
         train_cfg=TRAINING_CONFIGS["test-v1"],
         model_cfg=GPT_CONFIGS["tiny-v1"],
         dataset_cfg=MazeDatasetConfig(name="test", grid_n=3, n_mazes=5),
-        maze_tokenizer=MazeTokenizer(tokenization_mode=tok_mode),
+        maze_tokenizer=tokenizer,
     )
 
     dataset: MazeDataset = MazeDataset.from_config(cfg.dataset_cfg, save_local=False)

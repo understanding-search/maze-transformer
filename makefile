@@ -79,6 +79,12 @@ clean:
 	python -Bc "import pathlib; [p.rmdir() for p in pathlib.Path('.').rglob('__pycache__')]"
 
 
+.PHONY: test_with_branch
+test_with_branch:
+	@echo "creating test environment"
+	cp pyproject.toml poetry.lock maze-dataset_test
+
+
 # listing targets, from stackoverflow
 # https://stackoverflow.com/questions/4219255/how-do-you-get-the-list-of-targets-in-a-makefile
 .PHONY: help

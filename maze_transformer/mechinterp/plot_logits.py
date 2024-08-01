@@ -6,7 +6,7 @@ from jaxtyping import Bool, Float, Int
 from maze_dataset import CoordTup
 
 # Our Code
-from maze_dataset.tokenization import MazeTokenizer
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 
 _DEFAULT_SUBPLOTS_KWARGS: dict = dict(
     figsize=(20, 20),
@@ -86,7 +86,7 @@ def plot_logit_histograms(
 
 def get_baseline_incorrect_group(
     prompts: list[list[str]],
-    tokenizer: MazeTokenizer,
+    tokenizer: MazeTokenizer | MazeTokenizerModular,
     baseline: "RandomBaseline",
 ) -> Bool[torch.Tensor, "n_mazes d_vocab"]:
     """
@@ -116,7 +116,7 @@ def get_baseline_incorrect_group(
 def plot_logits(
     last_tok_logits: Float[torch.Tensor, "n_mazes d_vocab"],
     target_idxs: Int[torch.Tensor, "n_mazes"],
-    tokenizer: MazeTokenizer,
+    tokenizer: MazeTokenizer | MazeTokenizerModular,
     n_bins: int = 50,
     mark_incorrect: bool = False,
     mark_correct: bool = True,
