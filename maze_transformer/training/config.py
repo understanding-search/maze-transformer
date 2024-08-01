@@ -385,7 +385,7 @@ TRAINING_CONFIGS: dict[str, TrainConfig] = {
 }
 
 
-def _load_maze_tokenizer(data: dict) -> MazeTokenizerModular:
+def _load_maze_tokenizer(data: dict) -> MazeTokenizerModular | MazeTokenizer:
     """load the maze tokenizer, including vocab size from a legacy config"""
     mt = data.get("maze_tokenizer", None)
     if mt is not None:

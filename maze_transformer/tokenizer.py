@@ -85,10 +85,13 @@ class HuggingMazeTokenizer(PreTrainedTokenizer):
             vocab[self.unk_token] = len(vocab)
             self.vocab: dict[str, int] = vocab
 
-        special_tokens = list(SPECIAL_TOKENS.values())
-        normal_tokens = [x for x in token_arr if x not in special_tokens]
-        self._add_tokens(normal_tokens)
-        self._add_tokens(special_tokens)
+        if isinstance(self._maze_tokenizer, MazeTokenizer):
+            special_tokens = list(SPECIAL_TOKENS.values())
+            normal_tokens = [x for x in token_arr if x not in special_tokens]
+            self._add_tokens(normal_tokens)
+            self._add_tokens(special_tokens)
+        elif isinstance(self._maze_tokenizer, MazeTokenizerModular):
+            self._add_tokens(token_arr)
 
         self.unique_no_split_tokens = token_arr  # Trie is updated automatically?
 

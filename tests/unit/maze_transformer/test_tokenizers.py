@@ -29,7 +29,7 @@ from maze_transformer.training.config import BaseGPTConfig, ConfigHolder
             tokenizer,
             grid_size,
             grid_size_max,
-            id=f"{tokenizer.name.split('_')[-1]}-g{grid_size}-m{grid_size_max}",
+            id=f"{tokenizer.name}-g{grid_size}-m{grid_size_max}",
         )
         for tokenizer, grid_size, grid_size_max in product(
             LEGACY_AND_EQUIVALENT_TOKENIZERS,
@@ -46,7 +46,7 @@ def test_tokenization_encoding(
     if isinstance(tokenizer, MazeTokenizer):
         print(f"{tokenizer.tokenization_mode = }, {grid_size_max = }")
         tokenizer = MazeTokenizer(
-            tokenizer.tokenization_mode, max_grid_size=grid_size_max
+            tokenization_mode=tokenizer.tokenization_mode, max_grid_size=grid_size_max
         )
 
     # convert to strings
@@ -132,9 +132,8 @@ def test_to_ascii(tokenizer: MazeTokenizer | MazeTokenizerModular):
 @mark.parametrize(
     "tokenizer",
     [
-        param(TokenizationMode.AOTP_UT_uniform, id="AOTP_UT_uniform"),
-        param(TokenizationMode.AOTP_UT_rasterized, id="AOTP_UT_rasterized"),
-        param(MazeTokenizerModular(), id="MazeTokenizerModular(UT())"),
+        param(tokenizer, id=tokenizer.name)
+        for tokenizer in LEGACY_AND_EQUIVALENT_TOKENIZERS
     ],
 )
 def test_tokenizer_inside_hooked_transformer(
