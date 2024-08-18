@@ -2,10 +2,7 @@ from pathlib import Path
 
 import pytest
 from maze_dataset import MazeDatasetConfig
-from maze_dataset.tokenization import (
-    MazeTokenizer,
-    TokenizationMode,
-)
+from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
 from zanj import ZANJ
 from zanj.torchutil import assert_model_exact_equality
 
@@ -50,8 +47,7 @@ ZANJ_MODEL_CFGS: list[ConfigHolder] = [
 
 
 MODELS: list[tuple[ConfigHolder, ZanjHookedTransformer]] = [
-    (cfg, ZanjHookedTransformer(cfg))
-    for cfg in ZANJ_MODEL_CFGS
+    (cfg, ZanjHookedTransformer(cfg)) for cfg in ZANJ_MODEL_CFGS
 ]
 
 
