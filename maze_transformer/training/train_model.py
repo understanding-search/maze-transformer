@@ -195,6 +195,8 @@ def train_model(
         val_dataset=val_dataset,
     )
 
+    logger.finish()
+
     return TrainingResult(
         output_path=output_path,
         model=trained_model,
