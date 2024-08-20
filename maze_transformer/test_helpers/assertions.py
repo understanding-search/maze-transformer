@@ -93,7 +93,8 @@ def assert_model_output_equality(
         )
         if not torch.all(output_argsort_match):
             raise ModelOutputArgsortEqualityError(
-                f"argsort not equal, {output_argsort_match.numel() - output_argsort_match.sum()} / {output_argsort_match.numel()} elements differ"
+                f"argsort not equal, {output_argsort_match.numel() - output_argsort_match.sum()} / {output_argsort_match.numel()} elements differ",
+                f"{vocab_size = }, {test_sequence_length = }",
             )
 
     # apply normalization (e.g. softmax) and check with atol v-small
