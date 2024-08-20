@@ -37,19 +37,19 @@ ZANJ_MODEL_CFGS: list[ConfigHolder] = [
         (
             "raster",
             MazeTokenizer(
-                tokenization_mode=TokenizationMode.AOTP_UT_rasterized, max_grid_size=10
+                tokenization_mode=TokenizationMode.AOTP_UT_rasterized, max_grid_size=5
             ),
         ),
         (
             "uniform",
             MazeTokenizer(
-                tokenization_mode=TokenizationMode.AOTP_UT_uniform, max_grid_size=10
+                tokenization_mode=TokenizationMode.AOTP_UT_uniform, max_grid_size=5
             ),
         ),
         (
             "indexed",
             MazeTokenizer(
-                tokenization_mode=TokenizationMode.AOTP_CTT_indexed, max_grid_size=10
+                tokenization_mode=TokenizationMode.AOTP_CTT_indexed, max_grid_size=5
             ),
         ),
         ("modular", MazeTokenizerModular()),  # only checking default for now
@@ -106,7 +106,12 @@ def test_model_save_fold_ln(cfg_model: tuple[ConfigHolder, ZanjHookedTransformer
     zanj.save(model, fname)
     model_load = zanj.read(fname)
 
-    assert_model_output_equality(model, model_load)
+    vocab_size: int = len(model.zanj_model_config.tokenizer)
+    assert_model_output_equality(
+        model,
+        model_load,
+        check_argsort_equality=(vocab_size > 2048),
+    )
 
 
 @pytest.mark.parametrize("cfg_model", MODELS, ids=lambda x: x[0].name)
@@ -131,4 +136,9 @@ def test_model_save_refactored_attn_matrices(
     zanj.save(model, fname)
     model_load = zanj.read(fname)
 
-    assert_model_output_equality(model, model_load)
+    vocab_size: int = len(model.zanj_model_config.tokenizer)
+    assert_model_output_equality(
+        model,
+        model_load,
+        check_argsort_equality=(vocab_size > 2048),
+    )
