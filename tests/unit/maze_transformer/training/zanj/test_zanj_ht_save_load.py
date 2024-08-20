@@ -42,6 +42,12 @@ ZANJ_MODEL_CFGS: list[ConfigHolder] = [
                 tokenization_mode=TokenizationMode.AOTP_UT_uniform, max_grid_size=10
             ),
         ),
+        (
+            "indexed",
+            MazeTokenizer(
+                tokenization_mode=TokenizationMode.AOTP_CTT_indexed, max_grid_size=10
+            ),
+        ),
     ]
 ]
 
