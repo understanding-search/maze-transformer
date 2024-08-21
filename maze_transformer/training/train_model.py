@@ -30,6 +30,7 @@ from maze_transformer.training.wandb_logger import (
 class TrainingResult(SerializableDataclass):
     output_path: Path
     model: ZanjHookedTransformer
+    logger: WandbLogger
 
     def __str__(self):
         return f"TrainingResult of training run stored at output_path='{self.output_path}', trained a model from config with name: {self.model.zanj_model_config.name}"
@@ -193,13 +194,12 @@ def train_model(
         output_dir=output_path,
         device=device,
         val_dataset=val_dataset,
-    )
-
-    logger.finish()
+    )    
 
     return TrainingResult(
         output_path=output_path,
         model=trained_model,
+        logger=logger,
     )
 
 
