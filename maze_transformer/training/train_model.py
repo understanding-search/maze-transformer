@@ -194,7 +194,7 @@ def train_model(
         output_dir=output_path,
         device=device,
         val_dataset=val_dataset,
-    )    
+    )
 
     return TrainingResult(
         output_path=output_path,
