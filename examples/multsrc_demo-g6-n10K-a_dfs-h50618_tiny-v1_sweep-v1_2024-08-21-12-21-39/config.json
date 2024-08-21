@@ -234,7 +234,7 @@
 			"__format__": "AOTP(SerializableDataclass)",
 			"coord_tokenizer": {
 				"__format__": "UT(SerializableDataclass)",
-				"_type": "<class 'maze_dataset.tokenization.maze_tokenizer.CoordTokenizers.UT'>"
+				"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.CoordTokenizers.UT'>"
 			},
 			"adj_list_tokenizer": {
 				"__format__": "AdjListCoord(SerializableDataclass)",
@@ -243,37 +243,37 @@
 				"shuffle_d0": true,
 				"edge_grouping": {
 					"__format__": "Ungrouped(SerializableDataclass)",
-					"_type": "<class 'maze_dataset.tokenization.maze_tokenizer.EdgeGroupings.Ungrouped'>",
+					"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.EdgeGroupings.Ungrouped'>",
 					"connection_token_ordinal": 1
 				},
 				"edge_subset": {
 					"__format__": "ConnectionEdges(SerializableDataclass)",
-					"_type": "<class 'maze_dataset.tokenization.maze_tokenizer.EdgeSubsets.ConnectionEdges'>",
+					"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.EdgeSubsets.ConnectionEdges'>",
 					"walls": false
 				},
 				"edge_permuter": {
 					"__format__": "RandomCoords(SerializableDataclass)",
-					"_type": "<class 'maze_dataset.tokenization.maze_tokenizer.EdgePermuters.RandomCoords'>"
+					"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.EdgePermuters.RandomCoords'>"
 				},
-				"_type": "<class 'maze_dataset.tokenization.maze_tokenizer.AdjListTokenizers.AdjListCoord'>"
+				"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.AdjListTokenizers.AdjListCoord'>"
 			},
-			"_type": "<class 'maze_dataset.tokenization.maze_tokenizer.PromptSequencers.AOTP'>",
+			"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.PromptSequencers.AOTP'>",
 			"target_tokenizer": {
 				"__format__": "Unlabeled(SerializableDataclass)",
-				"_type": "<class 'maze_dataset.tokenization.maze_tokenizer.TargetTokenizers.Unlabeled'>",
+				"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.TargetTokenizers.Unlabeled'>",
 				"post": false
 			},
 			"path_tokenizer": {
 				"__format__": "StepSequence(SerializableDataclass)",
-				"_type": "<class 'maze_dataset.tokenization.maze_tokenizer.PathTokenizers.StepSequence'>",
+				"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.PathTokenizers.StepSequence'>",
 				"step_size": {
 					"__format__": "Singles(SerializableDataclass)",
-					"_type": "<class 'maze_dataset.tokenization.maze_tokenizer.StepSizes.Singles'>"
+					"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.StepSizes.Singles'>"
 				},
 				"step_tokenizers": [
 					{
 						"__format__": "Coord(SerializableDataclass)",
-						"_type": "<class 'maze_dataset.tokenization.maze_tokenizer.StepTokenizers.Coord'>"
+						"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.StepTokenizers.Coord'>"
 					}
 				],
 				"pre": false,

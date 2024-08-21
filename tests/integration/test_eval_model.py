@@ -22,7 +22,7 @@ temp_dir: Path = Path("tests/_temp/test_eval_model")
 
 def test_predict_maze_paths():
     model: ZanjHookedTransformer = ZanjHookedTransformer.read(
-        "examples/multsrc_demo-g6-n10K-a_dfs-h50618_tiny-v1_sweep-v1_2024-08-20-15-17-32/model.final.zanj"
+        "examples/multsrc_demo-g6-n10K-a_dfs-h50618_tiny-v1_sweep-v1_2024-08-21-12-21-39/model.final.zanj"
     )
     cfg: ConfigHolder = model.zanj_model_config
     cfg.dataset_cfg.n_mazes = 10
@@ -63,7 +63,7 @@ def test_predict_maze_paths():
 @pytest.mark.usefixtures("temp_dir")
 def test_evaluate_model(temp_dir):
     model: ZanjHookedTransformer = ZanjHookedTransformer.read(
-        "examples/multsrc_demo-g6-n10K-a_dfs-h50618_tiny-v1_sweep-v1_2024-08-20-15-17-32/model.final.zanj"
+        "examples/multsrc_demo-g6-n10K-a_dfs-h50618_tiny-v1_sweep-v1_2024-08-21-12-21-39/model.final.zanj"
     )
     cfg: ConfigHolder = model.zanj_model_config
     cfg.dataset_cfg.n_mazes = 10
