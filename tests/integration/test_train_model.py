@@ -22,6 +22,7 @@ def test_train_model():
         cfg_names=("demo_small-g3-n100-a_dfs-h44636", "nano-v1", "test-v1"),
     )
     print(cfg.dataset_cfg.summary())
+    assert cfg.dataset_cfg.n_mazes == 100
     result: TrainingResult = train_model(
         base_path=temp_dir,
         wandb_project=WandbProject.INTEGRATION_TESTS,

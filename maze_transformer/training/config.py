@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import typing
 import warnings
@@ -600,14 +601,11 @@ class ConfigHolder(SerializableDataclass):
                 for k, v in MAZE_DATASET_CONFIGS.items():
                     print(f"{k}: {v.summary()}")
 
-                dataset_cfg = MAZE_DATASET_CONFIGS[dataset_cfg_name]
-
-                print(f"gcm 601: {dataset_cfg.summary() = }")
                 config = ConfigHolder(
                     name=name,
-                    dataset_cfg=dataset_cfg,
-                    model_cfg=GPT_CONFIGS[model_cfg_name],
-                    train_cfg=TRAINING_CONFIGS[train_cfg_name],
+                    dataset_cfg=copy.deepcopy(MAZE_DATASET_CONFIGS[dataset_cfg_name]),
+                    model_cfg=copy.deepcopy(GPT_CONFIGS[model_cfg_name]),
+                    train_cfg=copy.deepcopy(TRAINING_CONFIGS[train_cfg_name]),
                 )
                 print(f"gcm 612: {config.dataset_cfg.summary() = }")
             except KeyError as e:

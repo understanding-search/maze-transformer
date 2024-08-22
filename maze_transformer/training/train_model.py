@@ -1,3 +1,4 @@
+import copy
 import json
 import typing
 import warnings
@@ -165,7 +166,7 @@ def train_model(
                 cfg.train_cfg.validation_dataset_cfg,
             ]
             val_dataset = MazeDataset(
-                cfg.dataset_cfg,
+                copy.deepcopy(cfg.dataset_cfg),
                 mazes=dataset.mazes[-split_dataset_sizes[1] :],
                 generation_metadata_collected=dataset.generation_metadata_collected,
             )
