@@ -62,7 +62,6 @@ def train_model(
         - model config names: {model_cfg_names}
         - train config names: {train_cfg_names}
     """
-    print(cfg.dataset_cfg.summary())
     if help:
         print(train_model.__doc__)
         return
@@ -110,7 +109,6 @@ def train_model(
     logger.progress("Summary logged, getting dataset")
 
     # load dataset
-    print(cfg.dataset_cfg.summary())
     if dataset is None:
         dataset = MazeDataset.from_config(
             cfg=cfg.dataset_cfg,
@@ -151,7 +149,6 @@ def train_model(
                     )
 
     logger.progress(f"finished getting training dataset with {len(dataset)} samples")
-    print(f"{len(dataset) = }")
     # validation dataset, if applicable
     val_dataset: MazeDataset | None = None
     if cfg.train_cfg.validation_dataset_cfg is not None:

@@ -589,25 +589,17 @@ class ConfigHolder(SerializableDataclass):
                 dataset_cfg_name, model_cfg_name, train_cfg_name = cfg_names
                 # assemble the collective name
                 name = f"multsrc_{dataset_cfg_name}_{model_cfg_name}_{train_cfg_name}"
-                print(f"gcm 591: {dataset_cfg_name = }")
             else:
                 # 4 names if collective name, unpack it
                 dataset_cfg_name, model_cfg_name, train_cfg_name, name = cfg_names
-                print(f"gcm 595: {dataset_cfg_name = }")
-
             try:
                 # try to actually assemble the configuration by looking up names in dicts
-                print(f"gcm 599: {dataset_cfg_name = }")
-                for k, v in MAZE_DATASET_CONFIGS.items():
-                    print(f"{k}: {v.summary()}")
-
                 config = ConfigHolder(
                     name=name,
                     dataset_cfg=copy.deepcopy(MAZE_DATASET_CONFIGS[dataset_cfg_name]),
                     model_cfg=copy.deepcopy(GPT_CONFIGS[model_cfg_name]),
                     train_cfg=copy.deepcopy(TRAINING_CONFIGS[train_cfg_name]),
                 )
-                print(f"gcm 612: {config.dataset_cfg.summary() = }")
             except KeyError as e:
                 # exception handling for missing keys case
                 raise KeyError(
@@ -620,14 +612,12 @@ class ConfigHolder(SerializableDataclass):
             raise ValueError(
                 "Must provide exactly one of cfg, cfg_file, or cfg_names. this state should be unreachable btw."
             )
-        print(f"gcm 604: {config.dataset_cfg.summary() = }")
         # update config with kwargs
         if kwargs_in:
             kwargs_dict: dict = kwargs_to_nested_dict(
                 kwargs_in, sep=".", strip_prefix="cfg.", when_unknown_prefix="raise"
             )
             config.update_from_nested_dict(kwargs_dict)
-        print(f"gcm 611: {config.dataset_cfg.summary() = }")
         return config
 
 
