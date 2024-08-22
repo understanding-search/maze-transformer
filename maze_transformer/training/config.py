@@ -556,38 +556,62 @@ class ConfigHolder(SerializableDataclass):
             - train_cfg_name: {train_cfg_names}
         """
 
+        # init the holder
         config: ConfigHolder
+
+        # make sure we are only using one of the three methods
         assert (
             sum(1 for x in (cfg, cfg_file, cfg_names) if x is not None) == 1
         ), "Must provide exactly one of cfg, cfg_file, or cfg_names"
 
         if cfg is not None:
+            # passing config directly
             assert cfg_names is None, "Must provide either cfg or cfg_names"
             config = cfg
         elif cfg_file is not None:
+            # passing config from file
             with open(cfg_file) as f:
                 config = ConfigHolder.load(json.load(f))
         elif cfg_names is not None:
+            # passing names
             assert (
                 len(cfg_names) == 3 or len(cfg_names) == 4
             ), "cfg_names must be (dataset_cfg_name,model_cfg_name,train_cfg_name) or the same with collective name at the end"
+            # set up the names
             dataset_cfg_name: str
             model_cfg_name: str
             train_cfg_name: str
             name: str
+
             if len(cfg_names) == 3:
+                # 3 names if no collective name
                 dataset_cfg_name, model_cfg_name, train_cfg_name = cfg_names
+                # assemble the collective name
                 name = f"multsrc_{dataset_cfg_name}_{model_cfg_name}_{train_cfg_name}"
+                print(f"gcm 591: {dataset_cfg_name = }")
             else:
+                # 4 names if collective name, unpack it
                 dataset_cfg_name, model_cfg_name, train_cfg_name, name = cfg_names
+                print(f"gcm 595: {dataset_cfg_name = }")
+
             try:
+                # try to actually assemble the configuration by looking up names in dicts
+                print(f"gcm 599: {dataset_cfg_name = }")
+                for k, v in MAZE_DATASET_CONFIGS.items():
+                    print(f"{k}: {v.summary()}")
+
+                dataset_cfg = MAZE_DATASET_CONFIGS[dataset_cfg_name]
+
+                print(f"gcm 601: {dataset_cfg.summary() = }")
                 config = ConfigHolder(
                     name=name,
-                    dataset_cfg=MAZE_DATASET_CONFIGS[dataset_cfg_name],
+                    dataset_cfg=dataset_cfg,
                     model_cfg=GPT_CONFIGS[model_cfg_name],
                     train_cfg=TRAINING_CONFIGS[train_cfg_name],
                 )
+                print(f"gcm 612: {config.dataset_cfg.summary() = }")
             except KeyError as e:
+                # exception handling for missing keys case
                 raise KeyError(
                     "tried to get a config that doesn't exist, check the names.\n",
                     f"{dataset_cfg_name = }, {model_cfg_name = }, {train_cfg_name = }\n",
@@ -598,14 +622,14 @@ class ConfigHolder(SerializableDataclass):
             raise ValueError(
                 "Must provide exactly one of cfg, cfg_file, or cfg_names. this state should be unreachable btw."
             )
-
+        print(f"gcm 604: {config.dataset_cfg.summary() = }")
         # update config with kwargs
         if kwargs_in:
             kwargs_dict: dict = kwargs_to_nested_dict(
                 kwargs_in, sep=".", strip_prefix="cfg.", when_unknown_prefix="raise"
             )
             config.update_from_nested_dict(kwargs_dict)
-
+        print(f"gcm 611: {config.dataset_cfg.summary() = }")
         return config
 
 

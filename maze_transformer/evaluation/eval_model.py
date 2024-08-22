@@ -15,14 +15,13 @@ from maze_dataset import (
     SolvedMaze,
 )
 from maze_dataset.token_utils import (
-    WhenMissing,
     get_context_tokens,
     get_path_tokens,
     remove_padding_from_token_str,
     strings_to_coords,
 )
 from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
-from maze_dataset.utils import WhenMissing
+from muutils.misc import WhenMissing
 
 # muutils
 from muutils.mlutils import chunks
