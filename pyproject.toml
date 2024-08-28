@@ -11,7 +11,7 @@ repository = "https://github.com/understanding-search/maze-transformer"
 python = ">=3.10.6,<3.13"
 # dataset
 # maze-dataset = "^0.5.6"
-maze-dataset = {git = "https://github.com/understanding-search/maze-dataset.git", rev = "tokenizer-overhaul-integration"}
+maze-dataset = {git = "https://github.com/understanding-search/maze-dataset.git"}
 # transformers
 torch = "^2.4.0"
 transformer-lens = "^2.4.0"
