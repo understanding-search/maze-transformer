@@ -18,8 +18,8 @@ from maze_dataset import CoordTup, MazeDataset, MazeDatasetConfig, SolvedMaze
 from maze_dataset.plotting import MazePlot
 from maze_dataset.plotting.plot_tokens import plot_colored_text
 from maze_dataset.plotting.print_tokens import color_tokens_cmap
-from maze_dataset.tokenization import MazeTokenizer
-from maze_dataset.tokenization.util import coord_str_to_tuple_noneable
+from maze_dataset.token_utils import coord_str_to_tuple_noneable
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 
 # Utilities
 from muutils.json_serialize import SerializableDataclass, serializable_dataclass
@@ -377,7 +377,7 @@ def mazeplot_attention(
 def plot_attn_dist_correlation(
     tokens_context: list[list[str]],
     tokens_dist_to: list[str],  # either current or target token for each maze
-    tokenizer: MazeTokenizer,
+    tokenizer: MazeTokenizer | MazeTokenizerModular,
     attention: Float[np.ndarray, "n_mazes n_tokens"],
     ax: plt.Axes | None = None,
     respect_topology: bool = False,  # manhattan distance if False
@@ -480,7 +480,7 @@ def plot_attention_final_token(
     prompts: list[list[str]],
     targets: list[str],
     mazes: list[SolvedMaze],
-    tokenizer: MazeTokenizer,
+    tokenizer: MazeTokenizer | MazeTokenizerModular,
     n_mazes: int = 5,
     last_n_tokens: int = 20,
     # exponentiate_scores: bool = False,

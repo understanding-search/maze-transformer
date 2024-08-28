@@ -27,7 +27,7 @@ def test_model_config_has_correct_values():
     assert model.cfg.d_head == 16
     assert model.cfg.n_layers == 4
     assert model.cfg.n_ctx == 512
-    assert model.cfg.d_vocab == 27
+    assert model.cfg.d_vocab == 4096
 
 
 def test_serialize_and_load():
