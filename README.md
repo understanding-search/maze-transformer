@@ -9,7 +9,7 @@
 
 # Maze Transformer
 
->[!NOTE]
+>[!WARNING]
 >This repository is designed to be used with ![maze-dataset](https://github.com/understanding-search/maze-dataset) and ![TransformerLens](https://github.com/TransformerLensOrg/TransformerLens). However, maze-dataset has been significantly updated since this repository was last maintained, and there may be compatibility issues between the two codebases.
 
 |     |     |     |
