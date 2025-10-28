@@ -9,7 +9,8 @@
 
 # Maze Transformer
 
-This repo is built to facilitate the training and analysis of autoregressive transformers on maze-solving tasks.
+>[!WARNING]
+>This repository is designed to be used with ![maze-dataset](https://github.com/understanding-search/maze-dataset) and ![TransformerLens](https://github.com/TransformerLensOrg/TransformerLens). However, both libraries have been significantly updated since this repository was last maintained, and there may be compatibility issues between the two codebases if using latest versions.
 
 |     |     |     |
 | :-: | :-: | :-: |
@@ -80,3 +81,14 @@ Most of the functionality is demonstrated in the ipython notebooks in the `noteb
 
 - formatter (black, pycln, and isort) via `make format`
     - formatter in check-only mode via `make check-format`
+ 
+## Cite As
+
+```bibtex
+@software{maze_transformer,
+  author = {Michael I. Ivanitskiy and Alex F. Spies and Chris Mathwin and Dan Valentine and Can Rager and Guillaume Corlouer and Tilman Räuker and Rusheb Shah and Lucia Quirke},
+  title = {Maze-Transformer: A Package to Train and Analyze Transformers on Maze-Solving Tasks},
+  year = {2023},
+  url = {https://github.com/understanding-search/maze-transformer},
+}
+```
