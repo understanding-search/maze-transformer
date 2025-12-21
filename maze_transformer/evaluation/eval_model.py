@@ -14,14 +14,14 @@ from maze_dataset import (
     MazeDatasetConfig,
     SolvedMaze,
 )
-from maze_dataset.tokenization import MazeTokenizer
-from maze_dataset.tokenization.token_utils import (
+from maze_dataset.token_utils import (
     get_context_tokens,
     get_path_tokens,
     remove_padding_from_token_str,
+    strings_to_coords,
 )
-from maze_dataset.tokenization.util import strings_to_coords
-from maze_dataset.utils import WhenMissing
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
+from muutils.misc import WhenMissing
 
 # muutils
 from muutils.mlutils import chunks
@@ -143,7 +143,7 @@ def predict_maze_paths(
             smart_max_new_tokens
         ), "if max_new_tokens is None, smart_max_new_tokens must be True"
 
-    maze_tokenizer: MazeTokenizer = model.tokenizer._maze_tokenizer
+    maze_tokenizer: MazeTokenizer | MazeTokenizerModular = model.config.maze_tokenizer
 
     contexts_lists: list[list[str]] = [
         get_context_tokens(tokens) for tokens in tokens_batch

@@ -3,7 +3,6 @@
 	"dataset_cfg": {
 		"__format__": "MazeDatasetConfig(SerializableDataclass)",
 		"name": "demo",
-		"dtype": "torch.int16",
 		"seq_len_min": 1,
 		"seq_len_max": 512,
 		"seed": 42,
@@ -12,7 +11,7 @@
 		"n_mazes": 10000,
 		"maze_ctor": {
 			"__name__": "gen_dfs",
-			"__module__": "maze_transformer.generation.generators",
+			"__module__": "maze_dataset.generation.generators",
 			"__doc__": [
 				"generate a lattice maze using depth first search, iterative",
 				"",
@@ -20,12 +19,12 @@
 				"        - `grid_shape: Coord`: the shape of the grid",
 				"        - `lattice_dim: int`: the dimension of the lattice",
 				"          (default: `2`)",
-				"        - `n_accessible_cells: int | None`: the number of accessible cells in the maze. If `None`, defaults to the total number of cells in the grid.",
+				"        - `accessible_cells: int | float |None`: the number of accessible cells in the maze. If `None`, defaults to the total number of cells in the grid. if a float, asserts it is <= 1 and treats it as a proportion of **total cells**",
 				"            (default: `None`)",
-				"        - `max_tree_depth: int | None`: the maximum depth of the tree. If `None`, defaults to `2 * n_accessible_cells`.",
+				"        - `max_tree_depth: int | float | None`: the maximum depth of the tree. If `None`, defaults to `2 * accessible_cells`. if a float, asserts it is <= 1 and treats it as a proportion of the **sum of the grid shape**",
 				"            (default: `None`)",
+				"        - `do_forks: bool`: whether to allow forks in the maze. If `False`, the maze will be have no forks and will be a simple hallway.",
 				"        - `start_coord: Coord | None`: the starting coordinate of the generation algorithm. If `None`, defaults to a random coordinate.",
-				"",
 				"",
 				"        # algorithm",
 				"        1. Choose the initial cell, mark it as visited and push it to the stack",
@@ -43,8 +42,10 @@
 				"    def gen_dfs(",
 				"        grid_shape: Coord,",
 				"        lattice_dim: int = 2,",
-				"        n_accessible_cells: int | None = None,",
-				"        max_tree_depth: int | None = None,",
+				"        accessible_cells: int | float | None = None,",
+				"        max_tree_depth: int | float | None = None,",
+				"        do_forks: bool = True,",
+				"        randomized_stack: bool = False,",
 				"        start_coord: Coord | None = None,",
 				"    ) -> LatticeMaze:",
 				"        \"\"\"generate a lattice maze using depth first search, iterative",
@@ -53,12 +54,12 @@
 				"        - `grid_shape: Coord`: the shape of the grid",
 				"        - `lattice_dim: int`: the dimension of the lattice",
 				"          (default: `2`)",
-				"        - `n_accessible_cells: int | None`: the number of accessible cells in the maze. If `None`, defaults to the total number of cells in the grid.",
+				"        - `accessible_cells: int | float |None`: the number of accessible cells in the maze. If `None`, defaults to the total number of cells in the grid. if a float, asserts it is <= 1 and treats it as a proportion of **total cells**",
 				"            (default: `None`)",
-				"        - `max_tree_depth: int | None`: the maximum depth of the tree. If `None`, defaults to `2 * n_accessible_cells`.",
+				"        - `max_tree_depth: int | float | None`: the maximum depth of the tree. If `None`, defaults to `2 * accessible_cells`. if a float, asserts it is <= 1 and treats it as a proportion of the **sum of the grid shape**",
 				"            (default: `None`)",
+				"        - `do_forks: bool`: whether to allow forks in the maze. If `False`, the maze will be have no forks and will be a simple hallway.",
 				"        - `start_coord: Coord | None`: the starting coordinate of the generation algorithm. If `None`, defaults to a random coordinate.",
-				"",
 				"",
 				"        # algorithm",
 				"        1. Choose the initial cell, mark it as visited and push it to the stack",
@@ -74,20 +75,33 @@
 				"        # Default values if no constraints have been passed",
 				"        grid_shape: Coord = np.array(grid_shape)",
 				"        n_total_cells: int = int(np.prod(grid_shape))",
-				"        if n_accessible_cells is None:",
+				"",
+				"        n_accessible_cells: int",
+				"        if accessible_cells is None:",
 				"            n_accessible_cells = n_total_cells",
+				"        elif isinstance(accessible_cells, float):",
+				"            assert (",
+				"                accessible_cells <= 1",
+				"            ), f\"accessible_cells must be an int (count) or a float in the range [0, 1] (proportion), got {accessible_cells}\"",
+				"",
+				"            n_accessible_cells = int(accessible_cells * n_total_cells)",
+				"        else:",
+				"            assert isinstance(accessible_cells, int)",
+				"            n_accessible_cells = accessible_cells",
+				"",
 				"        if max_tree_depth is None:",
 				"            max_tree_depth = (",
 				"                2 * n_total_cells",
 				"            )  # We define max tree depth counting from the start coord in two directions. Therefore we divide by two in the if clause for neighboring sites later and multiply by two here.",
-				"        if start_coord is None:",
-				"            start_coord: Coord = np.random.randint(",
-				"                0,",
-				"                np.maximum(grid_shape - 1, 1),",
-				"                size=2,",
-				"            )",
-				"        else:",
-				"            start_coord = np.array(start_coord)",
+				"        elif isinstance(max_tree_depth, float):",
+				"            assert (",
+				"                max_tree_depth <= 1",
+				"            ), f\"max_tree_depth must be an int (count) or a float in the range [0, 1] (proportion), got {max_tree_depth}\"",
+				"",
+				"            max_tree_depth = int(max_tree_depth * np.sum(grid_shape))",
+				"",
+				"        # choose a random start coord",
+				"        start_coord = _random_start_coord(grid_shape, start_coord)",
 				"",
 				"        # initialize the maze with no connections",
 				"        connection_list: ConnectionList = np.zeros(",
@@ -96,7 +110,7 @@
 				"",
 				"        # initialize the stack with the target coord",
 				"        visited_cells: set[tuple[int, int]] = set()",
-				"        visited_cells.add(tuple(start_coord))",
+				"        visited_cells.add(tuple(start_coord))  # this wasnt a bug after all lol",
 				"        stack: list[Coord] = [start_coord]",
 				"",
 				"        # initialize tree_depth_counter",
@@ -105,7 +119,11 @@
 				"        # loop until the stack is empty or n_connected_cells is reached",
 				"        while stack and (len(visited_cells) < n_accessible_cells):",
 				"            # get the current coord from the stack",
-				"            current_coord: Coord = stack.pop()",
+				"            current_coord: Coord",
+				"            if randomized_stack:",
+				"                current_coord = stack.pop(random.randint(0, len(stack) - 1))",
+				"            else:",
+				"                current_coord = stack.pop()",
 				"",
 				"            # filter neighbors by being within grid bounds and being unvisited",
 				"            unvisited_neighbors_deltas: list[tuple[Coord, Coord]] = [",
@@ -124,7 +142,9 @@
 				"            if unvisited_neighbors_deltas and (",
 				"                current_tree_depth <= max_tree_depth / 2",
 				"            ):",
-				"                stack.append(current_coord)",
+				"                # if we want a maze without forks, simply don't add the current coord back to the stack",
+				"                if do_forks and (len(unvisited_neighbors_deltas) > 1):",
+				"                    stack.append(current_coord)",
 				"",
 				"                # choose one of the unvisited neighbors",
 				"                chosen_neighbor, delta = random.choice(unvisited_neighbors_deltas)",
@@ -147,271 +167,31 @@
 				"            else:",
 				"                current_tree_depth -= 1",
 				"",
-				"        return LatticeMaze(",
+				"        output = LatticeMaze(",
 				"            connection_list=connection_list,",
 				"            generation_meta=dict(",
 				"                func_name=\"gen_dfs\",",
 				"                grid_shape=grid_shape,",
 				"                start_coord=start_coord,",
-				"                visited_cells={tuple(int(x) for x in coord) for coord in visited_cells},",
 				"                n_accessible_cells=int(n_accessible_cells),",
 				"                max_tree_depth=int(max_tree_depth),",
-				"                fully_connected=bool(len(visited_cells) == n_accessible_cells),",
+				"                # oh my god this took so long to track down. its almost 5am and I've spent like 2 hours on this bug",
+				"                # it was checking that len(visited_cells) == n_accessible_cells, but this means that the maze is",
+				"                # treated as fully connected even when it is most certainly not, causing solving the maze to break",
+				"                fully_connected=bool(len(visited_cells) == n_total_cells),",
+				"                visited_cells={tuple(int(x) for x in coord) for coord in visited_cells},",
 				"            ),",
-				"        )"
+				"        )",
+				"",
+				"        return output"
 			]
 		},
 		"maze_ctor_kwargs": {},
-		"padding_token_index": 10,
-		"token_arr": [
-			"<ADJLIST_START>",
-			"<ADJLIST_END>",
-			"<TARGET_START>",
-			"<TARGET_END>",
-			"<ORIGIN_START>",
-			"<ORIGIN_END>",
-			"<PATH_START>",
-			"<PATH_END>",
-			"<-->",
-			";",
-			"<PADDING>",
-			"(0,0)",
-			"(0,1)",
-			"(1,0)",
-			"(1,1)",
-			"(0,2)",
-			"(2,0)",
-			"(1,2)",
-			"(2,1)",
-			"(2,2)",
-			"(0,3)",
-			"(3,0)",
-			"(3,1)",
-			"(2,3)",
-			"(3,2)",
-			"(1,3)",
-			"(3,3)",
-			"(0,4)",
-			"(2,4)",
-			"(4,0)",
-			"(1,4)",
-			"(4,1)",
-			"(4,2)",
-			"(3,4)",
-			"(4,3)",
-			"(4,4)",
-			"(0,5)",
-			"(5,0)",
-			"(5,1)",
-			"(2,5)",
-			"(5,2)",
-			"(5,3)",
-			"(4,5)",
-			"(5,4)",
-			"(1,5)",
-			"(3,5)",
-			"(5,5)"
-		],
-		"tokenizer_map": {
-			"<ADJLIST_START>": 0,
-			"<ADJLIST_END>": 1,
-			"<TARGET_START>": 2,
-			"<TARGET_END>": 3,
-			"<ORIGIN_START>": 4,
-			"<ORIGIN_END>": 5,
-			"<PATH_START>": 6,
-			"<PATH_END>": 7,
-			"<-->": 8,
-			";": 9,
-			"<PADDING>": 10,
-			"(0,0)": 11,
-			"(0,1)": 12,
-			"(1,0)": 13,
-			"(1,1)": 14,
-			"(0,2)": 15,
-			"(2,0)": 16,
-			"(1,2)": 17,
-			"(2,1)": 18,
-			"(2,2)": 19,
-			"(0,3)": 20,
-			"(3,0)": 21,
-			"(3,1)": 22,
-			"(2,3)": 23,
-			"(3,2)": 24,
-			"(1,3)": 25,
-			"(3,3)": 26,
-			"(0,4)": 27,
-			"(2,4)": 28,
-			"(4,0)": 29,
-			"(1,4)": 30,
-			"(4,1)": 31,
-			"(4,2)": 32,
-			"(3,4)": 33,
-			"(4,3)": 34,
-			"(4,4)": 35,
-			"(0,5)": 36,
-			"(5,0)": 37,
-			"(5,1)": 38,
-			"(2,5)": 39,
-			"(5,2)": 40,
-			"(5,3)": 41,
-			"(4,5)": 42,
-			"(5,4)": 43,
-			"(1,5)": 44,
-			"(3,5)": 45,
-			"(5,5)": 46
-		},
+		"endpoint_kwargs": {},
 		"grid_shape": [
 			6,
 			6
-		],
-		"token_node_map": {
-			"(0,0)": [
-				0,
-				0
-			],
-			"(0,1)": [
-				0,
-				1
-			],
-			"(1,0)": [
-				1,
-				0
-			],
-			"(1,1)": [
-				1,
-				1
-			],
-			"(0,2)": [
-				0,
-				2
-			],
-			"(2,0)": [
-				2,
-				0
-			],
-			"(1,2)": [
-				1,
-				2
-			],
-			"(2,1)": [
-				2,
-				1
-			],
-			"(2,2)": [
-				2,
-				2
-			],
-			"(0,3)": [
-				0,
-				3
-			],
-			"(3,0)": [
-				3,
-				0
-			],
-			"(3,1)": [
-				3,
-				1
-			],
-			"(2,3)": [
-				2,
-				3
-			],
-			"(3,2)": [
-				3,
-				2
-			],
-			"(1,3)": [
-				1,
-				3
-			],
-			"(3,3)": [
-				3,
-				3
-			],
-			"(0,4)": [
-				0,
-				4
-			],
-			"(2,4)": [
-				2,
-				4
-			],
-			"(4,0)": [
-				4,
-				0
-			],
-			"(1,4)": [
-				1,
-				4
-			],
-			"(4,1)": [
-				4,
-				1
-			],
-			"(4,2)": [
-				4,
-				2
-			],
-			"(3,4)": [
-				3,
-				4
-			],
-			"(4,3)": [
-				4,
-				3
-			],
-			"(4,4)": [
-				4,
-				4
-			],
-			"(0,5)": [
-				0,
-				5
-			],
-			"(5,0)": [
-				5,
-				0
-			],
-			"(5,1)": [
-				5,
-				1
-			],
-			"(2,5)": [
-				2,
-				5
-			],
-			"(5,2)": [
-				5,
-				2
-			],
-			"(5,3)": [
-				5,
-				3
-			],
-			"(4,5)": [
-				4,
-				5
-			],
-			"(5,4)": [
-				5,
-				4
-			],
-			"(1,5)": [
-				1,
-				5
-			],
-			"(3,5)": [
-				3,
-				5
-			],
-			"(5,5)": [
-				5,
-				5
-			]
-		},
-		"n_tokens": 47
+		]
 	},
 	"model_cfg": {
 		"__format__": "BaseGPTConfig(SerializableDataclass)",
@@ -420,14 +200,18 @@
 		"d_model": 32,
 		"d_head": 16,
 		"n_layers": 4,
+		"positional_embedding_type": "standard",
 		"weight_processing": {
 			"are_layernorms_folded": false,
 			"are_weights_processed": false
-		}
+		},
+		"n_heads": 2
 	},
 	"train_cfg": {
 		"__format__": "TrainConfig(SerializableDataclass)",
 		"name": "sweep-v1",
+		"evals_max_new_tokens": 8,
+		"validation_dataset_cfg": 50,
 		"optimizer": "AdamW",
 		"optimizer_kwargs": {
 			"lr": 0.0001
@@ -439,9 +223,66 @@
 			"persistent_workers": true,
 			"drop_last": true
 		},
-		"print_loss_interval": 1000,
-		"checkpoint_interval": 5000
+		"intervals": null,
+		"intervals_count": null
 	},
-	"name": "multsrc_demo-g6-n10K-a_dfs-h92077_tiny-v1_sweep-v1",
-	"pretrainedtokenizer_kwargs": null
+	"name": "multsrc_demo-g6-n10K-a_dfs-h50618_tiny-v1_sweep-v1",
+	"pretrainedtokenizer_kwargs": null,
+	"maze_tokenizer": {
+		"__format__": "MazeTokenizerModular(SerializableDataclass)",
+		"prompt_sequencer": {
+			"__format__": "AOTP(SerializableDataclass)",
+			"coord_tokenizer": {
+				"__format__": "UT(SerializableDataclass)",
+				"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.CoordTokenizers.UT'>"
+			},
+			"adj_list_tokenizer": {
+				"__format__": "AdjListCoord(SerializableDataclass)",
+				"pre": false,
+				"post": true,
+				"shuffle_d0": true,
+				"edge_grouping": {
+					"__format__": "Ungrouped(SerializableDataclass)",
+					"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.EdgeGroupings.Ungrouped'>",
+					"connection_token_ordinal": 1
+				},
+				"edge_subset": {
+					"__format__": "ConnectionEdges(SerializableDataclass)",
+					"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.EdgeSubsets.ConnectionEdges'>",
+					"walls": false
+				},
+				"edge_permuter": {
+					"__format__": "RandomCoords(SerializableDataclass)",
+					"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.EdgePermuters.RandomCoords'>"
+				},
+				"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.AdjListTokenizers.AdjListCoord'>"
+			},
+			"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.PromptSequencers.AOTP'>",
+			"target_tokenizer": {
+				"__format__": "Unlabeled(SerializableDataclass)",
+				"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.TargetTokenizers.Unlabeled'>",
+				"post": false
+			},
+			"path_tokenizer": {
+				"__format__": "StepSequence(SerializableDataclass)",
+				"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.PathTokenizers.StepSequence'>",
+				"step_size": {
+					"__format__": "Singles(SerializableDataclass)",
+					"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.StepSizes.Singles'>"
+				},
+				"step_tokenizers": [
+					{
+						"__format__": "Coord(SerializableDataclass)",
+						"_type_": "<class 'maze_dataset.tokenization.maze_tokenizer.StepTokenizers.Coord'>"
+					}
+				],
+				"pre": false,
+				"intra": false,
+				"post": false
+			}
+		},
+		"tokenizer_element_tree_concrete": "MazeTokenizerModular\n\tAOTP\n\t\tUT\n\t\tAdjListCoord\n\t\t\tUngrouped\n\t\t\tConnectionEdges\n\t\t\tRandomCoords\n\t\tUnlabeled\n\t\tStepSequence\n\t\t\tSingles\n\t\t\tCoord\n",
+		"name": "MazeTokenizerModular-AOTP(UT(), AdjListCoord(pre=F, post=T, shuffle_d0=T, Ungrouped(connection_token_ordinal=1), ConnectionEdges(walls=F), RandomCoords()), Unlabeled(post=F), StepSequence(Singles(), step_tokenizers=(Coord(), ), pre=F, intra=F, post=F))"
+	},
+	"_tokenizer": "None"
 }

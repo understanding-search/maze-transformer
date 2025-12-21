@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import typing
 import warnings
@@ -10,7 +11,7 @@ from typing import Any, Type
 import torch
 from maze_dataset.dataset.configs import MAZE_DATASET_CONFIGS
 from maze_dataset.dataset.dataset import GPTDatasetConfig
-from maze_dataset.tokenization import MazeTokenizer, TokenizationMode
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 from muutils.dictmagic import kwargs_to_nested_dict
 from muutils.json_serialize import (
     JSONitem,
@@ -385,19 +386,17 @@ TRAINING_CONFIGS: dict[str, TrainConfig] = {
 }
 
 
-def _load_maze_tokenizer(data: dict) -> MazeTokenizer:
+def _load_maze_tokenizer(data: dict) -> MazeTokenizerModular | MazeTokenizer:
     """load the maze tokenizer, including vocab size from a legacy config"""
-    if "maze_tokenizer" in data:
-        # new style tokenizer
-        return load_item_recursive(data["maze_tokenizer"], path=tuple("maze_tokenizer"))
+    mt = data.get("maze_tokenizer", None)
+    if mt is not None:
+        fmt_str: str = mt.get("__format__", None)
+        if fmt_str == "MazeTokenizerModular(SerializableDataclass)":
+            return MazeTokenizerModular.load(mt)
+        elif fmt_str == "MazeTokenizer(SerializableDataclass)":
+            return MazeTokenizer.load(mt)
     else:
-        if "token_arr" in data["dataset_cfg"]:
-            output: MazeTokenizer = MazeTokenizer(
-                tokenization_mode=TokenizationMode.AOTP_UT_rasterized,
-                max_grid_size=None,
-            )
-        else:
-            raise ValueError("Could not find vocab size in legacy config")
+        return None
 
 
 @serializable_dataclass(kw_only=True)
@@ -420,7 +419,7 @@ class ConfigHolder(SerializableDataclass):
     pretrainedtokenizer_kwargs: dict[str, JSONitem] | None = serializable_field(
         default=None
     )
-    maze_tokenizer: MazeTokenizer | None = serializable_field(
+    maze_tokenizer: MazeTokenizer | MazeTokenizerModular | None = serializable_field(
         default_factory=lambda: None,
         loading_fn=_load_maze_tokenizer,
     )
@@ -449,8 +448,9 @@ class ConfigHolder(SerializableDataclass):
         return self.model_cfg.n_heads
 
     def _set_tok_gridsize_from_dataset(self):
-        self.maze_tokenizer.max_grid_size = self.dataset_cfg.max_grid_n
-        self.maze_tokenizer.clear_cache()
+        if isinstance(self.maze_tokenizer, MazeTokenizer):
+            self.maze_tokenizer.max_grid_size = self.dataset_cfg.max_grid_n
+            self.maze_tokenizer.clear_cache()
 
     def __post_init__(self):
         # fallback to default maze tokenizer if no kwargs are provided
@@ -458,15 +458,12 @@ class ConfigHolder(SerializableDataclass):
             if self.maze_tokenizer is None:
                 # TODO: is this the right default? maybe set it to AOTP_UT_rasterized
                 # since thats what legacy models are likely to be?
-                self.maze_tokenizer = MazeTokenizer(
-                    tokenization_mode=TokenizationMode.AOTP_UT_uniform,
-                    max_grid_size=None,
-                )
+                self.maze_tokenizer = MazeTokenizerModular()
 
         # update the config of the maze tokenizer if there is no grid size
         # since we need the token array for the vocab size of the model
         if self.maze_tokenizer is not None:
-            if self.maze_tokenizer.max_grid_size is None:
+            if getattr(self.maze_tokenizer, "max_grid_size", None) is None:
                 self._set_tok_gridsize_from_dataset()
 
     def summary(self) -> str:
@@ -560,38 +557,51 @@ class ConfigHolder(SerializableDataclass):
             - train_cfg_name: {train_cfg_names}
         """
 
+        # init the holder
         config: ConfigHolder
+
+        # make sure we are only using one of the three methods
         assert (
             sum(1 for x in (cfg, cfg_file, cfg_names) if x is not None) == 1
         ), "Must provide exactly one of cfg, cfg_file, or cfg_names"
 
         if cfg is not None:
+            # passing config directly
             assert cfg_names is None, "Must provide either cfg or cfg_names"
             config = cfg
         elif cfg_file is not None:
+            # passing config from file
             with open(cfg_file) as f:
                 config = ConfigHolder.load(json.load(f))
         elif cfg_names is not None:
+            # passing names
             assert (
                 len(cfg_names) == 3 or len(cfg_names) == 4
             ), "cfg_names must be (dataset_cfg_name,model_cfg_name,train_cfg_name) or the same with collective name at the end"
+            # set up the names
             dataset_cfg_name: str
             model_cfg_name: str
             train_cfg_name: str
             name: str
+
             if len(cfg_names) == 3:
+                # 3 names if no collective name
                 dataset_cfg_name, model_cfg_name, train_cfg_name = cfg_names
+                # assemble the collective name
                 name = f"multsrc_{dataset_cfg_name}_{model_cfg_name}_{train_cfg_name}"
             else:
+                # 4 names if collective name, unpack it
                 dataset_cfg_name, model_cfg_name, train_cfg_name, name = cfg_names
             try:
+                # try to actually assemble the configuration by looking up names in dicts
                 config = ConfigHolder(
                     name=name,
-                    dataset_cfg=MAZE_DATASET_CONFIGS[dataset_cfg_name],
-                    model_cfg=GPT_CONFIGS[model_cfg_name],
-                    train_cfg=TRAINING_CONFIGS[train_cfg_name],
+                    dataset_cfg=copy.deepcopy(MAZE_DATASET_CONFIGS[dataset_cfg_name]),
+                    model_cfg=copy.deepcopy(GPT_CONFIGS[model_cfg_name]),
+                    train_cfg=copy.deepcopy(TRAINING_CONFIGS[train_cfg_name]),
                 )
             except KeyError as e:
+                # exception handling for missing keys case
                 raise KeyError(
                     "tried to get a config that doesn't exist, check the names.\n",
                     f"{dataset_cfg_name = }, {model_cfg_name = }, {train_cfg_name = }\n",
@@ -602,14 +612,12 @@ class ConfigHolder(SerializableDataclass):
             raise ValueError(
                 "Must provide exactly one of cfg, cfg_file, or cfg_names. this state should be unreachable btw."
             )
-
         # update config with kwargs
         if kwargs_in:
             kwargs_dict: dict = kwargs_to_nested_dict(
                 kwargs_in, sep=".", strip_prefix="cfg.", when_unknown_prefix="raise"
             )
             config.update_from_nested_dict(kwargs_dict)
-
         return config
 
 

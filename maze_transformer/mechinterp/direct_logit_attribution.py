@@ -13,7 +13,7 @@ from jaxtyping import Float, Int
 
 # maze-datset stuff
 from maze_dataset import MazeDataset, MazeDatasetConfig
-from maze_dataset.tokenization import MazeTokenizer
+from maze_dataset.tokenization import MazeTokenizer, MazeTokenizerModular
 
 # TransformerLens imports
 from transformer_lens import ActivationCache
@@ -226,7 +226,9 @@ def create_report(
     # model and tokenizer
     if not isinstance(model, ZanjHookedTransformer):
         model = ZanjHookedTransformer.read(model)
-    tokenizer: MazeTokenizer = model.zanj_model_config.maze_tokenizer
+    tokenizer: MazeTokenizer | MazeTokenizerModular = (
+        model.zanj_model_config.maze_tokenizer
+    )
 
     # dataset cfg
     if dataset_cfg_source is None:

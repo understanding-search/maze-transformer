@@ -1,3 +1,4 @@
+import copy
 import json
 import typing
 import warnings
@@ -30,6 +31,7 @@ from maze_transformer.training.wandb_logger import (
 class TrainingResult(SerializableDataclass):
     output_path: Path
     model: ZanjHookedTransformer
+    logger: WandbLogger
 
     def __str__(self):
         return f"TrainingResult of training run stored at output_path='{self.output_path}', trained a model from config with name: {self.model.zanj_model_config.name}"
@@ -161,7 +163,7 @@ def train_model(
                 cfg.train_cfg.validation_dataset_cfg,
             ]
             val_dataset = MazeDataset(
-                cfg.dataset_cfg,
+                copy.deepcopy(cfg.dataset_cfg),
                 mazes=dataset.mazes[-split_dataset_sizes[1] :],
                 generation_metadata_collected=dataset.generation_metadata_collected,
             )
@@ -198,6 +200,7 @@ def train_model(
     return TrainingResult(
         output_path=output_path,
         model=trained_model,
+        logger=logger,
     )
 
 
